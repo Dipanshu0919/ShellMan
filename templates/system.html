@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}System - ShellMan{% endblock %}
+
+{% block content %}
+{% if not selected_server %}
+  <div style="padding: 3rem; text-align: center;">
+    <h3>No Server Selected</h3>
+    <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
+  </div>
+{% else %}
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+    <div>
+      <h2 style="font-size: 1.4rem; font-weight: 700;">System Information</h2>
+      <p style="font-size: 0.85rem; color: var(--text-secondary);">
+        Hardware architecture, kernel, CPU, and network interface breakdown.
+      </p>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="loadSystemInfo()">
+      <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+      Refresh
+    </button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+    <!-- Hardware & OS Details -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">System & Hardware</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <tbody>
+            <tr><td style="color:var(--text-muted); width: 35%;">Hostname</td><td><code id="sysHostname">--</code></td></tr>
+            <tr><td style="color:var(--text-muted);">Architecture</td><td><code id="sysArch">--</code></td></tr>
+            <tr><td style="color:var(--text-muted);">Kernel Version</td><td><code id="sysKernel">--</code></td></tr>
+            <tr><td style="color:var(--text-muted);">CPU Model</td><td id="sysCpuModel">--</td></tr>
+            <tr><td style="color:var(--text-muted);">CPU Cores</td><td><code id="sysCpuCores">--</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Network Address Details -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">IP & Addressing</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <tbody>
+            <tr><td style="color:var(--text-muted); width: 35%;">Public IP</td><td><strong style="color:var(--accent-cyan);" id="sysPublicIp">--</strong></td></tr>
+            <tr><td style="color:var(--text-muted);">SSH Endpoint</td><td><code>{{ selected_server.host|mask_ip }}:{{ selected_server.port }}</code></td></tr>
+            <tr><td style="color:var(--text-muted);">SSH User</td><td><code>{{ selected_server.username }}</code></td></tr>
+            <tr><td style="color:var(--text-muted);">Auth Mechanism</td><td>{{ 'Key-based SSH' if selected_server.auth_type == 'key' else 'Password SSH' }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 1.25rem;">
+    <div class="card-header">
+      <span class="card-title">Network Interfaces</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Interface</th>
+            <th>Status</th>
+            <th>IP Addresses</th>
+          </tr>
+        </thead>
+        <tbody id="interfacesTableBody">
+          <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Loading interfaces...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if selected_server %}
+<script>
+  const serverId = {{ selected_server.id }};
+
+  async function loadSystemInfo() {
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/system/info`);
+      const res = await resp.json();
+      if (res.success) {
+        const d = res.data;
+        document.getElementById('sysHostname').textContent = d.hostname;
+        document.getElementById('sysArch').textContent = d.arch;
+        document.getElementById('sysKernel').textContent = d.kernel;
+        document.getElementById('sysCpuModel').textContent = d.cpu_model;
+        document.getElementById('sysCpuCores').textContent = d.cpu_cores;
+        document.getElementById('sysPublicIp').textContent = d.public_ip;
+
+        const tbody = document.getElementById('interfacesTableBody');
+        if (d.interfaces && d.interfaces.length > 0) {
+          tbody.innerHTML = d.interfaces.map(i => `
+            <tr>
+              <td><strong><code>${i.name}</code></strong></td>
+              <td>
+                <span class="badge ${i.status.toLowerCase() === 'up' ? 'badge-online' : 'badge-offline'}">
+                  ${i.status}
+                </span>
+              </td>
+              <td>${i.addrs.map(a => `<code>${a}</code>`).join(' ')}</td>
+            </tr>
+          `).join('');
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  loadSystemInfo();
+</script>
+{% endif %}
+{% endblock %}

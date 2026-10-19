@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Server' if action == 'edit' else 'Add Server' }} - ShellMan{% endblock %}
+
+{% block content %}
+<div style="max-width: 680px; margin: 0 auto;">
+  <div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('servers.index') }}" class="btn btn-ghost btn-sm" style="margin-bottom: 0.5rem;">
+      <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to Servers
+    </a>
+    <h2 style="font-size: 1.4rem; font-weight: 700;">{{ 'Edit Server Details' if action == 'edit' else 'Add New Remote Server' }}</h2>
+    <p style="font-size: 0.85rem; color: var(--text-secondary);">
+      Credentials are encrypted securely using Fernet encryption in SQLite. The remote server only requires standard SSH.
+    </p>
+  </div>
+
+  <div class="card">
+    <form method="POST" id="serverForm">
+      <div class="form-group">
+        <label class="form-label" for="name">Server Display Name</label>
+        <input class="form-control" type="text" id="name" name="name" required placeholder="Production Web 01" value="{{ server.name if server else '' }}">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label" for="host">Hostname or IP Address</label>
+          <input class="form-control" type="text" id="host" name="host" required placeholder="192.168.1.100 or vps.domain.com" value="{{ server.host if server else '' }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="port">SSH Port</label>
+          <input class="form-control" type="number" id="port" name="port" required value="{{ server.port if server else '22' }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="username">SSH Username</label>
+        <input class="form-control" type="text" id="username" name="username" required placeholder="root or ubuntu" value="{{ server.username if server else 'root' }}">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Authentication Method</label>
+        <div style="display: flex; gap: 1.5rem; margin-top: 0.25rem;">
+          <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;">
+            <input type="radio" name="auth_type" value="password" {% if not server or server.auth_type == 'password' %}checked{% endif %} onchange="toggleAuthFields()">
+            Password
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; font-size: 0.9rem;">
+            <input type="radio" name="auth_type" value="key" {% if server and server.auth_type == 'key' %}checked{% endif %} onchange="toggleAuthFields()">
+            SSH Private Key
+          </label>
+        </div>
+      </div>
+
+      <!-- Password section -->
+      <div id="passwordSection" class="form-group">
+        <label class="form-label" for="password">
+          SSH Password
+          {% if action == 'edit' %}<span style="font-size:0.75rem; color:var(--text-muted);">(Leave blank to keep existing password)</span>{% endif %}
+        </label>
+        <input class="form-control" type="password" id="password" name="password" placeholder="••••••••••••">
+      </div>
+
+      <!-- Private key section -->
+      <div id="keySection" style="display: none;">
+        <div class="form-group">
+          <label class="form-label" for="private_key">
+            SSH Private Key (OpenSSH, RSA, Ed25519)
+            {% if action == 'edit' %}<span style="font-size:0.75rem; color:var(--text-muted);">(Leave blank to keep existing key)</span>{% endif %}
+          </label>
+          <textarea class="form-control" id="private_key" name="private_key" rows="6" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="passphrase">Private Key Passphrase (optional)</label>
+          <input class="form-control" type="password" id="passphrase" name="passphrase" placeholder="Key passphrase if encrypted">
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+        <button type="button" onclick="testFormConnection()" class="btn btn-secondary" id="testFormBtn">
+          <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+          Test Connection
+        </button>
+        <button type="submit" class="btn btn-primary" style="padding: 0.6rem 1.5rem;">
+          {{ 'Save Changes' if action == 'edit' else 'Add Server' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function toggleAuthFields() {
+    const isKey = document.querySelector('input[name="auth_type"]:checked').value === 'key';
+    document.getElementById('passwordSection').style.display = isKey ? 'none' : 'block';
+    document.getElementById('keySection').style.display = isKey ? 'block' : 'none';
+  }
+  toggleAuthFields();
+
+  async function testFormConnection() {
+    const btn = document.getElementById('testFormBtn');
+    const orig = btn.innerHTML;
+    btn.textContent = 'Testing SSH...';
+    btn.disabled = true;
+
+    const payload = {
+      host: document.getElementById('host').value,
+      port: document.getElementById('port').value,
+      username: document.getElementById('username').value,
+      auth_type: document.querySelector('input[name="auth_type"]:checked').value,
+      password: document.getElementById('password').value,
+      private_key: document.getElementById('private_key').value,
+      passphrase: document.getElementById('passphrase').value
+    };
+
+    try {
+      const resp = await fetch('/api/servers/test-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const res = await resp.json();
+      if (res.success) {
+        alert('Success!\n' + res.message);
+      } else {
+        alert('SSH Connection Failed:\n' + res.message);
+      }
+    } catch (e) {
+      alert('Error testing connection: ' + e);
+    } finally {
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    }
+  }
+</script>
+{% endblock %}

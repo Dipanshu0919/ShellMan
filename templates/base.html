@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}ShellMan - Remote Infrastructure Desktop{% endblock %}</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b111c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ShellMan">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="desktop-shell">
+    <!-- 1. System Bar (Top, 40px) -->
+    <header class="system-bar">
+      <div class="sys-left">
+        <!-- ShellMan Brand Mark -->
+        <a href="{{ url_for('dashboard.index', server_id=selected_server.id if selected_server else None) }}" class="sys-brand" style="display:inline-flex; align-items:center; gap:0.5rem;">
+          <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ShellMan Logo" style="width: 22px; height: 22px; filter: drop-shadow(0 2px 6px rgba(14, 165, 233, 0.45));">
+          <span class="sys-brand-name">SHELLMAN</span>
+          <span class="sys-badge">OS</span>
+        </a>
+
+        <!-- Server Identity & Connection Status Pill -->
+        {% if selected_server %}
+        <div class="sys-server-pill" onclick="openServerSelectorModal()" title="Active Remote Node (Click to switch)">
+          <span class="sys-pulse-dot {% if selected_server.is_online %}online{% else %}offline{% endif %}" id="sysStatusDot"></span>
+          <span class="sys-server-name">{{ selected_server.name }}</span>
+          <span class="sys-server-host" id="sysServerHost" data-masked="{{ selected_server.username }}@{{ selected_server.host|mask_ip }}:{{ selected_server.port }}" data-unmasked="{{ selected_server.username }}@{{ selected_server.host }}:{{ selected_server.port }}">{{ selected_server.username }}@{{ selected_server.host|mask_ip }}:{{ selected_server.port }}</span>
+          <span class="ip-mask-toggle" id="sysIpMaskToggleBtn" onclick="toggleDesktopIpMask(event)" title="Show full IP address">
+            <svg class="ip-eye-icon ip-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg class="ip-eye-icon ip-eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+              <line x1="1" y1="1" x2="23" y2="23"></line>
+            </svg>
+          </span>
+          <svg class="sys-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        {% endif %}
+
+        <!-- Active Application / Context Breadcrumb -->
+        <div class="sys-breadcrumb" id="sysBreadcrumb">
+          <span class="sys-bc-app">{% block app_title %}Workspace{% endblock %}</span>
+        </div>
+      </div>
+
+      <!-- Center: Global Command Palette Quick Trigger -->
+      <div class="sys-center">
+        <button class="sys-palette-trigger" onclick="openCommandPalette()" type="button">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <svg style="width:13px;height:13px;color:var(--accent-cyan);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Search commands, files, nodes...</span>
+          </div>
+          <kbd>Ctrl+K</kbd>
+        </button>
+      </div>
+
+      <!-- Right: Telemetry Ticker, Clock, Inspector Toggle, Session -->
+      <div class="sys-right">
+        <!-- Live Micro Telemetry Ticker (CPU/MEM pills) -->
+        {% if selected_server %}
+        <div class="sys-telemetry" id="sysTelemetryTicker" title="Remote Host Live Telemetry">
+          <div class="sys-telemetry-item">
+            <span class="sys-tel-label">CPU</span>
+            <span class="sys-tel-val" id="sysTelCpu">--%</span>
+            <div class="sys-tel-bar"><div id="sysTelCpuBar" style="width: 0%"></div></div>
+          </div>
+          <div class="sys-telemetry-item">
+            <span class="sys-tel-label">MEM</span>
+            <span class="sys-tel-val" id="sysTelMem">--%</span>
+            <div class="sys-tel-bar"><div id="sysTelMemBar" style="width: 0%"></div></div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Real-time Clock -->
+        <div class="sys-clock" id="sysClock" title="Current System Time">--:--:--</div>
+
+        <!-- Contextual Inspector Toggle Button -->
+        <button class="sys-icon-btn" id="btnToggleInspector" onclick="toggleContextualInspector()" title="Toggle Contextual Inspector (Ctrl+I)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+        </button>
+
+        <!-- Theme Switcher -->
+        <button class="sys-icon-btn" id="themeToggle" title="Toggle Light/Dark Theme">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+
+        <!-- User & Logout -->
+        <div class="sys-user-badge">
+          <span class="sys-avatar">{{ session.get('username', 'A')[0].upper() }}</span>
+          <a href="{{ url_for('auth.logout') }}" class="sys-logout-link" title="Logout Session">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- 2. Workspace Body (Launcher + Main Canvas + Contextual Inspector) -->
+    <div class="desktop-body">
+      <!-- Application Launcher Rail (Left, 58px) -->
+      <nav class="app-launcher" id="appLauncher">
+        <!-- Overview -->
+        <a href="{{ url_for('dashboard.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}" data-tooltip="Overview (Alt+1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          <span class="launcher-label">Overview</span>
+        </a>
+
+        <!-- Files -->
+        <a href="{{ url_for('files.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'files.index' %}active{% endif %}" data-tooltip="Files (Alt+2)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <span class="launcher-label">Files</span>
+        </a>
+
+        <!-- Code Workspace -->
+        <a href="{{ url_for('workspace.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'workspace.index' %}active{% endif %}" data-tooltip="Code Workspace (Alt+3)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          <span class="launcher-label">Code</span>
+        </a>
+
+        <!-- Terminal -->
+        <a href="{{ url_for('terminal.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'terminal.index' %}active{% endif %}" data-tooltip="Terminal (Alt+4)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          <span class="launcher-label">Terminal</span>
+        </a>
+
+        <!-- Processes -->
+        <a href="{{ url_for('processes.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'processes.index' %}active{% endif %}" data-tooltip="Processes (Alt+5)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
+          <span class="launcher-label">Processes</span>
+        </a>
+
+        <!-- Services -->
+        <a href="{{ url_for('services.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'services.index' %}active{% endif %}" data-tooltip="Services (Alt+6)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span class="launcher-label">Services</span>
+        </a>
+
+        <!-- Logs -->
+        <a href="{{ url_for('logs.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'logs.index' %}active{% endif %}" data-tooltip="Logs (Alt+7)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          <span class="launcher-label">Logs</span>
+        </a>
+
+        <!-- Hardware & Network -->
+        <a href="{{ url_for('system.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'system.index' %}active{% endif %}" data-tooltip="Hardware (Alt+8)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line></svg>
+          <span class="launcher-label">Hardware</span>
+        </a>
+
+        <a href="{{ url_for('network.index', server_id=selected_server.id if selected_server else None) }}" class="launcher-item {% if request.endpoint == 'network.index' %}active{% endif %}" data-tooltip="Network (Alt+9)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          <span class="launcher-label">Network</span>
+        </a>
+
+        <div class="launcher-sep"></div>
+
+        <!-- Nodes / Servers -->
+        <a href="{{ url_for('servers.index') }}" class="launcher-item {% if request.endpoint in ('servers.index', 'servers.add', 'servers.edit') %}active{% endif %}" data-tooltip="Managed Nodes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+          <span class="launcher-label">Nodes</span>
+        </a>
+
+        <!-- Settings -->
+        <a href="{{ url_for('settings.index') }}" class="launcher-item {% if request.endpoint == 'settings.index' %}active{% endif %}" data-tooltip="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <span class="launcher-label">Config</span>
+        </a>
+      </nav>
+
+      <!-- Main Desktop Application Canvas -->
+      <main class="desktop-canvas {% block content_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+      </main>
+
+      <!-- Right: Contextual Inspector Drawer -->
+      <aside class="contextual-inspector collapsed" id="contextualInspector">
+        <div class="inspector-header">
+          <span class="inspector-title" id="inspectorTitle">Node Inspector</span>
+          <button class="sys-icon-btn" onclick="toggleContextualInspector()" title="Close Inspector (Esc)">✕</button>
+        </div>
+        <div class="inspector-body" id="inspectorBody">
+          {% if selected_server %}
+          <div class="inspector-section">
+            <span class="inspector-section-title">Active Node Details</span>
+            <div class="inspector-kv"><span class="inspector-kv-key">Server Name</span><span class="inspector-kv-val">{{ selected_server.name }}</span></div>
+            <div class="inspector-kv"><span class="inspector-kv-key">Host / IP</span><span class="inspector-kv-val">{{ selected_server.host|mask_ip }}:{{ selected_server.port }}</span></div>
+            <div class="inspector-kv"><span class="inspector-kv-key">SSH User</span><span class="inspector-kv-val">{{ selected_server.username }}</span></div>
+            <div class="inspector-kv"><span class="inspector-kv-key">Auth Mode</span><span class="inspector-kv-val">{{ selected_server.auth_type | upper }}</span></div>
+            <div class="inspector-kv"><span class="inspector-kv-key">OS / Kernel</span><span class="inspector-kv-val" id="inspectorOsVal">{{ selected_server.os_cache or 'Linux' }}</span></div>
+            <div class="inspector-kv"><span class="inspector-kv-key">SSH Protocol</span><span class="inspector-kv-val">OpenSSH 2.0</span></div>
+          </div>
+
+          <div class="inspector-section" id="inspectorDynamicSection">
+            <span class="inspector-section-title">Context Properties</span>
+            <div id="inspectorDynamicContent" style="color:var(--text-muted);font-size:0.75rem;">Select any item or file to inspect detailed remote metadata.</div>
+          </div>
+          {% endif %}
+        </div>
+      </aside>
+    </div>
+
+    <!-- Command Palette Modal -->
+    <div class="cmd-palette-backdrop" id="cmdPalette" style="display:none;" onclick="if(event.target===this)closeCommandPalette()">
+      <div class="cmd-palette-box">
+        <div class="cmd-search-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="cmdPaletteInput" placeholder="Type a command or jump to application..." autocomplete="off">
+          <kbd>ESC</kbd>
+        </div>
+        <div class="cmd-palette-results" id="cmdPaletteResults"></div>
+      </div>
+    </div>
+
+    <!-- Server Selector Quick Modal -->
+    <div class="server-modal-backdrop" id="serverSelectorModal" style="display:none;" onclick="if(event.target===this)closeServerSelectorModal()">
+      <div class="server-modal-box">
+        <div class="server-modal-header">
+          <span>Switch Remote Node</span>
+          <button class="sys-icon-btn" onclick="closeServerSelectorModal()">✕</button>
+        </div>
+        <div class="server-modal-list">
+          {% if servers is defined and servers %}
+            {% for s in servers %}
+              <div class="server-modal-item {% if selected_server and selected_server.id == s.id %}active{% endif %}" onclick="switchActiveServer({{ s.id }})">
+                <span class="sys-pulse-dot {% if s.is_online %}online{% else %}offline{% endif %}"></span>
+                <div style="flex:1;">
+                  <div style="font-weight:600;color:var(--text-primary);font-size:0.85rem;">{{ s.name }}</div>
+                  <div class="server-modal-item-host" style="font-size:0.72rem;color:var(--text-secondary);font-family:var(--font-mono);" data-masked="{{ s.username }}@{{ s.host|mask_ip }}:{{ s.port }}" data-unmasked="{{ s.username }}@{{ s.host }}:{{ s.port }}">{{ s.username }}@{{ s.host|mask_ip }}:{{ s.port }}</div>
+                </div>
+                {% if selected_server and selected_server.id == s.id %}
+                  <span class="badge badge-online">CURRENT</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% else %}
+            <div style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:0.82rem;">No servers registered.</div>
+          {% endif %}
+        </div>
+        <div class="server-modal-footer">
+          <a href="{{ url_for('servers.add') }}" class="btn btn-primary btn-sm">+ Add New Server</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop Toast Notification Stack -->
+    <div class="desktop-toast-container" id="toastContainer"></div>
+  </div>
+
+  <script>
+    const currentServerId = {{ selected_server.id if selected_server else 'null' }};
+
+    // 1. Theme Switcher
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElem = document.documentElement;
+    const savedTheme = localStorage.getItem('shellman_theme') || 'dark';
+    htmlElem.setAttribute('data-theme', savedTheme);
+
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        const current = htmlElem.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        htmlElem.setAttribute('data-theme', next);
+        localStorage.setItem('shellman_theme', next);
+      });
+    }
+
+    // 2. Real-time Live Clock
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+      const el = document.getElementById('sysClock');
+      if (el) el.textContent = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 3. Contextual Inspector Toggle
+    function toggleContextualInspector(forceOpen = null) {
+      const insp = document.getElementById('contextualInspector');
+      const btn = document.getElementById('btnToggleInspector');
+      if (!insp) return;
+
+      const shouldOpen = forceOpen !== null ? forceOpen : insp.classList.contains('collapsed');
+      if (shouldOpen) {
+        insp.classList.remove('collapsed');
+        if (btn) btn.classList.add('active');
+        localStorage.setItem('shellman_inspector', 'open');
+      } else {
+        insp.classList.add('collapsed');
+        if (btn) btn.classList.remove('active');
+        localStorage.setItem('shellman_inspector', 'closed');
+      }
+    }
+
+    // Restore Inspector Preference
+    if (localStorage.getItem('shellman_inspector') === 'open') {
+      toggleContextualInspector(true);
+    }
+
+    // Dynamic Inspector Content Helper for any application
+    function setInspectorContent(title, kvPairs) {
+      const titleEl = document.getElementById('inspectorTitle');
+      const contentEl = document.getElementById('inspectorDynamicContent');
+      if (titleEl && title) titleEl.textContent = title;
+      if (contentEl && Array.isArray(kvPairs)) {
+        contentEl.innerHTML = kvPairs.map(p => `
+          <div class="inspector-kv">
+            <span class="inspector-kv-key">${p.key}</span>
+            <span class="inspector-kv-val">${p.val}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // 4. Server Switcher Quick Modal
+    function openServerSelectorModal() {
+      document.getElementById('serverSelectorModal').style.display = 'flex';
+    }
+    function closeServerSelectorModal() {
+      document.getElementById('serverSelectorModal').style.display = 'none';
+    }
+    function switchActiveServer(id) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('server_id', id);
+      window.location.href = url.toString();
+    }
+
+    // IP Masking Toggle
+    function updateIpMaskUI(isRevealed) {
+      const sysHost = document.getElementById('sysServerHost');
+      if (sysHost) {
+        const targetText = isRevealed ? sysHost.getAttribute('data-unmasked') : sysHost.getAttribute('data-masked');
+        if (targetText) sysHost.textContent = targetText;
+      }
+      document.querySelectorAll('.ip-mask-toggle').forEach(btn => {
+        btn.classList.toggle('active', isRevealed);
+        btn.setAttribute('title', isRevealed ? 'Mask IP address' : 'Show full IP address');
+        const openEye = btn.querySelector('.ip-eye-open');
+        const closedEye = btn.querySelector('.ip-eye-closed');
+        if (openEye) openEye.style.display = isRevealed ? 'none' : 'inline-block';
+        if (closedEye) closedEye.style.display = isRevealed ? 'inline-block' : 'none';
+      });
+      document.querySelectorAll('.server-modal-item-host').forEach(el => {
+        if (el.hasAttribute('data-unmasked') && el.hasAttribute('data-masked')) {
+          el.textContent = isRevealed ? el.getAttribute('data-unmasked') : el.getAttribute('data-masked');
+        }
+      });
+    }
+
+    function toggleDesktopIpMask(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      const current = localStorage.getItem('shellman_ip_revealed') === 'true';
+      const next = !current;
+      localStorage.setItem('shellman_ip_revealed', next ? 'true' : 'false');
+      updateIpMaskUI(next);
+      if (typeof showToast === 'function') {
+        showToast(next ? 'Full IP address revealed' : 'IP address masked', 'info');
+      }
+    }
+    window.toggleDesktopIpMask = toggleDesktopIpMask;
+    window.updateIpMaskUI = updateIpMaskUI;
+
+    if (localStorage.getItem('shellman_ip_revealed') === 'true') {
+      updateIpMaskUI(true);
+    }
+
+    // 5. Desktop Toast Notifications
+    function showToast(message, type = 'info', durationMs = 3500) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      toast.className = `desktop-toast ${type}`;
+      toast.innerHTML = `
+        <div style="flex:1;">${message}</div>
+      `;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        toast.style.transition = 'all 0.2s ease';
+        setTimeout(() => toast.remove(), 250);
+      }, durationMs);
+    }
+
+    // 6. Command Palette Implementation
+    const commandList = [
+      { name: "Overview", desc: "System telemetry and hardware health", url: "{{ url_for('dashboard.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Files", desc: "Remote file browser & manager", url: "{{ url_for('files.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Code Workspace", desc: "VS Code-style Monaco remote IDE", url: "{{ url_for('workspace.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Terminal", desc: "Interactive SSH console session", url: "{{ url_for('terminal.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Processes", desc: "Monitor and manage running tasks", url: "{{ url_for('processes.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Services", desc: "Systemd service control", url: "{{ url_for('services.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Logs", desc: "Journalctl and system logs viewer", url: "{{ url_for('logs.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Hardware", desc: "CPU, memory, storage specifications", url: "{{ url_for('system.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Network", desc: "Network interfaces & open listening ports", url: "{{ url_for('network.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Nodes", desc: "Register or configure servers", url: "{{ url_for('servers.index') }}", badge: "App" },
+      { name: "Switch Node", desc: "Switch active remote server", action: () => { closeCommandPalette(); openServerSelectorModal(); }, badge: "Action" },
+      { name: "Toggle Inspector", desc: "Show/hide contextual telemetry drawer", action: () => { closeCommandPalette(); toggleContextualInspector(); }, badge: "Action" },
+      { name: "Toggle Theme", desc: "Switch between dark and light themes", action: () => { themeToggle && themeToggle.click(); closeCommandPalette(); }, badge: "Action" }
+    ];
+
+    let cmdSelectedIdx = 0;
+    let filteredCommands = [];
+
+    function openCommandPalette() {
+      const palette = document.getElementById('cmdPalette');
+      const input = document.getElementById('cmdPaletteInput');
+      palette.style.display = 'flex';
+      input.value = '';
+      input.focus();
+      filterCommandPalette('');
+    }
+
+    function closeCommandPalette() {
+      document.getElementById('cmdPalette').style.display = 'none';
+    }
+
+    function filterCommandPalette(q) {
+      const query = q.trim().toLowerCase();
+      filteredCommands = commandList.filter(c => c.name.toLowerCase().includes(query) || c.desc.toLowerCase().includes(query));
+      cmdSelectedIdx = 0;
+      renderCommandResults();
+    }
+
+    function renderCommandResults() {
+      const resultsEl = document.getElementById('cmdPaletteResults');
+      if (filteredCommands.length === 0) {
+        resultsEl.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--text-muted);font-size:0.8rem;">No matching commands found.</div>';
+        return;
+      }
+
+      resultsEl.innerHTML = filteredCommands.map((c, i) => `
+        <div class="cmd-item ${i === cmdSelectedIdx ? 'selected' : ''}" onclick="executeCmd(${i})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <div>
+            <span style="font-weight:600;color:var(--text-primary);">${c.name}</span>
+            <span style="font-size:0.75rem;color:var(--text-secondary);margin-left:0.5rem;">${c.desc}</span>
+          </div>
+          <span class="cmd-badge">${c.badge}</span>
+        </div>
+      `).join('');
+    }
+
+    function executeCmd(idx) {
+      const cmd = filteredCommands[idx];
+      if (!cmd) return;
+      if (cmd.url) {
+        window.location.href = cmd.url;
+      } else if (cmd.action) {
+        cmd.action();
+      }
+    }
+
+    const cmdInput = document.getElementById('cmdPaletteInput');
+    if (cmdInput) {
+      cmdInput.addEventListener('input', (e) => filterCommandPalette(e.target.value));
+      cmdInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          cmdSelectedIdx = (cmdSelectedIdx + 1) % filteredCommands.length;
+          renderCommandResults();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          cmdSelectedIdx = (cmdSelectedIdx - 1 + filteredCommands.length) % filteredCommands.length;
+          renderCommandResults();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          executeCmd(cmdSelectedIdx);
+        } else if (e.key === 'Escape') {
+          closeCommandPalette();
+        }
+      });
+    }
+
+    // 7. Global Keyboard Navigation
+    window.addEventListener('keydown', (e) => {
+      // Don't intercept when user is typing in code editor, textarea, or active xterm
+      const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      const isTerminal = document.activeElement && document.activeElement.closest('.xterm');
+
+      if (!isTerminal && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const palette = document.getElementById('cmdPalette');
+        if (palette.style.display === 'flex') closeCommandPalette();
+        else openCommandPalette();
+      }
+
+      if (!isTerminal && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        toggleContextualInspector();
+      }
+
+      if (e.key === 'Escape') {
+        closeCommandPalette();
+        closeServerSelectorModal();
+      }
+
+      // Alt + Number Application Shortcuts
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key >= '1' && e.key <= '9') {
+        const shortcuts = [
+          "{{ url_for('dashboard.index', server_id=selected_server.id if selected_server else None) }}",
+          "{{ url_for('files.index', server_id=selected_server.id if selected_server else None) }}",
+          "{{ url_for('workspace.index', server_id=selected_server.id if selected_server else None) }}",
+          "{{ url_for('terminal.index', server_id=selected_server.id if selected_server else None) }}",
+          "{{ url_for('processes.index', server_id=selected_server.id if selected_server else None) }}",
+          "{{ url_for('services.index', server_id=selected_server.id if selected_server else None) }}",
+          "{{ url_for('logs.index', server_id=selected_server.id if selected_server else None) }}",
+          "{{ url_for('system.index', server_id=selected_server.id if selected_server else None) }}",
+          "{{ url_for('network.index', server_id=selected_server.id if selected_server else None) }}"
+        ];
+        const idx = parseInt(e.key) - 1;
+        if (shortcuts[idx]) {
+          e.preventDefault();
+          window.location.href = shortcuts[idx];
+        }
+      }
+    });
+
+    // 8. Micro Telemetry Polling (Every 4 seconds for top bar ticker)
+    {% if selected_server %}
+    async function updateSystemBarTelemetry() {
+      try {
+        const resp = await fetch(`/api/servers/${currentServerId}/metrics`);
+        const data = await resp.json();
+        if (data.online) {
+          const cpuVal = document.getElementById('sysTelCpu');
+          const cpuBar = document.getElementById('sysTelCpuBar');
+          const memVal = document.getElementById('sysTelMem');
+          const memBar = document.getElementById('sysTelMemBar');
+          const dot = document.getElementById('sysStatusDot');
+
+          if (cpuVal && data.cpu !== undefined) {
+            cpuVal.textContent = data.cpu + '%';
+            if (cpuBar) cpuBar.style.width = Math.min(100, data.cpu) + '%';
+          }
+          if (memVal && data.memory && data.memory.percent !== undefined) {
+            memVal.textContent = data.memory.percent + '%';
+            if (memBar) memBar.style.width = Math.min(100, data.memory.percent) + '%';
+          }
+          if (dot) dot.className = 'sys-pulse-dot online';
+        }
+      } catch (_) {}
+    }
+    setInterval(updateSystemBarTelemetry, 4500);
+    setTimeout(updateSystemBarTelemetry, 600);
+    {% endif %}
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

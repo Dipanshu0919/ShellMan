@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Network - ShellMan{% endblock %}
+
+{% block content %}
+{% if not selected_server %}
+  <div style="padding: 3rem; text-align: center;">
+    <h3>No Server Selected</h3>
+    <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
+  </div>
+{% else %}
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+    <div>
+      <h2 style="font-size: 1.4rem; font-weight: 700;">Network & Open Ports</h2>
+      <p style="font-size: 0.85rem; color: var(--text-secondary);">
+        Active listening ports and sockets detected via ss / netstat.
+      </p>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="loadNetworkInfo()">
+      <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+      Refresh
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Listening Ports & Sockets</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Protocol</th>
+            <th>Local Address / Port</th>
+            <th>Bound Service / Process</th>
+          </tr>
+        </thead>
+        <tbody id="portsTableBody">
+          <tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading network information...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if selected_server %}
+<script>
+  const serverId = {{ selected_server.id }};
+
+  async function loadNetworkInfo() {
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/network/info`);
+      const res = await resp.json();
+      if (res.success) {
+        const tbody = document.getElementById('portsTableBody');
+        if (res.data.ports && res.data.ports.length > 0) {
+          tbody.innerHTML = res.data.ports.map(p => `
+            <tr>
+              <td><span class="badge" style="background-color: var(--bg-tertiary);">${p.proto.toUpperCase()}</span></td>
+              <td><code>${p.local_addr}</code></td>
+              <td><code>${p.process}</code></td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No listening ports found</td></tr>`;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  loadNetworkInfo();
+</script>
+{% endif %}
+{% endblock %}

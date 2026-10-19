@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - ShellMan{% endblock %}
+
+{% block content_class %}full-bleed{% endblock %}
+
+{% block content %}
+{% if not selected_server %}
+  <div style="padding: 3rem; text-align: center;">
+    <h3>No Server Selected</h3>
+    <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
+  </div>
+{% else %}
+  <div style="display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; background: #090d16;">
+    <!-- Top Logs Toolbar -->
+    <header class="desktop-toolbar" style="padding: 0 0.85rem; height: 42px;">
+      <div class="toolbar-left" style="gap: 0.6rem;">
+        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.05em;">
+          Journal &amp; Logs
+        </span>
+        <div style="width: 1px; height: 16px; background: var(--border-subtle);"></div>
+        <span id="logHeaderInfo" style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--accent-cyan);">journalctl -n 250</span>
+      </div>
+
+      <div class="toolbar-right" style="gap: 0.45rem;">
+        <input type="text" id="serviceInput" placeholder="Unit (e.g. nginx, sshd)" class="form-control" style="width: 160px; padding: 0.25rem 0.5rem; font-size: 0.75rem;" value="{{ request.args.get('service', '') }}">
+        <select id="linesSelect" class="form-control" style="width: 95px; padding: 0.25rem 0.4rem; font-size: 0.74rem;">
+          <option value="100">100 lines</option>
+          <option value="250" selected>250 lines</option>
+          <option value="500">500 lines</option>
+          <option value="1000">1000 lines</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="fetchLogs()" title="Query Logs">
+          <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          Fetch
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleAutoScroll()" id="autoScrollBtn" title="Toggle Auto Scroll">
+          Scroll: ON
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="copyLogs()" title="Copy to Clipboard">
+          <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="clearLogs()" title="Clear Output">
+          <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Preformatted Log Terminal Output -->
+    <pre id="logOutput" style="flex: 1; margin: 0; padding: 1rem 1.25rem; overflow-y: auto; font-family: var(--font-mono); font-size: 0.8rem; color: #f1f5f9; line-height: 1.45; white-space: pre-wrap; word-break: break-all; background: #090d16;"></pre>
+
+    <!-- Bottom Status Bar -->
+    <footer class="files-statusbar" style="background: var(--bg-surface);">
+      <span id="logStatusText">Idle</span>
+      <span style="font-family: var(--font-mono); color: var(--accent-emerald);">● System Journal Streaming</span>
+    </footer>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if selected_server %}
+<script>
+  const serverId = {{ selected_server.id }};
+  let autoScroll = true;
+
+  function toggleAutoScroll() {
+    autoScroll = !autoScroll;
+    document.getElementById('autoScrollBtn').textContent = `Scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+  }
+
+  function clearLogs() {
+    document.getElementById('logOutput').textContent = '';
+  }
+
+  function copyLogs() {
+    const text = document.getElementById('logOutput').textContent;
+    if (navigator.clipboard && text) {
+      navigator.clipboard.writeText(text).then(() => {
+        if (window.showToast) window.showToast('Logs copied to clipboard', 'success');
+      });
+    }
+  }
+
+  async function fetchLogs() {
+    const service = document.getElementById('serviceInput').value.trim();
+    const lines = document.getElementById('linesSelect').value;
+    const header = document.getElementById('logHeaderInfo');
+    const status = document.getElementById('logStatusText');
+
+    header.textContent = service ? `journalctl -u ${service} -n ${lines}` : `journalctl -n ${lines}`;
+    status.textContent = 'Fetching journal entries...';
+
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/logs/fetch?service=${encodeURIComponent(service)}&lines=${lines}`);
+      const res = await resp.json();
+      if (res.success) {
+        const out = document.getElementById('logOutput');
+        out.textContent = res.logs || 'No log output returned.';
+        if (autoScroll) {
+          out.scrollTop = out.scrollHeight;
+        }
+        status.textContent = 'Synchronized: ' + new Date().toLocaleTimeString();
+        if (window.setInspectorContent) {
+          window.setInspectorContent('Logs Target', [
+            { key: 'Target', val: service || 'system journal' },
+            { key: 'Buffer Lines', val: lines },
+            { key: 'Last Polled', val: new Date().toLocaleTimeString() }
+          ]);
+        }
+      } else {
+        status.textContent = 'Error: ' + res.error;
+      }
+    } catch (e) {
+      status.textContent = 'Fetch error: ' + e;
+    }
+  }
+
+  fetchLogs();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Processes - ShellMan{% endblock %}
+
+{% block content %}
+{% if not selected_server %}
+  <div style="padding: 3rem; text-align: center;">
+    <h3>No Server Selected</h3>
+    <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
+  </div>
+{% else %}
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+    <div>
+      <h2 style="font-size: 1.3rem; font-weight: 700;">Process Manager</h2>
+      <p style="font-size: 0.82rem; color: var(--text-secondary);">
+        Active remote Linux processes sorted by processor utilization.
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <div style="display: flex; align-items: center; position: relative;">
+        <input type="text" id="procSearch" placeholder="Filter PID, user, cmd..." class="form-control" style="width: 220px; padding: 0.3rem 0.6rem 0.3rem 1.8rem; font-size: 0.78rem;" oninput="filterProcs()">
+        <svg style="width:12px;height:12px;position:absolute;left:0.6rem;color:var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="loadProcesses()" title="Refresh Processes">
+        <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width: 80px;">PID</th>
+            <th style="width: 100px;">User</th>
+            <th style="width: 80px;">CPU %</th>
+            <th style="width: 80px;">MEM %</th>
+            <th style="width: 70px;">Stat</th>
+            <th>Command Line</th>
+            <th style="text-align: right; width: 140px;">Signals</th>
+          </tr>
+        </thead>
+        <tbody id="processesTableBody">
+          <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading processes...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if selected_server %}
+<script>
+  const serverId = {{ selected_server.id }};
+  let allProcesses = [];
+
+  async function loadProcesses() {
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/processes/list`);
+      const res = await resp.json();
+      if (res.success) {
+        allProcesses = res.processes;
+        filterProcs();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function filterProcs() {
+    const q = document.getElementById('procSearch').value.toLowerCase().trim();
+    if (!q) {
+      renderProcesses(allProcesses);
+      return;
+    }
+    const filtered = allProcesses.filter(p => 
+      p.pid.toString().includes(q) ||
+      p.user.toLowerCase().includes(q) ||
+      p.comm.toLowerCase().includes(q) ||
+      p.args.toLowerCase().includes(q)
+    );
+    renderProcesses(filtered);
+  }
+
+  function inspectProcess(p) {
+    if (!window.setInspectorContent) return;
+    window.setInspectorContent('Process Inspector', [
+      { key: 'PID', val: p.pid },
+      { key: 'Owner / User', val: p.user },
+      { key: 'Binary', val: p.comm },
+      { key: 'CPU Usage', val: `${p.cpu}%` },
+      { key: 'Memory Usage', val: `${p.mem}%` },
+      { key: 'Process State', val: p.stat },
+      { key: 'Full Command', val: p.args }
+    ]);
+    if (window.openContextualInspector) window.openContextualInspector();
+  }
+
+  function renderProcesses(procs) {
+    const tbody = document.getElementById('processesTableBody');
+    if (!procs || procs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 3rem; color: var(--text-muted);">No matching processes</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = procs.map(p => `
+      <tr onclick='inspectProcess(${JSON.stringify(p)})' style="cursor: pointer;">
+        <td><code style="color: var(--accent-cyan); font-weight: 600;">${p.pid}</code></td>
+        <td style="color: var(--text-secondary); font-size: 0.78rem;">${p.user}</td>
+        <td><strong style="color: ${p.cpu > 50 ? 'var(--accent-rose)' : (p.cpu > 20 ? 'var(--accent-amber)' : 'inherit')};">${p.cpu}%</strong></td>
+        <td>${p.mem}%</td>
+        <td><code style="font-size: 0.72rem; background: var(--bg-surface-elevated); padding: 1px 4px; border-radius: 2px;">${p.stat}</code></td>
+        <td style="max-width: 480px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.76rem;" title="${p.args}">
+          ${p.args}
+        </td>
+        <td style="text-align: right;" onclick="event.stopPropagation()">
+          <div style="display: inline-flex; gap: 0.25rem;">
+            <button class="btn btn-secondary btn-sm" onclick="killProc(${p.pid}, 'SIGTERM', '${p.comm}')" title="SIGTERM (-15)">
+              Term
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="killProc(${p.pid}, 'SIGKILL', '${p.comm}')" title="SIGKILL (-9)">
+              Kill
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function killProc(pid, signal, comm) {
+    const isKill = signal === 'SIGKILL';
+    const msg = isKill 
+      ? `FORCE KILL confirmation: Are you sure you want to send SIGKILL (-9) to PID ${pid} (${comm})?`
+      : `Send SIGTERM (-15) to terminate PID ${pid} (${comm})?`;
+
+    if (!confirm(msg)) return;
+
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/processes/kill`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pid: pid, signal: signal })
+      });
+      const res = await resp.json();
+      if (window.showToast) window.showToast(res.message, res.success ? 'success' : 'error');
+      else alert(res.message);
+      loadProcesses();
+    } catch (e) {
+      alert('Error signalling process: ' + e);
+    }
+  }
+
+  loadProcesses();
+  // Sensible interval
+  setInterval(loadProcesses, 8000);
+</script>
+{% endif %}
+{% endblock %}
