@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ selected_server.name if selected_server else 'ShellMan' }} - Remote Workspace</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/xterm/xterm.css') }}">
+  <!-- Load XTerm.js first so window.Terminal and window.FitAddon are globally available -->
+  <script src="{{ url_for('static', filename='vendor/xterm/xterm.js') }}"></script>
+  <script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-fit.js') }}"></script>
+  <!-- Load Monaco Editor AMD Loader -->
+  <script src="{{ url_for('static', filename='vendor/monaco/loader.min.js') }}"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #1e1e1e;
+    }
+  </style>
+</head>
+<body>
+{% if not selected_server %}
+  <div style="padding: 3rem; text-align: center; color: #fff;">
+    <h3>No Server Selected</h3>
+    <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
+  </div>
+{% else %}
+<div class="workspace-wrapper" id="wsWrapper" style="width: 100vw; height: 100vh;">
+  <!-- Top Workspace Header -->
+  <div class="ws-topbar">
+    <div class="ws-topbar-left">
+      <a href="{{ url_for('dashboard.index', server_id=selected_server.id) }}" class="btn btn-ghost btn-sm" title="Back to ShellMan Panel" style="padding: 2px 6px;">
+        <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        Panel
+      </a>
+
+      <div class="ws-folder-badge" onclick="promptChangeFolder()" title="Click to open another remote folder">
+        <svg style="width:14px;height:14px;color:#007acc;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+        <span id="wsCurrentPathDisplay">{{ workspace_path }}</span>
+        <svg style="width:12px;height:12px;color:#858585;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+
+      <button class="btn btn-ghost btn-sm" onclick="showQuickOpen()" title="Quick Open File (Ctrl+P)" style="font-size:0.75rem;">
+        <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        Quick Open (Ctrl+P)
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <button class="btn btn-ghost btn-sm" onclick="toggleTerminalPanel()" id="termToggleBtn" title="Toggle Integrated Terminal (Ctrl+\`)">
+        <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        Terminal
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="saveActiveFile()" id="saveBtn" title="Save File (Ctrl+S)">
+        <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        Save
+      </button>
+    </div>
+  </div>
+
+  <!-- Main IDE Body -->
+  <div class="ws-main">
+    <!-- Left Activity Bar -->
+    <div class="ws-activity-bar">
+      <div class="activity-btn active" id="actBtnExplorer" onclick="switchActivity('explorer')" title="Explorer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+      </div>
+      <div class="activity-btn" id="actBtnSearch" onclick="switchActivity('search')" title="Search in Files">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </div>
+    </div>
+
+    <!-- Collapsible Sidebar -->
+    <div class="ws-sidebar" id="wsSidebar">
+      <!-- 1. File Explorer View -->
+      <div id="explorerView" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="sidebar-title-bar">
+          <span>Explorer</span>
+          <div style="display: flex; gap: 0.25rem;">
+            <button class="btn btn-ghost btn-sm" style="padding: 2px;" onclick="promptNewItem('file')" title="New File">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button class="btn btn-ghost btn-sm" style="padding: 2px;" onclick="promptNewItem('dir')" title="New Folder">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+            </button>
+            <button class="btn btn-ghost btn-sm" style="padding: 2px;" onclick="triggerWsUpload()" title="Upload File(s)">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </button>
+            <button class="btn btn-ghost btn-sm" style="padding: 2px;" onclick="refreshWorkspaceTree()" title="Refresh Explorer">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <input type="file" id="wsUploadFileInput" multiple style="display:none;" onchange="handleWsUploadFiles(this)">
+
+        <div class="tree-container" id="fileTreeContainer">
+          <div style="padding: 1rem; color: #858585; font-size: 0.8rem;">Loading tree...</div>
+        </div>
+      </div>
+
+      <!-- 2. Search in Files View -->
+      <div id="searchView" style="display: none; flex-direction: column; height: 100%;">
+        <div class="sidebar-title-bar">
+          <span>Search in Files</span>
+        </div>
+        <div style="padding: 0.75rem; border-bottom: 1px solid #2d2d2d;">
+          <input type="text" id="codeSearchQuery" placeholder="Search text..." class="form-control" style="font-size:0.8rem; margin-bottom: 0.4rem;" onkeydown="if(event.key==='Enter') executeCodeSearch()">
+          <input type="text" id="codeSearchPattern" placeholder="files to include (e.g. *.py)" class="form-control" style="font-size:0.75rem; margin-bottom: 0.5rem;" onkeydown="if(event.key==='Enter') executeCodeSearch()">
+          <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="executeCodeSearch()">Find</button>
+        </div>
+        <div class="tree-container" id="searchResultsContainer" style="padding: 0.5rem;">
+          <div style="color: #858585; font-size: 0.78rem; text-align: center; margin-top: 1rem;">Enter query to search across remote files.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Horizontal Resizer Between Sidebar and Editor -->
+    <div class="resizer-horizontal" id="sidebarResizer"></div>
+
+    <!-- Center Editor & Terminal Area -->
+    <div class="ws-editor-container">
+      <!-- File Tabs Bar -->
+      <div class="ws-tabs-bar" id="wsTabsBar"></div>
+
+      <!-- Editor Body (Monaco) -->
+      <div class="monaco-mount-area" id="editorContainer">
+        <div id="noFilePlaceholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b;">
+          <svg style="width:48px;height:48px;margin-bottom:0.75rem;opacity:0.5;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          <p style="font-size: 0.95rem;">Select a file from the explorer or press <kbd style="background:#2d2d2d;padding:2px 5px;border-radius:3px;">Ctrl+P</kbd> to open</p>
+        </div>
+        <div id="monacoInstance" style="width:100%;height:100%;display:none;"></div>
+      </div>
+
+      <!-- Vertical Resizer Between Editor and Terminal -->
+      <div class="resizer-vertical" id="terminalResizer"></div>
+
+      <!-- Bottom Integrated Terminal -->
+      <div class="ws-terminal-panel" id="wsTerminalPanel">
+        <div class="ws-terminal-header">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span>Terminal</span>
+            <span style="font-size: 0.7rem; color: #858585; font-family: var(--font-mono);" id="termCwdText">{{ workspace_path }}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <button class="btn btn-ghost btn-sm" style="padding: 2px 6px; font-size: 0.7rem;" onclick="reconnectWsTerminal()" title="Restart Session">↺</button>
+            <button class="btn btn-ghost btn-sm" style="padding: 2px 6px; font-size: 0.7rem;" onclick="toggleTerminalPanel()" title="Close Terminal Panel">✕</button>
+          </div>
+        </div>
+        <div class="ws-terminal-screen" id="wsTerminalScreen"></div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="ws-statusbar">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span id="sbServerInfo">{{ selected_server.name }} ({{ selected_server.host|mask_ip }})</span>
+          <span id="sbActiveFilePath">No file</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span id="sbCursorPos">Ln 1, Col 1</span>
+          <span id="sbEncoding">UTF-8</span>
+          <span id="sbLanguage">Plain Text</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Context Menu -->
+<div class="ws-context-menu" id="wsContextMenu">
+  <div class="ws-context-item" id="ctxOpen" onclick="ctxHandleOpen()">Open File</div>
+  <div class="ws-context-item" id="ctxNewFile" onclick="promptNewItem('file')">New File</div>
+  <div class="ws-context-item" id="ctxNewFolder" onclick="promptNewItem('dir')">New Folder</div>
+  <div class="ws-context-item" id="ctxUpload" onclick="triggerWsUpload()">Upload File(s)...</div>
+  <div class="ws-context-sep"></div>
+  <div class="ws-context-item" onclick="ctxHandleCopyPath()">Copy Path</div>
+  <div class="ws-context-item" onclick="ctxHandleDownload()" id="ctxDownload">Download File</div>
+  <div class="ws-context-item" onclick="ctxHandleTerminalHere()">Open Terminal Here</div>
+  <div class="ws-context-sep"></div>
+  <div class="ws-context-item" onclick="ctxHandleRename()">Rename</div>
+  <div class="ws-context-item" onclick="ctxHandleDelete()" style="color: var(--accent-rose);">Delete</div>
+</div>
+
+<!-- Upload Progress Toast in Workspace -->
+<div id="wsUploadToast" style="display:none; position: fixed; bottom: 35px; right: 24px; z-index: 1000; background: #252526; border: 1px solid #3c3c3c; box-shadow: 0 4px 16px rgba(0,0,0,0.6); border-radius: 6px; padding: 0.75rem 1rem; width: 340px; color: #cccccc; font-size: 0.82rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+    <span id="wsUploadToastTitle" style="font-weight: 600; color: #ffffff;">Uploading...</span>
+    <span id="wsUploadToastPercent" style="font-weight: 600; color: #38bdf8;">0%</span>
+  </div>
+  <div style="height: 5px; background: #333333; border-radius: 3px; overflow: hidden; margin-bottom: 0.4rem;">
+    <div id="wsUploadToastBar" style="height: 100%; width: 0%; background: #007acc; transition: width 0.15s ease;"></div>
+  </div>
+  <div id="wsUploadToastStatus" style="font-size: 0.74rem; color: #94a3b8; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Preparing upload...</div>
+</div>
+
+<!-- Quick Open Modal (Ctrl+P) -->
+<div class="quick-open-overlay" id="quickOpenModal">
+  <input type="text" class="quick-open-input" id="quickOpenInput" placeholder="Type filename to open..." oninput="filterQuickOpen(this.value)">
+  <div class="quick-open-results" id="quickOpenList"></div>
+</div>
+
+<script>
+  const serverId = {{ selected_server.id }};
+  let currentWorkspacePath = "{{ workspace_path }}";
+
+  // State Management
+  let openFiles = []; // { path, name, content, originalContent, isDirty, model }
+  let activeFilePath = null;
+  let monacoEditor = null;
+  let termInstance = null;
+  let termFit = null;
+  let termSocket = null;
+  let contextTarget = null;
+  let quickOpenItems = [];
+
+  // Configure Monaco Editor AMD Loader
+  require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+
+  function initMonaco() {
+    require(['vs/editor/editor.main'], function () {
+      monacoEditor = monaco.editor.create(document.getElementById('monacoInstance'), {
+        theme: 'vs-dark',
+        automaticLayout: true,
+        fontSize: 14,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        tabSize: 4,
+        minimap: { enabled: true },
+        scrollBeyondLastLine: false,
+        wordWrap: 'on'
+      });
+
+      monacoEditor.onDidChangeCursorPosition((e) => {
+        document.getElementById('sbCursorPos').textContent = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
+      });
+
+      monacoEditor.onDidChangeModelContent(() => {
+        const file = getActiveFile();
+        if (file) {
+          const currentText = monacoEditor.getValue();
+          file.isDirty = (currentText !== file.originalContent);
+          updateTabDirtyState(file);
+        }
+      });
+
+      monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function () {
+        saveActiveFile();
+      });
+
+      monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, function () {
+        showQuickOpen();
+      });
+    });
+  }
+
+  function detectLanguage(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const map = {
+      'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'html': 'html',
+      'css': 'css', 'json': 'json', 'md': 'markdown', 'sh': 'shell', 'bash': 'shell',
+      'yml': 'yaml', 'yaml': 'yaml', 'sql': 'sql', 'xml': 'xml', 'ini': 'ini',
+      'conf': 'ini', 'service': 'ini', 'c': 'c', 'cpp': 'cpp', 'java': 'java', 'php': 'php'
+    };
+    return map[ext] || 'plaintext';
+  }
+
+  function getActiveFile() {
+    return openFiles.find(f => f.path === activeFilePath);
+  }
+
+  async function openFileInWorkspace(filePath) {
+    const existing = openFiles.find(f => f.path === filePath);
+    if (existing) {
+      setActiveFile(filePath);
+      return;
+    }
+
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/files/read?path=${encodeURIComponent(filePath)}`);
+      const res = await resp.json();
+      if (!res.success) {
+        alert('Cannot open file: ' + res.error);
+        return;
+      }
+
+      const fileObj = {
+        path: filePath,
+        name: res.data.name,
+        originalContent: res.data.content,
+        isDirty: false
+      };
+
+      openFiles.push(fileObj);
+      renderTabs();
+      setActiveFile(filePath);
+    } catch (e) {
+      alert('Error opening file: ' + e);
+    }
+  }
+
+  function setActiveFile(filePath) {
+    activeFilePath = filePath;
+    const file = getActiveFile();
+    if (!file) return;
+
+    document.getElementById('noFilePlaceholder').style.display = 'none';
+    document.getElementById('monacoInstance').style.display = 'block';
+
+    const lang = detectLanguage(file.name);
+    document.getElementById('sbLanguage').textContent = lang;
+    document.getElementById('sbActiveFilePath').textContent = file.path;
+
+    if (monacoEditor) {
+      if (!file.model) {
+        file.model = monaco.editor.createModel(file.originalContent, lang);
+      }
+      monacoEditor.setModel(file.model);
+      monacoEditor.focus();
+    }
+
+    renderTabs();
+  }
+
+  function closeFile(filePath, event) {
+    if (event) event.stopPropagation();
+    const file = openFiles.find(f => f.path === filePath);
+    if (!file) return;
+
+    if (file.isDirty && !confirm(`Discard unsaved changes in ${file.name}?`)) {
+      return;
+    }
+
+    if (file.model) {
+      file.model.dispose();
+    }
+
+    openFiles = openFiles.filter(f => f.path !== filePath);
+    if (activeFilePath === filePath) {
+      activeFilePath = openFiles.length > 0 ? openFiles[openFiles.length - 1].path : null;
+      if (activeFilePath) {
+        setActiveFile(activeFilePath);
+      } else {
+        document.getElementById('noFilePlaceholder').style.display = 'flex';
+        document.getElementById('monacoInstance').style.display = 'none';
+        document.getElementById('sbActiveFilePath').textContent = 'No file';
+      }
+    }
+    renderTabs();
+  }
+
+  function renderTabs() {
+    const bar = document.getElementById('wsTabsBar');
+    bar.innerHTML = openFiles.map(f => `
+      <div class="ws-tab ${f.path === activeFilePath ? 'active' : ''} ${f.isDirty ? 'dirty' : ''}" onclick="setActiveFile('${f.path}')">
+        <span>${f.name}</span>
+        <span class="tab-dirty-dot"></span>
+        <span class="tab-close-btn" onclick="closeFile('${f.path}', event)">✕</span>
+      </div>
+    `).join('');
+  }
+
+  function updateTabDirtyState(file) {
+    renderTabs();
+  }
+
+  async function saveActiveFile() {
+    const file = getActiveFile();
+    if (!file || !monacoEditor) return;
+
+    const content = monacoEditor.getValue();
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/files/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: file.path, content: content })
+      });
+      const res = await resp.json();
+      if (res.success) {
+        file.originalContent = content;
+        file.isDirty = false;
+        updateTabDirtyState(file);
+      } else {
+        alert('Save failed: ' + res.error);
+      }
+    } catch (e) {
+      alert('Error saving file: ' + e);
+    } finally {
+      saveBtn.innerHTML = `
+        <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        Save
+      `;
+      saveBtn.disabled = false;
+    }
+  }
+
+  async function loadTreeDirectory(path, container) {
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/workspace/tree?path=${encodeURIComponent(path)}`);
+      const res = await resp.json();
+      if (!res.success) {
+        container.innerHTML = `<div style="padding:0.4rem 0.6rem;color:var(--accent-rose);font-size:0.75rem;">${res.error}</div>`;
+        return;
+      }
+
+      const items = res.data.items;
+      if (!items || items.length === 0) {
+        container.innerHTML = `<div style="padding:0.3rem 1rem;color:#858585;font-size:0.75rem;">(empty)</div>`;
+        return;
+      }
+
+      container.innerHTML = items.map(item => {
+        const id = 'node_' + Math.random().toString(36).substr(2, 9);
+        if (item.is_dir) {
+          return `
+            <div class="tree-item-group" data-path="${item.path}">
+              <div class="tree-node" onclick="toggleTreeNode('${id}', '${item.path}')" oncontextmenu="showContextMenu(event, '${item.path}', true)">
+                <span class="tree-arrow" id="arrow_${id}">▶</span>
+                <svg style="width:14px;height:14px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <span>${item.name}</span>
+              </div>
+              <div class="tree-children" id="${id}" style="padding-left: 14px;"></div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="tree-node" onclick="openFileInWorkspace('${item.path}')" oncontextmenu="showContextMenu(event, '${item.path}', false)" data-path="${item.path}">
+              <span class="tree-arrow empty"></span>
+              <svg style="width:14px;height:14px;color:#cccccc;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span>${item.name}</span>
+            </div>
+          `;
+        }
+      }).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function toggleTreeNode(childrenId, path) {
+    const childrenDiv = document.getElementById(childrenId);
+    const arrow = document.getElementById('arrow_' + childrenId);
+    if (!childrenDiv) return;
+
+    if (childrenDiv.classList.contains('open')) {
+      childrenDiv.classList.remove('open');
+      arrow.classList.remove('expanded');
+    } else {
+      childrenDiv.classList.add('open');
+      arrow.classList.add('expanded');
+      if (childrenDiv.children.length === 0) {
+        childrenDiv.innerHTML = '<div style="padding:0.2rem 0.5rem;font-size:0.75rem;color:#858585;">Loading...</div>';
+        loadTreeDirectory(path, childrenDiv);
+      }
+    }
+  }
+
+  function refreshWorkspaceTree() {
+    const container = document.getElementById('fileTreeContainer');
+    container.innerHTML = '<div style="padding: 1rem; color: #858585; font-size: 0.8rem;">Refreshing tree...</div>';
+    loadTreeDirectory(currentWorkspacePath, container);
+  }
+
+  async function promptChangeFolder() {
+    const newPath = prompt("Enter remote directory to open as workspace:", currentWorkspacePath);
+    if (!newPath || !newPath.trim() || newPath === currentWorkspacePath) return;
+
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/workspace/set`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: newPath.trim() })
+      });
+      const res = await resp.json();
+      if (res.success) {
+        currentWorkspacePath = res.path;
+        document.getElementById('wsCurrentPathDisplay').textContent = currentWorkspacePath;
+        document.getElementById('termCwdText').textContent = currentWorkspacePath;
+        refreshWorkspaceTree();
+        reconnectWsTerminal(currentWorkspacePath);
+      } else {
+        alert(res.error);
+      }
+    } catch (e) {
+      alert('Error setting workspace: ' + e);
+    }
+  }
+
+  function initWsTerminal() {
+    const termContainer = document.getElementById('wsTerminalScreen');
+    termInstance = new Terminal({
+      cursorBlink: true,
+      cursorStyle: 'bar',
+      fontSize: 13,
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+      theme: { background: '#0b0f19', foreground: '#f8fafc', cursor: '#38bdf8' }
+    });
+
+    termFit = new FitAddon.FitAddon();
+    termInstance.loadAddon(termFit);
+    termInstance.open(termContainer);
+    termFit.fit();
+
+    termInstance.attachCustomKeyEventHandler((event) => {
+      if (event.ctrlKey && !event.altKey) {
+        const key = event.key.toLowerCase();
+        if (['s', 'w', 'o', 'f', 'p', 'd', 'k', 'r', 'n', 't'].includes(key)) {
+          if (event.type === 'keydown') {
+            event.preventDefault();
+            event.stopPropagation();
+            const code = key.charCodeAt(0) - 96;
+            if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+              termSocket.send(JSON.stringify({ type: 'input', data: String.fromCharCode(code) }));
+            }
+          }
+          return false;
+        }
+      }
+      return true;
+    });
+
+    termInstance.onData((data) => {
+      if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+        termSocket.send(JSON.stringify({ type: 'input', data: data }));
+      }
+    });
+
+    connectTerminalWebSocket(currentWorkspacePath);
+  }
+
+  function connectTerminalWebSocket(cwd) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/terminal/${serverId}?cols=${termInstance.cols}&rows=${termInstance.rows}&cwd=${encodeURIComponent(cwd || currentWorkspacePath)}`;
+
+    termSocket = new WebSocket(wsUrl);
+    termSocket.onopen = () => {
+      termInstance.focus();
+    };
+    termSocket.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'data') termInstance.write(msg.data);
+        else if (msg.type === 'error') termInstance.write(`\r\n\x1b[31m${msg.data}\x1b[0m\r\n`);
+      } catch (e) {
+        termInstance.write(event.data);
+      }
+    };
+  }
+
+  function reconnectWsTerminal(cwd) {
+    if (termSocket) termSocket.close();
+    if (termInstance) termInstance.reset();
+    connectTerminalWebSocket(cwd || currentWorkspacePath);
+  }
+
+  function toggleTerminalPanel() {
+    const panel = document.getElementById('wsTerminalPanel');
+    const resizer = document.getElementById('terminalResizer');
+    if (panel.style.display === 'none') {
+      panel.style.display = 'flex';
+      resizer.style.display = 'block';
+      if (termFit) termFit.fit();
+    } else {
+      panel.style.display = 'none';
+      resizer.style.display = 'none';
+    }
+  }
+
+  function switchActivity(act) {
+    document.getElementById('actBtnExplorer').classList.toggle('active', act === 'explorer');
+    document.getElementById('actBtnSearch').classList.toggle('active', act === 'search');
+    document.getElementById('explorerView').style.display = act === 'explorer' ? 'flex' : 'none';
+    document.getElementById('searchView').style.display = act === 'search' ? 'flex' : 'none';
+  }
+
+  async function executeCodeSearch() {
+    const q = document.getElementById('codeSearchQuery').value.trim();
+    const pattern = document.getElementById('codeSearchPattern').value.trim();
+    const container = document.getElementById('searchResultsContainer');
+    if (!q) return;
+
+    container.innerHTML = '<div style="color: #858585; font-size: 0.78rem; text-align: center;">Searching...</div>';
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/workspace/search-code?path=${encodeURIComponent(currentWorkspacePath)}&q=${encodeURIComponent(q)}&pattern=${encodeURIComponent(pattern)}`);
+      const res = await resp.json();
+      if (!res.success || res.results.length === 0) {
+        container.innerHTML = '<div style="color: #858585; font-size: 0.78rem; text-align: center;">No results found.</div>';
+        return;
+      }
+
+      container.innerHTML = res.results.map(r => `
+        <div style="padding: 0.35rem 0.5rem; cursor: pointer; border-bottom: 1px solid #2d2d2d;" onclick="openFileInWorkspace('${r.path}')">
+          <div style="font-weight: 500; font-size: 0.8rem; color: #38bdf8;">${r.path.split('/').pop()} <span style="font-size:0.7rem;color:#858585;">Line ${r.line}</span></div>
+          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #cccccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${r.text}</div>
+        </div>
+      `).join('');
+    } catch (e) {
+      container.innerHTML = `<div style="color: var(--accent-rose); font-size:0.75rem;">Error: ${e}</div>`;
+    }
+  }
+
+  function showQuickOpen() {
+    const modal = document.getElementById('quickOpenModal');
+    modal.style.display = 'flex';
+    const input = document.getElementById('quickOpenInput');
+    input.value = '';
+    input.focus();
+    loadQuickOpenIndex();
+  }
+
+  async function loadQuickOpenIndex() {
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/files/search?path=${encodeURIComponent(currentWorkspacePath)}&q=`);
+      const res = await resp.json();
+      if (res.success) {
+        quickOpenItems = res.results;
+        renderQuickOpenList(quickOpenItems);
+      }
+    } catch (e) {}
+  }
+
+  function filterQuickOpen(query) {
+    const q = query.toLowerCase().trim();
+    const filtered = quickOpenItems.filter(i => i.name.toLowerCase().includes(q) || i.path.toLowerCase().includes(q));
+    renderQuickOpenList(filtered);
+  }
+
+  function renderQuickOpenList(items) {
+    const list = document.getElementById('quickOpenList');
+    list.innerHTML = items.slice(0, 30).map(item => `
+      <div class="quick-open-item" onclick="openFileInWorkspace('${item.path}'); closeQuickOpen();">
+        <span style="font-weight: 500;">${item.name}</span>
+        <span style="font-family: var(--font-mono); font-size: 0.72rem; color: #858585;">${item.path}</span>
+      </div>
+    `).join('');
+  }
+
+  function closeQuickOpen() {
+    document.getElementById('quickOpenModal').style.display = 'none';
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'p') {
+      e.preventDefault();
+      showQuickOpen();
+    }
+    if (e.key === 'Escape') {
+      closeQuickOpen();
+      hideContextMenu();
+    }
+    if (e.ctrlKey && e.key === '`') {
+      e.preventDefault();
+      toggleTerminalPanel();
+    }
+  });
+
+  function showContextMenu(e, path, isDir) {
+    e.preventDefault();
+    e.stopPropagation();
+    contextTarget = { path, isDir };
+
+    const menu = document.getElementById('wsContextMenu');
+    menu.style.display = 'block';
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
+
+    document.getElementById('ctxOpen').style.display = isDir ? 'none' : 'block';
+    document.getElementById('ctxDownload').style.display = isDir ? 'none' : 'block';
+  }
+
+  function hideContextMenu() {
+    document.getElementById('wsContextMenu').style.display = 'none';
+  }
+  window.addEventListener('click', hideContextMenu);
+
+  function ctxHandleOpen() {
+    if (contextTarget && !contextTarget.isDir) openFileInWorkspace(contextTarget.path);
+  }
+  function ctxHandleCopyPath() {
+    if (contextTarget) navigator.clipboard.writeText(contextTarget.path);
+  }
+  function ctxHandleTerminalHere() {
+    if (contextTarget) {
+      const folder = contextTarget.isDir ? contextTarget.path : contextTarget.path.substring(0, contextTarget.path.lastIndexOf('/'));
+      reconnectWsTerminal(folder);
+      document.getElementById('termCwdText').textContent = folder;
+    }
+  }
+
+  async function promptNewItem(type) {
+    const parent = contextTarget && contextTarget.isDir ? contextTarget.path : currentWorkspacePath;
+    const name = prompt(`Enter ${type === 'dir' ? 'folder' : 'file'} name inside ${parent}:`);
+    if (!name || !name.trim()) return;
+
+    const fullPath = parent.replace(/\/+$/, '') + '/' + name.trim();
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/files/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: fullPath, type: type })
+      });
+      const res = await resp.json();
+      if (res.success) {
+        refreshWorkspaceTree();
+        if (type === 'file') openFileInWorkspace(fullPath);
+      } else {
+        alert(res.error);
+      }
+    } catch (e) {
+      alert('Error creating item: ' + e);
+    }
+  }
+
+  async function ctxHandleRename() {
+    if (!contextTarget) return;
+    const oldName = contextTarget.path.split('/').pop();
+    const newName = prompt(`Rename ${oldName} to:`, oldName);
+    if (!newName || !newName.trim() || newName === oldName) return;
+
+    const dir = contextTarget.path.substring(0, contextTarget.path.lastIndexOf('/'));
+    const newPath = dir + '/' + newName.trim();
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/files/rename`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ old_path: contextTarget.path, new_path: newPath })
+      });
+      const res = await resp.json();
+      if (res.success) {
+        refreshWorkspaceTree();
+      } else {
+        alert(res.error);
+      }
+    } catch (e) {
+      alert('Error renaming: ' + e);
+    }
+  }
+
+  async function ctxHandleDelete() {
+    if (!contextTarget) return;
+    const name = contextTarget.path.split('/').pop();
+    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/files/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: contextTarget.path, is_dir: contextTarget.isDir })
+      });
+      const res = await resp.json();
+      if (res.success) {
+        if (!contextTarget.isDir) closeFile(contextTarget.path);
+        refreshWorkspaceTree();
+      } else {
+        alert(res.error);
+      }
+    } catch (e) {
+      alert('Error deleting: ' + e);
+    }
+  }
+
+  function ctxHandleDownload() {
+    if (contextTarget && !contextTarget.isDir) {
+      window.open(`/api/servers/${serverId}/files/download?path=${encodeURIComponent(contextTarget.path)}`, '_blank');
+    }
+  }
+
+  let wsUploadTargetDir = null;
+
+  function triggerWsUpload() {
+    wsUploadTargetDir = (contextTarget && contextTarget.isDir) ? contextTarget.path : currentWorkspacePath;
+    const input = document.getElementById('wsUploadFileInput');
+    input.value = '';
+    input.click();
+  }
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  async function handleWsUploadFiles(inputOrFiles) {
+    const files = inputOrFiles.files || inputOrFiles;
+    if (!files || files.length === 0) return;
+
+    const destDir = wsUploadTargetDir || currentWorkspacePath;
+    const toast = document.getElementById('wsUploadToast');
+    const toastTitle = document.getElementById('wsUploadToastTitle');
+    const toastPercent = document.getElementById('wsUploadToastPercent');
+    const toastBar = document.getElementById('wsUploadToastBar');
+    const toastStatus = document.getElementById('wsUploadToastStatus');
+
+    toast.style.display = 'block';
+    toastTitle.textContent = `Uploading ${files.length} file(s)...`;
+    toastPercent.textContent = '0%';
+    toastBar.style.width = '0%';
+    toastBar.style.background = '#007acc';
+    toastStatus.textContent = 'Sending to server...';
+
+    const uploadId = 'ws_upl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    const formData = new FormData();
+    formData.append('dest_dir', destDir);
+    formData.append('overwrite', 'true');
+    formData.append('upload_id', uploadId);
+
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
+
+    let sseStarted = false;
+    let eventSource = null;
+    let remoteTransferStarted = false;
+
+    function startSSE() {
+      if (sseStarted) return;
+      sseStarted = true;
+      eventSource = new EventSource(`/api/servers/${serverId}/files/upload-progress/${uploadId}`);
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.total_files > 0) {
+            remoteTransferStarted = true;
+            const fileIdx = data.file_index || 1;
+            const currentName = data.current_file || '';
+            const filePercent = data.total > 0 ? Math.round((data.transferred / data.total) * 100) : 0;
+            const overallPercent = Math.min(100, Math.round(((fileIdx - 1 + (filePercent / 100)) / data.total_files) * 100));
+
+            toastBar.style.width = `${overallPercent}%`;
+            toastPercent.textContent = `${overallPercent}%`;
+            toastStatus.textContent = `Remote VPS: File ${fileIdx}/${data.total_files}: ${currentName} (${formatBytes(data.transferred)}/${formatBytes(data.total)})`;
+
+            if (data.done || overallPercent >= 100) {
+              toastBar.style.background = '#10b981';
+              toastStatus.textContent = 'Upload complete!';
+              eventSource.close();
+            }
+          }
+        } catch (_) {}
+      };
+      eventSource.onerror = () => {
+        if (eventSource) eventSource.close();
+      };
+    }
+
+    startSSE();
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `/api/servers/${serverId}/files/upload`, true);
+
+    xhr.upload.onprogress = (e) => {
+      if (!remoteTransferStarted && e.lengthComputable) {
+        const browserPercent = Math.min(99, Math.round((e.loaded / e.total) * 100));
+        toastBar.style.width = `${browserPercent}%`;
+        toastPercent.textContent = `${browserPercent}%`;
+        toastStatus.textContent = `Uploading: ${formatBytes(e.loaded)} / ${formatBytes(e.total)}`;
+      }
+    };
+
+    xhr.onload = () => {
+      if (eventSource) eventSource.close();
+      if (xhr.status === 200) {
+        toastBar.style.width = '100%';
+        toastBar.style.background = '#10b981';
+        toastPercent.textContent = '100%';
+        toastTitle.textContent = 'Upload Successful';
+        toastStatus.textContent = `${files.length} file(s) saved to remote workspace`;
+        refreshWorkspaceTree();
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+      } else {
+        toastBar.style.background = '#ef4444';
+        toastTitle.textContent = 'Upload Failed';
+        toastStatus.textContent = 'Server returned error ' + xhr.status;
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+      }
+    };
+
+    xhr.onerror = () => {
+      if (eventSource) eventSource.close();
+      toastBar.style.background = '#ef4444';
+      toastTitle.textContent = 'Network Error';
+      toastStatus.textContent = 'Could not upload files';
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    };
+
+    xhr.send(formData);
+  }
+
+  function initDragAndDrop() {
+    const tree = document.getElementById('fileTreeContainer');
+    if (!tree) return;
+
+    tree.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      tree.style.outline = '2px dashed #007acc';
+    });
+
+    tree.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      tree.style.outline = 'none';
+    });
+
+    tree.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      tree.style.outline = 'none';
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        wsUploadTargetDir = currentWorkspacePath;
+        handleWsUploadFiles(e.dataTransfer.files);
+      }
+    });
+  }
+
+  function initResizers() {
+    const sidebar = document.getElementById('wsSidebar');
+    const sideResizer = document.getElementById('sidebarResizer');
+    let isSideResizing = false;
+
+    sideResizer.addEventListener('mousedown', () => { isSideResizing = true; });
+    window.addEventListener('mousemove', (e) => {
+      if (isSideResizing) {
+        const newW = e.clientX - 48;
+        if (newW > 120 && newW < 600) sidebar.style.width = newW + 'px';
+      }
+    });
+    window.addEventListener('mouseup', () => { isSideResizing = false; });
+
+    const termPanel = document.getElementById('wsTerminalPanel');
+    const termResizer = document.getElementById('terminalResizer');
+    let isTermResizing = false;
+
+    termResizer.addEventListener('mousedown', () => { isTermResizing = true; });
+    window.addEventListener('mousemove', (e) => {
+      if (isTermResizing) {
+        const newH = window.innerHeight - e.clientY - 22;
+        if (newH > 40 && newH < (window.innerHeight * 0.7)) {
+          termPanel.style.height = newH + 'px';
+          if (termFit) termFit.fit();
+        }
+      }
+    });
+    window.addEventListener('mouseup', () => { isTermResizing = false; });
+  }
+
+  window.addEventListener('load', () => {
+    initMonaco();
+    initWsTerminal();
+    initResizers();
+    initDragAndDrop();
+    refreshWorkspaceTree();
+  });
+</script>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Services - ShellMan{% endblock %}
+
+{% block content %}
+{% if not selected_server %}
+  <div style="padding: 3rem; text-align: center;">
+    <h3>No Server Selected</h3>
+    <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
+  </div>
+{% else %}
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+    <div>
+      <h2 style="font-size: 1.3rem; font-weight: 700;">Systemd Services</h2>
+      <p style="font-size: 0.82rem; color: var(--text-secondary);">
+        Manage Linux systemd service units remotely over SSH.
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <div style="display: flex; align-items: center; position: relative;">
+        <input type="text" id="svcSearch" placeholder="Filter unit or description..." class="form-control" style="width: 220px; padding: 0.3rem 0.6rem 0.3rem 1.8rem; font-size: 0.78rem;" oninput="filterServices()">
+        <svg style="width:12px;height:12px;position:absolute;left:0.6rem;color:var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="loadServices()" title="Refresh Services">
+        <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width: 100px;">Status</th>
+            <th style="width: 28%;">Service Unit</th>
+            <th style="width: 100px;">Sub State</th>
+            <th>Description</th>
+            <th style="text-align: right; width: 200px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="servicesTableBody">
+          <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading system services...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if selected_server %}
+<script>
+  const serverId = {{ selected_server.id }};
+  let allServices = [];
+
+  async function loadServices() {
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/services/list`);
+      const res = await resp.json();
+      if (res.success) {
+        allServices = res.services;
+        filterServices();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function filterServices() {
+    const q = document.getElementById('svcSearch').value.toLowerCase().trim();
+    if (!q) {
+      renderServices(allServices);
+      return;
+    }
+    const filtered = allServices.filter(s => 
+      s.name.toLowerCase().includes(q) ||
+      s.description.toLowerCase().includes(q)
+    );
+    renderServices(filtered);
+  }
+
+  function inspectService(s) {
+    if (!window.setInspectorContent) return;
+    window.setInspectorContent('Service Unit', [
+      { key: 'Unit Name', val: s.name },
+      { key: 'Load State', val: s.active },
+      { key: 'Sub State', val: s.sub },
+      { key: 'Active State', val: s.is_running ? 'RUNNING' : 'STOPPED' },
+      { key: 'Description', val: s.description }
+    ]);
+    if (window.openContextualInspector) window.openContextualInspector();
+  }
+
+  function renderServices(services) {
+    const tbody = document.getElementById('servicesTableBody');
+    if (!services || services.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 3rem; color: var(--text-muted);">No services found</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = services.map(s => `
+      <tr onclick='inspectService(${JSON.stringify(s)})' style="cursor: pointer;">
+        <td>
+          <span class="badge ${s.is_running ? 'badge-online' : 'badge-offline'}">
+            <span class="status-dot ${s.is_running ? 'connected' : 'disconnected'}"></span>
+            ${s.active}
+          </span>
+        </td>
+        <td><strong style="color: var(--text-primary);">${s.name}</strong></td>
+        <td><code style="font-size: 0.75rem; background: var(--bg-surface-elevated); padding: 2px 4px; border-radius: 3px;">${s.sub}</code></td>
+        <td style="color: var(--text-secondary); font-size: 0.78rem; max-width: 380px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="${s.description}">
+          ${s.description}
+        </td>
+        <td style="text-align: right;" onclick="event.stopPropagation()">
+          <div style="display: inline-flex; gap: 0.25rem;">
+            ${s.is_running ? `
+              <button class="btn btn-secondary btn-sm" onclick="svcAction('${s.name}', 'restart')" title="Restart Service">
+                Restart
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="svcAction('${s.name}', 'stop')" title="Stop Service">
+                Stop
+              </button>
+            ` : `
+              <button class="btn btn-primary btn-sm" onclick="svcAction('${s.name}', 'start')" title="Start Service">
+                Start
+              </button>
+            `}
+            <a href="{{ url_for('logs.index', server_id=selected_server.id) }}?service=${encodeURIComponent(s.name)}" class="btn btn-ghost btn-sm" title="View Journalctl Logs">
+              Logs
+            </a>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function svcAction(name, action) {
+    if (!confirm(`Perform action '${action}' on service ${name}?`)) return;
+
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/services/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, action: action })
+      });
+      const res = await resp.json();
+      if (window.showToast) window.showToast(res.message, res.success ? 'success' : 'error');
+      else alert(res.message);
+      loadServices();
+    } catch (e) {
+      alert('Error triggering service action: ' + e);
+    }
+  }
+
+  loadServices();
+</script>
+{% endif %}
+{% endblock %}

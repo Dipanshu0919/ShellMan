@@ -1,0 +1,70 @@
+{
+  "name": "ShellMan",
+  "short_name": "ShellMan",
+  "description": "Remote Infrastructure Workspace & Linux Desktop Operating Environment",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#080c14",
+  "theme_color": "#0b111c",
+  "categories": ["utilities", "developer", "productivity"],
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "SSH Terminal",
+      "short_name": "Terminal",
+      "description": "Open interactive SSH Terminal",
+      "url": "/?app=terminal",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "File Manager",
+      "short_name": "Files",
+      "description": "Browse and manage remote files via SFTP",
+      "url": "/?app=files",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Code Workspace",
+      "short_name": "Code",
+      "description": "Open Monaco remote IDE",
+      "url": "/?app=code",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "System Overview",
+      "short_name": "Overview",
+      "description": "Live system metrics & telemetry dials",
+      "url": "/?app=overview",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+

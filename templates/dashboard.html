@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShellMan</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b111c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ShellMan">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop.css') }}?v=1.3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v=1.3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/xterm/xterm.css') }}">
+  
+  <script>
+    window.DesktopConfig = {
+      serverId: {{ selected_server.id if selected_server else 'null' }},
+      serverName: "{{ selected_server.name if selected_server else '' }}",
+      serverHost: "{{ selected_server.host|mask_ip if selected_server else '' }}:{{ selected_server.port if selected_server else '' }}",
+      username: "{{ selected_server.username if selected_server else '' }}",
+      initialApp: "{{ initial_app or '' }}"
+    };
+
+    window.DesktopServersList = [
+      {% for s in servers %}
+        {
+          id: {{ s.id }},
+          name: "{{ s.name }}",
+          host: "{{ s.host }}",
+          port: {{ s.port }},
+          username: "{{ s.username }}",
+          is_online: {{ 'true' if s.is_online else 'false' }}
+        }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const t = document.createElement('div');
+      t.className = `desktop-toast ${type}`;
+      t.innerHTML = `<span>${msg}</span>`;
+      container.appendChild(t);
+      setTimeout(() => {
+        t.style.opacity = '0';
+        t.style.transform = 'translateY(10px)';
+        setTimeout(() => t.remove(), 250);
+      }, 3500);
+    }
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        window.addEventListener('DOMContentLoaded', () => {
+          {% for category, message in messages %}
+            showToast("{{ message|replace('\"', '\\\"') }}", "{{ category }}");
+          {% endfor %}
+        });
+      {% endif %}
+    {% endwith %}
+  </script>
+</head>
+<body>
+
+<div class="desktop-environment" id="desktop">
+  <!-- 2. Desktop Workspace Canvas (Full Viewport) -->
+  <main class="desktop-workspace" id="desktopWorkspace" oncontextmenu="handleDesktopContextMenu(event)">
+    <!-- Hidden Taskbar for window manager -->
+    <div id="desktopTaskbar" style="display: none;"></div>
+
+    <!-- Central Atmospheric Wallpaper Branding & Desktop Server Switcher -->
+    <div class="desktop-wallpaper-center">
+      <div class="desktop-logo-mark" style="width: 84px; height: 84px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; filter: drop-shadow(0 12px 32px rgba(14, 165, 233, 0.45));">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ShellMan Logo" style="width: 100%; height: 100%; object-fit: contain;">
+      </div>
+      <div class="desktop-title-mark" style="letter-spacing: 0.12em; background: linear-gradient(135deg, #f8fafc 0%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SHELLMAN</div>
+      <div class="desktop-sub-mark">REMOTE INFRASTRUCTURE WORKSPACE &bull; LINUX OS</div>
+
+      <!-- Desktop Server Switcher Component -->
+      <div class="desktop-server-switcher-box">
+        <div style="display:inline-flex; align-items:center; gap:0.55rem; justify-content:center; flex-wrap:wrap;">
+          {% if selected_server %}
+          <button class="desktop-server-switcher-pill" id="serverSelectorPill" onclick="toggleServerMenu(event)" title="Active Node - Click to Switch Server">
+            <span class="status-dot connected" id="topServerDot"></span>
+            <span class="switcher-prefix">CONNECTED NODE:</span>
+            <span class="switcher-name" id="topServerName">{{ selected_server.name }}</span>
+            <span class="switcher-host" id="topServerHost" data-masked="({{ selected_server.host|mask_ip }}:{{ selected_server.port }})" data-unmasked="({{ selected_server.host }}:{{ selected_server.port }})">({{ selected_server.host|mask_ip }}:{{ selected_server.port }})</span>
+            <span class="ip-mask-toggle" id="ipMaskToggleBtn" onclick="toggleDesktopIpMask(event)" title="Show full IP address">
+              <svg class="ip-eye-icon ip-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="ip-eye-icon ip-eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          {% else %}
+          <button class="desktop-server-switcher-pill" id="serverSelectorPill" onclick="toggleServerMenu(event)" title="No Server Selected - Click to Connect">
+            <span class="status-dot disconnected" id="topServerDot"></span>
+            <span class="switcher-prefix">SELECT REMOTE NODE</span>
+            <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          {% endif %}
+        </div>
+
+        <!-- Desktop Server Dropdown Menu -->
+        <div id="serverSelectorMenu" class="desktop-server-dropdown">
+          <div class="server-dropdown-header">
+            <span>SWITCH REMOTE NODE</span>
+            <span class="server-count">{{ servers|length }} Nodes</span>
+          </div>
+          <div class="server-dropdown-list">
+            {% for s in servers %}
+              <a href="/?server_id={{ s.id }}" class="server-dropdown-item {{ 'active' if selected_server and s.id == selected_server.id else '' }}">
+                <div class="server-dropdown-left">
+                  <span class="status-dot {{ 'connected' if s.is_online else 'disconnected' }}"></span>
+                  <span class="server-dropdown-name">{{ s.name }}</span>
+                </div>
+                <span class="server-dropdown-host" data-masked="{{ s.host|mask_ip }}:{{ s.port }}" data-unmasked="{{ s.host }}:{{ s.port }}">{{ s.host|mask_ip }}:{{ s.port }}</span>
+              </a>
+            {% endfor %}
+          </div>
+          <div class="server-dropdown-divider"></div>
+          <div onclick="DesktopApps.launch('settings', { tab: 'servers' }); toggleServerMenu(event);" class="server-dropdown-action-item" style="display:flex; align-items:center; gap:0.55rem; padding:0.48rem 0.65rem; border-radius:5px; background:rgba(56,189,248,0.08) !important; color:#38bdf8 !important; border:1px solid rgba(56,189,248,0.18) !important; font-size:0.75rem; font-weight:600; cursor:pointer; margin-bottom:4px; transition:all 0.15s ease;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2" style="width:14px;height:14px;min-width:14px;min-height:14px;flex-shrink:0;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>Manage All Servers (Settings)...</span>
+          </div>
+          <div onclick="DesktopApps.launch('settings', { tab: 'servers', action: 'add' }); toggleServerMenu(event);" class="server-dropdown-action-item" style="display:flex; align-items:center; gap:0.55rem; padding:0.48rem 0.65rem; border-radius:5px; background:rgba(56,189,248,0.08) !important; color:#38bdf8 !important; border:1px solid rgba(56,189,248,0.18) !important; font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.15s ease;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2" style="width:14px;height:14px;min-width:14px;min-height:14px;flex-shrink:0;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>Add New Server Node...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop Shortcuts Icons Grid -->
+    <div class="desktop-icons-container" id="desktopIcons"></div>
+
+    <!-- 4. Right-Side Desktop Widgets Hub (Clock, CPU, RAM, Storage) -->
+    <div class="desktop-widgets-panel" id="desktopWidgetsPanel">
+      <!-- Big Clock & Calendar Card -->
+      <div class="widget-card widget-clock-card">
+        <div class="widget-time-display">
+          <span class="widget-time-main" id="wgtTime">--:--</span>
+          <span class="widget-time-sec" id="wgtSec">00</span>
+        </div>
+        <div class="widget-date-display" id="wgtDate">--</div>
+      </div>
+
+      <!-- Live Resource Meters Card -->
+      <div class="widget-card widget-resources-card" onclick="DesktopApps.launch('overview')" title="Click to open System Overview">
+        <div class="widget-header">
+          <div class="widget-header-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+            <span>SYSTEM METRICS</span>
+          </div>
+        </div>
+
+        <!-- CPU Metric Meter -->
+        <div class="widget-metric-row">
+          <div class="widget-metric-info">
+            <span class="metric-label">CPU USAGE</span>
+            <span class="metric-value" id="wgtCpuVal">--%</span>
+          </div>
+          <div class="widget-progress-track">
+            <div class="widget-progress-fill cpu-fill" id="wgtCpuBar" style="width: 0%;"></div>
+          </div>
+          <div class="widget-metric-sub" id="wgtCpuLoad">Load: --, --, --</div>
+        </div>
+
+        <!-- RAM Metric Meter -->
+        <div class="widget-metric-row">
+          <div class="widget-metric-info">
+            <span class="metric-label">MEMORY (RAM)</span>
+            <span class="metric-value" id="wgtMemVal">--%</span>
+          </div>
+          <div class="widget-progress-track">
+            <div class="widget-progress-fill mem-fill" id="wgtMemBar" style="width: 0%;"></div>
+          </div>
+          <div class="widget-metric-sub" id="wgtMemDetail">-- / -- GB</div>
+        </div>
+
+        <!-- Storage / Disk Metric Meter -->
+        <div class="widget-metric-row">
+          <div class="widget-metric-info">
+            <span class="metric-label">STORAGE (DISK)</span>
+            <span class="metric-value" id="wgtDiskVal">--%</span>
+          </div>
+          <div class="widget-progress-track">
+            <div class="widget-progress-fill disk-fill" id="wgtDiskBar" style="width: 0%;"></div>
+          </div>
+          <div class="widget-metric-sub" id="wgtDiskDetail">-- / -- GB (/)</div>
+        </div>
+      </div>
+
+      <!-- Quick Server Specs Card -->
+      <div class="widget-card widget-specs-card">
+        <div class="widget-spec-item">
+          <span class="spec-label">UPTIME</span>
+          <span class="spec-val" id="wgtUptime">--</span>
+        </div>
+        <div class="widget-spec-divider"></div>
+        <div class="widget-spec-item">
+          <span class="spec-label">PLATFORM</span>
+          <span class="spec-val" id="wgtOs">{{ selected_server.os_cache if selected_server and selected_server.os_cache else 'Linux' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Windows Container (Movable, Resizable Windows) -->
+    <div class="windows-container" id="windowsContainer"></div>
+
+    <!-- 3. Floating Application Dock -->
+    <div class="desktop-dock-wrapper">
+      <div class="desktop-dock" id="desktopDock"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Desktop Right-Click Context Menu -->
+<div class="desktop-context-menu" id="desktopContextMenu">
+  <div class="ctx-item" onclick="DesktopApps.launch('terminal')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+    New Terminal
+  </div>
+  <div class="ctx-item" onclick="DesktopApps.launch('files')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+    Open File Manager
+  </div>
+  <div class="ctx-item" onclick="DesktopApps.launch('code')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+    Open Code Editor
+  </div>
+  <div class="ctx-item" onclick="DesktopApps.launch('overview')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect></svg>
+    System Overview
+  </div>
+  <div class="ctx-item" onclick="DesktopApps.launch('processes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+    Task Manager
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="WindowManager.cascadeWindows()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="14" height="14" rx="2"></rect><path d="M7 21h14a2 2 0 0 0 2-2V7"></path></svg>
+    Cascade Windows
+  </div>
+  <div class="ctx-item" onclick="WindowManager.minimizeAll()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="4" y1="12" x2="20" y2="12"></line></svg>
+    Minimize All Windows
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="DesktopApps.launch('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+    System Settings
+  </div>
+  <div class="ctx-item" onclick="DesktopApps.launch('servers')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect></svg>
+    Manage Server Nodes
+  </div>
+  <div class="ctx-item" onclick="toggleFullscreen()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+    Toggle Fullscreen (Immersive)
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item pwa-install-btn" onclick="PwaManager.promptInstall()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+    <span class="btn-label" data-installed-text="ShellMan App (Installed)">Download Desktop App (PWA)</span>
+  </div>
+  <div class="ctx-sep"></div>
+  <a href="{{ url_for('auth.logout') }}" class="ctx-item" style="text-decoration: none; color: #ef4444;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+    Sign Out ({{ session.get('username', 'admin') }})
+  </a>
+</div>
+
+<!-- Start Menu Popup -->
+<div class="start-menu-popup" id="startMenuPopup">
+  <input type="text" id="startSearchInput" placeholder="Search applications & actions..." class="form-control start-search-box" oninput="DesktopMenusInstance.filterStartApps(this.value)">
+  <div class="start-apps-grid">
+    <div class="ctx-item" onclick="DesktopApps.launch('overview'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect></svg>
+      <span>System Overview</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('terminal'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+      <span>SSH Terminal (PTY)</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('files'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      <span>File Manager (SFTP)</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('code'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#818cf8"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+      <span>Code Workspace (Monaco)</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('processes'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#34d399"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+      <span>Task Manager &amp; Processes</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('services'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+      <span>System Services (systemd)</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('logs'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line></svg>
+      <span>System Logs (journalctl)</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('hardware'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#c084fc"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>
+      <span>Hardware Architecture</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('network'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+      <span>Network &amp; Sockets</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('servers'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#f43f5e"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect></svg>
+      <span>Infrastructure Nodes</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('settings'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1 2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+      <span>System Settings</span>
+    </div>
+    <div class="ctx-item pwa-install-btn" onclick="PwaManager.promptInstall(); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      <span class="btn-label" data-installed-text="ShellMan App (Installed)">Download App (PWA)</span>
+    </div>
+  </div>
+</div>
+
+<!-- Alt+Tab Task Switcher Modal -->
+<div class="alt-tab-switcher" id="altTabSwitcher">
+  <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Open Applications (Alt+Tab)</div>
+  <div class="alt-tab-grid" id="altTabGrid"></div>
+</div>
+
+<!-- Command Palette Modal -->
+<div class="cmd-palette-backdrop" id="cmdPalette" style="display: none;" onclick="if(event.target===this)DesktopMenusInstance.closeCommandPalette()">
+  <div class="cmd-palette-box">
+    <div class="cmd-search-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="cmdInput" placeholder="Type a command, launch app, or jump to server..." oninput="DesktopMenusInstance.renderCommandResults(this.value)">
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmd-palette-results" id="cmdResults"></div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="desktop-toast-container" id="toastContainer"></div>
+
+<!-- Vendor Scripts -->
+<script src="{{ url_for('static', filename='vendor/xterm/xterm.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-fit.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-web-links.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/monaco/loader.min.js') }}"></script>
+
+<!-- Desktop OS JavaScript Modules -->
+<script src="{{ url_for('static', filename='js/desktop/pwa.js') }}"></script>
+<script src="{{ url_for('static', filename='js/desktop/wm.js') }}"></script>
+<script src="{{ url_for('static', filename='js/desktop/dock.js') }}"></script>
+<script src="{{ url_for('static', filename='js/desktop/menu.js') }}"></script>
+<script src="{{ url_for('static', filename='js/desktop/apps.js') }}"></script>
+<script src="{{ url_for('static', filename='js/desktop/main.js') }}"></script>
+
+</body>
+</html>

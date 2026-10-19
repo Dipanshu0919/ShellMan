@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+
+{% block title %}Terminal - ShellMan{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/xterm/xterm.css') }}">
+{% endblock %}
+
+{% block content_class %}full-bleed{% endblock %}
+
+{% block content %}
+{% if not selected_server %}
+  <div style="padding: 3rem; text-align: center;">
+    <h3>No Server Selected</h3>
+    <p style="color: var(--text-secondary); margin-top: 0.5rem;">Please select or configure a remote server to launch terminal.</p>
+    <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
+  </div>
+{% else %}
+  <div class="terminal-app-container" id="terminalAppContainer">
+    <!-- Top Multi-Tab Terminal Toolbar -->
+    <header class="terminal-toolbar">
+      <!-- Tabs track on left -->
+      <div class="terminal-tabs-track" id="terminalTabsTrack">
+        <!-- Dynamic tab pills inserted here -->
+      </div>
+
+      <!-- Add Tab Button -->
+      <button class="terminal-add-tab-btn" onclick="createNewTab()" title="New Terminal Session (Alt+T)">
+        <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+
+      <div style="width: 1px; height: 18px; background: var(--border-subtle); margin: 0 0.25rem;"></div>
+
+      <!-- Session Info & Actions on right -->
+      <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-family: var(--font-mono); color: var(--text-secondary);">
+          <span class="status-dot" id="activeStatusDot"></span>
+          <span id="activeStatusText">Ready</span>
+          <span style="color: var(--text-muted); font-size: 0.72rem; margin-left: 0.2rem;" id="activeDimText">80x24</span>
+        </div>
+
+        <button class="btn btn-ghost btn-sm" onclick="copyTerminalBuffer()" title="Copy Terminal Output to Clipboard">
+          <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          Copy
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="clearActiveTerminal()" title="Clear Screen">
+          <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+          Clear
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="reconnectActiveTerminal()" title="Reconnect PTY">
+          <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          Reconnect
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleFullscreen()" title="Toggle Fullscreen">
+          <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Multi-Tab Terminal Viewports Container -->
+    <div class="terminal-viewport-container" id="terminalViewportContainer">
+      <!-- Dynamic tab terminal instances inserted here -->
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if selected_server %}
+<script src="{{ url_for('static', filename='vendor/xterm/xterm.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-fit.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-web-links.js') }}"></script>
+
+<script>
+  const serverId = {{ selected_server.id }};
+  const serverName = "{{ selected_server.name }}";
+  const serverHost = "{{ selected_server.host|mask_ip }}:{{ selected_server.port }}";
+
+  // Tab state collection
+  // Map of tabId -> { id, title, term, fitAddon, socket, containerEl, pillEl, status, cols, rows }
+  const terminalTabs = new Map();
+  let activeTabId = null;
+  let tabCounter = 0;
+
+  const tabsTrack = document.getElementById('terminalTabsTrack');
+  const viewportContainer = document.getElementById('terminalViewportContainer');
+  const activeStatusDot = document.getElementById('activeStatusDot');
+  const activeStatusText = document.getElementById('activeStatusText');
+  const activeDimText = document.getElementById('activeDimText');
+
+  const xtermTheme = {
+    background: '#090d16',
+    foreground: '#f8fafc',
+    cursor: '#38bdf8',
+    selectionBackground: 'rgba(56, 189, 248, 0.3)',
+    black: '#1e293b',
+    red: '#f43f5e',
+    green: '#10b981',
+    yellow: '#f59e0b',
+    blue: '#3b82f6',
+    magenta: '#d946ef',
+    cyan: '#06b6d4',
+    white: '#f8fafc',
+    brightBlack: '#64748b',
+    brightRed: '#fb7185',
+    brightGreen: '#34d399',
+    brightYellow: '#fbbf24',
+    brightBlue: '#60a5fa',
+    brightMagenta: '#e879f9',
+    brightCyan: '#22d3ee',
+    brightWhite: '#ffffff'
+  };
+
+  function createNewTab(initialTitle) {
+    tabCounter++;
+    const tabId = 'tab_' + Date.now() + '_' + tabCounter;
+    const title = initialTitle || `Terminal ${tabCounter}`;
+
+    // 1. Create viewport instance element
+    const containerEl = document.createElement('div');
+    containerEl.className = 'terminal-tab-instance';
+    containerEl.id = `screen_${tabId}`;
+    viewportContainer.appendChild(containerEl);
+
+    // 2. Initialize xterm
+    const term = new Terminal({
+      cursorBlink: true,
+      cursorStyle: 'bar',
+      fontSize: 14,
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      theme: xtermTheme,
+      allowProposedApi: true,
+      scrollback: 5000,
+      macOptionIsMeta: true
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+
+    if (window.WebLinksAddon) {
+      term.loadAddon(new WebLinksAddon.WebLinksAddon());
+    }
+
+    term.open(containerEl);
+
+    // Keyboard handling: prevent browser default shortcuts, transmit control characters
+    term.attachCustomKeyEventHandler((event) => {
+      // Ctrl+C with text selected -> native copy
+      if (event.ctrlKey && event.key.toLowerCase() === 'c' && term.hasSelection()) {
+        return true;
+      }
+      // Ctrl+V or Shift+Insert -> allow paste
+      if ((event.ctrlKey && event.key.toLowerCase() === 'v') || (event.shiftKey && event.key === 'Insert')) {
+        return true;
+      }
+      // Intercept browser shortcuts
+      if (event.ctrlKey && !event.altKey) {
+        const key = event.key.toLowerCase();
+        if (['s', 'w', 'o', 'f', 'p', 'd', 'j', 'k', 'r', 'n', 't', 'g', 'h'].includes(key)) {
+          if (event.type === 'keydown') {
+            event.preventDefault();
+            event.stopPropagation();
+            const code = key.charCodeAt(0) - 96;
+            sendTabPayload(tabId, { type: 'input', data: String.fromCharCode(code) });
+          }
+          return false;
+        }
+      }
+      return true;
+    });
+
+    term.onData((data) => {
+      sendTabPayload(tabId, { type: 'input', data: data });
+    });
+
+    // 3. Create Tab Pill element
+    const pillEl = document.createElement('div');
+    pillEl.className = 'terminal-tab-pill';
+    pillEl.id = `pill_${tabId}`;
+    pillEl.onclick = () => switchTab(tabId);
+    pillEl.innerHTML = `
+      <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+      <span class="tab-title">${title}</span>
+      <button class="tab-close-btn" onclick="closeTab('${tabId}', event)" title="Close Session">✕</button>
+    `;
+    tabsTrack.appendChild(pillEl);
+
+    // Store in tab map
+    const tabObj = {
+      id: tabId,
+      title: title,
+      term: term,
+      fitAddon: fitAddon,
+      socket: null,
+      containerEl: containerEl,
+      pillEl: pillEl,
+      status: 'connecting',
+      cols: 80,
+      rows: 24
+    };
+    terminalTabs.set(tabId, tabObj);
+
+    // Switch to new tab and establish connection
+    switchTab(tabId);
+    connectTabWebSocket(tabId);
+
+    // Resize observer
+    const resizeObserver = new ResizeObserver(() => {
+      if (activeTabId === tabId && term && fitAddon) {
+        try {
+          fitAddon.fit();
+          sendTabResize(tabId);
+        } catch (_) {}
+      }
+    });
+    resizeObserver.observe(containerEl);
+
+    if (window.showToast) window.showToast(`Opened ${title}`, 'info');
+  }
+
+  function switchTab(tabId) {
+    if (!terminalTabs.has(tabId)) return;
+    activeTabId = tabId;
+
+    terminalTabs.forEach((tab, id) => {
+      if (id === tabId) {
+        tab.pillEl.classList.add('active');
+        tab.containerEl.classList.add('active');
+        setTimeout(() => {
+          try {
+            tab.fitAddon.fit();
+            sendTabResize(id);
+            tab.term.focus();
+          } catch (_) {}
+        }, 50);
+        updateActiveStatusUI(tab);
+      } else {
+        tab.pillEl.classList.remove('active');
+        tab.containerEl.classList.remove('active');
+      }
+    });
+
+    updateInspectorTerminalInfo();
+  }
+
+  function closeTab(tabId, event) {
+    if (event) event.stopPropagation();
+    if (!terminalTabs.has(tabId)) return;
+
+    const tab = terminalTabs.get(tabId);
+    if (tab.socket) {
+      try { tab.socket.close(); } catch (_) {}
+    }
+    if (tab.term) {
+      try { tab.term.dispose(); } catch (_) {}
+    }
+    if (tab.containerEl && tab.containerEl.parentNode) {
+      tab.containerEl.parentNode.removeChild(tab.containerEl);
+    }
+    if (tab.pillEl && tab.pillEl.parentNode) {
+      tab.pillEl.parentNode.removeChild(tab.pillEl);
+    }
+
+    terminalTabs.delete(tabId);
+
+    // Switch to another tab if the closed tab was active
+    if (activeTabId === tabId) {
+      const remaining = Array.from(terminalTabs.keys());
+      if (remaining.length > 0) {
+        switchTab(remaining[remaining.length - 1]);
+      } else {
+        createNewTab('Terminal 1');
+      }
+    }
+  }
+
+  function connectTabWebSocket(tabId) {
+    const tab = terminalTabs.get(tabId);
+    if (!tab) return;
+
+    tab.status = 'connecting';
+    if (activeTabId === tabId) updateActiveStatusUI(tab);
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/terminal/${serverId}?cols=${tab.term.cols || 80}&rows=${tab.term.rows || 24}`;
+
+    const socket = new WebSocket(wsUrl);
+    tab.socket = socket;
+
+    socket.onopen = () => {
+      tab.status = 'connected';
+      if (activeTabId === tabId) updateActiveStatusUI(tab);
+      sendTabResize(tabId);
+      tab.term.focus();
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'data') {
+          tab.term.write(msg.data);
+        } else if (msg.type === 'closed') {
+          tab.term.write(msg.data || '\r\n[Disconnected]\r\n');
+          tab.status = 'disconnected';
+          if (activeTabId === tabId) updateActiveStatusUI(tab);
+        } else if (msg.type === 'error') {
+          tab.term.write(`\r\n\x1b[31m[Error] ${msg.data}\x1b[0m\r\n`);
+          tab.status = 'error';
+          if (activeTabId === tabId) updateActiveStatusUI(tab);
+        }
+      } catch (_) {
+        tab.term.write(event.data);
+      }
+    };
+
+    socket.onclose = () => {
+      tab.status = 'disconnected';
+      if (activeTabId === tabId) updateActiveStatusUI(tab);
+    };
+
+    socket.onerror = () => {
+      tab.status = 'error';
+      if (activeTabId === tabId) updateActiveStatusUI(tab);
+    };
+  }
+
+  function sendTabPayload(tabId, obj) {
+    const tab = terminalTabs.get(tabId);
+    if (tab && tab.socket && tab.socket.readyState === WebSocket.OPEN) {
+      tab.socket.send(JSON.stringify(obj));
+    }
+  }
+
+  function sendTabResize(tabId) {
+    const tab = terminalTabs.get(tabId);
+    if (!tab || !tab.term) return;
+    const cols = tab.term.cols;
+    const rows = tab.term.rows;
+    tab.cols = cols;
+    tab.rows = rows;
+    if (activeTabId === tabId) {
+      activeDimText.textContent = `${cols}x${rows}`;
+    }
+    sendTabPayload(tabId, { type: 'resize', cols: cols, rows: rows });
+  }
+
+  function updateActiveStatusUI(tab) {
+    if (tab.status === 'connected') {
+      activeStatusDot.className = 'status-dot connected';
+      activeStatusText.textContent = 'PTY Active';
+    } else if (tab.status === 'connecting') {
+      activeStatusDot.className = 'status-dot';
+      activeStatusText.textContent = 'Connecting...';
+    } else {
+      activeStatusDot.className = 'status-dot disconnected';
+      activeStatusText.textContent = 'Disconnected';
+    }
+    activeDimText.textContent = `${tab.cols || tab.term.cols}x${tab.rows || tab.term.rows}`;
+  }
+
+  function reconnectActiveTerminal() {
+    if (!activeTabId || !terminalTabs.has(activeTabId)) return;
+    const tab = terminalTabs.get(activeTabId);
+    if (tab.socket) {
+      try { tab.socket.close(); } catch (_) {}
+    }
+    tab.term.reset();
+    connectTabWebSocket(activeTabId);
+    if (window.showToast) window.showToast(`Reconnected ${tab.title}`, 'info');
+  }
+
+  function clearActiveTerminal() {
+    if (!activeTabId || !terminalTabs.has(activeTabId)) return;
+    terminalTabs.get(activeTabId).term.clear();
+  }
+
+  function copyTerminalBuffer() {
+    if (!activeTabId || !terminalTabs.has(activeTabId)) return;
+    const term = terminalTabs.get(activeTabId).term;
+    let text = term.getSelection();
+    if (!text) {
+      const buffer = term.buffer.active;
+      const lines = [];
+      for (let i = 0; i < buffer.length; i++) {
+        lines.push(buffer.getLine(i).translateToString(true));
+      }
+      text = lines.join('\n');
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        if (window.showToast) window.showToast('Terminal output copied to clipboard', 'success');
+      });
+    }
+  }
+
+  function toggleFullscreen() {
+    const el = document.getElementById('terminalAppContainer');
+    if (!document.fullscreenElement) {
+      el.requestFullscreen().catch(err => alert(`Fullscreen error: ${err.message}`));
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  function updateInspectorTerminalInfo() {
+    if (!window.setInspectorContent || !activeTabId) return;
+    const tab = terminalTabs.get(activeTabId);
+    if (!tab) return;
+    window.setInspectorContent('Terminal Session', [
+      { key: 'Active Session', val: tab.title },
+      { key: 'Node Target', val: serverName },
+      { key: 'Endpoint', val: serverHost },
+      { key: 'Status', val: tab.status.toUpperCase() },
+      { key: 'Dimensions', val: `${tab.cols} cols × ${tab.rows} rows` },
+      { key: 'Buffer Size', val: '5000 lines' },
+      { key: 'Active Tabs', val: `${terminalTabs.size} session(s)` }
+    ]);
+  }
+
+  // --- Keyboard Shortcuts for Terminal App ---
+  window.addEventListener('keydown', (e) => {
+    // Alt+T -> New Tab
+    if (e.altKey && e.key.toLowerCase() === 't') {
+      e.preventDefault();
+      createNewTab();
+    }
+    // Alt+W -> Close Tab
+    if (e.altKey && e.key.toLowerCase() === 'w') {
+      e.preventDefault();
+      if (activeTabId) closeTab(activeTabId);
+    }
+    // Alt+[1-9] -> Switch to Tab index
+    if (e.altKey && !isNaN(parseInt(e.key)) && parseInt(e.key) > 0) {
+      const idx = parseInt(e.key) - 1;
+      const tabs = Array.from(terminalTabs.keys());
+      if (idx < tabs.length) {
+        e.preventDefault();
+        switchTab(tabs[idx]);
+      }
+    }
+  });
+
+  // Launch initial tab
+  window.addEventListener('load', () => {
+    createNewTab('Terminal 1');
+  });
+</script>
+{% endif %}
+{% endblock %}

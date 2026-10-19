@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - ShellMan{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+  <div style="margin-bottom: 1.5rem;">
+    <h2 style="font-size: 1.4rem; font-weight: 700;">Account & Panel Settings</h2>
+    <p style="font-size: 0.85rem; color: var(--text-secondary);">
+      Manage your ShellMan control center credentials and preferences.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Change Password</span>
+    </div>
+
+    <form method="POST">
+      <input type="hidden" name="action" value="change_password">
+      <div class="form-group">
+        <label class="form-label" for="current_password">Current Password</label>
+        <input class="form-control" type="password" id="current_password" name="current_password" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="new_password">New Password</label>
+        <input class="form-control" type="password" id="new_password" name="new_password" required minlength="6">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="confirm_password">Confirm New Password</label>
+        <input class="form-control" type="password" id="confirm_password" name="confirm_password" required>
+      </div>
+
+      <div style="text-align: right; margin-top: 1.5rem;">
+        <button type="submit" class="btn btn-primary">Update Password</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+      <span class="card-title">About ShellMan</span>
+    </div>
+    <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+      <p><strong>ShellMan</strong> is a lightweight, agentless Linux server management panel.</p>
+      <p style="margin-top: 0.5rem;">Persistent overhead on managed VPS: <strong>0 MB permanent RAM</strong>. Communicates exclusively using OpenSSH, SFTP, and interactive PTY sessions.</p>
+      <p style="margin-top: 0.5rem;">Version: <strong>1.0.0</strong></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
