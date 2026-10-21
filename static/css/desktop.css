@@ -2432,7 +2432,9 @@ input[type="file"]::file-selector-button:hover {
 
 /* File Manager Right-Side Properties Panel */
 .files-props-panel {
-  width: 250px;
+  width: 285px;
+  min-width: 220px;
+  max-width: 750px;
   background: #090e18 !important;
   border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
   display: flex;
@@ -2440,6 +2442,42 @@ input[type="file"]::file-selector-button:hover {
   overflow-y: auto;
   flex-shrink: 0;
   user-select: none;
+  position: relative;
+}
+
+.files-props-resizer {
+  width: 6px;
+  margin-right: -6px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 25;
+  user-select: none;
+  touch-action: none;
+  transition: background 0.15s ease;
+}
+
+.files-props-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.files-props-resizer:hover::after,
+.files-props-resizer.is-resizing::after {
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+}
+
+.files-props-resizer:hover,
+.files-props-resizer.is-resizing {
+  background: rgba(56, 189, 248, 0.12);
 }
 
 .props-action-btn {
@@ -2683,10 +2721,199 @@ input[type="file"]::file-selector-button:hover {
   flex-shrink: 0;
 }
 
-/* In standalone installed PWA window, hide redundant download prompt */
-body.pwa-standalone .desktop-server-switcher-box .pwa-install-pill {
-  display: none !important;
+/* ==========================================================================
+   CUSTOM ACTIONS APPLICATION STYLING
+   ========================================================================== */
+.custom-action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.75rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.16);
+  border-radius: 8px;
+  margin-bottom: 0.45rem;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  user-select: none;
 }
+
+.custom-action-card:hover {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(56, 189, 248, 0.42);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.custom-action-card.builtin-deploy {
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(6, 78, 59, 0.18);
+}
+.custom-action-card.builtin-deploy:hover {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(6, 78, 59, 0.32);
+}
+
+.custom-action-card.builtin-shield {
+  border-color: rgba(139, 92, 246, 0.25);
+  background: rgba(76, 29, 149, 0.18);
+}
+.custom-action-card.builtin-shield:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(76, 29, 149, 0.32);
+}
+
+.custom-action-card.builtin-checksum {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(120, 53, 15, 0.18);
+}
+.custom-action-card.builtin-checksum:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(120, 53, 15, 0.32);
+}
+
+.custom-action-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.custom-action-del-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.custom-action-card:hover .custom-action-del-btn {
+  opacity: 1;
+}
+
+.custom-action-del-btn:hover {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  color: #ef4444 !important;
+  transform: scale(1.08);
+}
+
+.custom-action-run-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.custom-action-card:hover .custom-action-run-btn {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: scale(1.08);
+}
+
+.custom-action-icon-opt:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.add-custom-action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.add-custom-action-card:hover {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.custom-action-pill-var {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.12s ease;
+}
+
+.custom-action-pill-var:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+}
+
+.action-output-box {
+  background: #06090e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #e2e8f0;
+  max-height: 380px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.file-action-selected-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.75rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  margin-bottom: 0.85rem;
+}
+
+.file-action-selected-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+
 
 
 

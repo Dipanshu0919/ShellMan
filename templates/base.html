@@ -15,6 +15,18 @@
   <meta name="apple-mobile-web-app-title" content="ShellMan">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>
+    (function() {
+      try {
+        var s = localStorage.getItem('shellman_font_size');
+        if (s) {
+          document.documentElement.style.fontSize = s + 'px';
+          document.documentElement.style.setProperty('--app-font-size', s + 'px');
+          document.documentElement.style.setProperty('--app-font-scale', (parseInt(s, 10) / 16).toString());
+        }
+      } catch(e) {}
+    })();
+  </script>
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -410,6 +422,7 @@
       { name: "Logs", desc: "Journalctl and system logs viewer", url: "{{ url_for('logs.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
       { name: "Hardware", desc: "CPU, memory, storage specifications", url: "{{ url_for('system.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
       { name: "Network", desc: "Network interfaces & open listening ports", url: "{{ url_for('network.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
+      { name: "Nginx & Domains", desc: "Reverse proxy routing, configuration editor, and Certbot SSL", url: "{{ url_for('nginx.index', server_id=selected_server.id if selected_server else None) }}", badge: "App" },
       { name: "Nodes", desc: "Register or configure servers", url: "{{ url_for('servers.index') }}", badge: "App" },
       { name: "Switch Node", desc: "Switch active remote server", action: () => { closeCommandPalette(); openServerSelectorModal(); }, badge: "Action" },
       { name: "Toggle Inspector", desc: "Show/hide contextual telemetry drawer", action: () => { closeCommandPalette(); toggleContextualInspector(); }, badge: "Action" },

@@ -11,8 +11,10 @@
   <a href="#the-story-why-shellman"><img src="https://img.shields.io/badge/Agent-0_MB_Overhead-0ea5e9?style=for-the-badge&logo=linux&logoColor=white" alt="Agentless"></a>
   <a href="#quick-start-guide"><img src="https://img.shields.io/badge/Python-3.9+-38bdf8?style=for-the-badge&logo=python&logoColor=white" alt="Python Version"></a>
   <a href="#2-real-interactive-ssh-pty-terminal"><img src="https://img.shields.io/badge/Terminal-xterm.js_%2B_PTY-10b981?style=for-the-badge&logo=gnometerminal&logoColor=white" alt="Terminal"></a>
-  <a href="#3-sftp-file-manager-with-recursive-folder-drag-and-drop"><img src="https://img.shields.io/badge/Transport-SFTP_over_SSH-f59e0b?style=for-the-badge&logo=files&logoColor=white" alt="SFTP"></a>
-  <a href="#7-progressive-web-app-pwa-support"><img src="https://img.shields.io/badge/PWA-Installable-8b5cf6?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA Ready"></a>
+  <a href="#3-sftp-file-manager-with-recursive-folder-drag-and-drop--custom-actions"><img src="https://img.shields.io/badge/Transport-SFTP_over_SSH-f59e0b?style=for-the-badge&logo=files&logoColor=white" alt="SFTP"></a>
+  <a href="#6-real-time-task-manager--linux-process-control"><img src="https://img.shields.io/badge/Processes-POSIX_Control-34d399?style=for-the-badge&logo=htop&logoColor=white" alt="Processes"></a>
+  <a href="#8-nginx-web-server-reverse-proxy-routing--certbot-ssl"><img src="https://img.shields.io/badge/Routing-Nginx_%2B_Certbot_SSL-059669?style=for-the-badge&logo=nginx&logoColor=white" alt="Nginx & Certbot"></a>
+  <a href="#9-progressive-web-app-pwa-support"><img src="https://img.shields.io/badge/PWA-Installable-8b5cf6?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA Ready"></a>
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-64748b?style=for-the-badge" alt="License"></a>
 </p>
 
@@ -57,6 +59,8 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 | **Inbound Firewall Ports Needed** | Custom open ports (`8080`, `9090`, etc.) | **Standard OpenSSH (Port 22 only)** |
 | **Multi-Node Fleet Control** | Often requires paid multi-server licenses | **Built-in instant node switcher** |
 | **File Transfer Experience** | Basic single-file HTML uploaders | **Recursive folder Drag & Drop via SFTP** |
+| **Custom Automations** | Hardcoded menus or complex plugins | **Extensible Custom Actions with safe POSIX variable injection & 33+ vector SVGs** |
+| **Process & Task Management** | Coarse CPU list or heavy background poller | **Agentless POSIX control (SIGTERM, SIGKILL, SIGSTOP, SIGCONT) with RSS & PSS memory metrics** |
 | **Terminal Capability** | Simulated web console | **Real interactive PTY with xterm.js (vim, htop, tmux)** |
 | **Code Editing** | Plain textarea or basic editor | **Full Monaco Editor (VS Code engine)** |
 | **Interface Style** | Tab-heavy static web pages | **Fluid Multi-Window Web Desktop OS & PWA** |
@@ -72,8 +76,8 @@ Your remote servers dedicate **100% of their compute and memory to your workload
   <img src="docs/screenshots/desktop-overview.png" alt="ShellMan Desktop Environment" width="950">
 </p>
 
-### 2. Remote SFTP File Manager with Recursive Drag-and-Drop
-> Dual-pane remote file browser with directory tree navigation, item properties inspection drawer, batch operations bar, and breadcrumbs.
+### 2. Remote SFTP File Manager with Recursive Drag-and-Drop & Custom Actions
+> Dual-pane remote file browser with directory tree navigation, persistent resizable properties panel, recursive folder drag-and-drop, and an extensible Custom Actions engine with safe parameter interpolation and live terminal handoff.
 <p align="center">
   <img src="docs/screenshots/file-manager-sftp.png" alt="ShellMan SFTP File Manager" width="950">
 </p>
@@ -113,11 +117,17 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Signal Handling**: Dedicated raw input interception handles <kbd>Ctrl</kbd>+<kbd>C</kbd>, <kbd>Ctrl</kbd>+<kbd>D</kbd>, <kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>L</kbd>, and arrow keys without browser collision.
 - **Dynamic Viewport Auto-Fit**: Window resizes trigger real-time PTY terminal column and row recalculations via `fitAddon`.
 
-### 3. SFTP File Manager with Recursive Folder Drag-and-Drop
-- **Drop Entire Directories**: Drag any folder from your local desktop and drop it into the browser window — ShellMan recursively uploads all nested files and creates remote subdirectories automatically (`mkdir -p`).
-- **Target Folder Hover Detection**: Drop files directly onto specific folder rows or grid items to upload straight into them.
-- **Dual View Modes**: Switch between a compact details list and a visual thumbnail grid.
-- **Context Drawer & Batch Operations**: Inspect file permissions (`chmod`), ownership (`chown`), file sizes, and modification timestamps. Batch move, copy, compress (`.zip`/`.tar.gz`), and delete items.
+### 3. SFTP File Manager with Recursive Folder Drag-and-Drop & Custom Actions
+- **Custom Actions Automation Engine**: Turn recurring shell commands into reusable remote buttons directly embedded in the file manager.
+  - **Safe POSIX Parameter Substitution**: Variables are safely quoted and escaped to prevent command injection: `{{selected_path}}`, `{{selected_name}}`, `{{current_dir}}`, `{{selected_paths}}`, and `{{server_name}}`.
+  - **Embedded Output Panel & Terminal Handoff**: Run actions with live status badges, exit code tracking, stdout/stderr output streaming, rerun button, and a 1-click terminal handoff to continue interactively.
+  - **Confirmation Shield**: Optional confirmation dialog displaying the target server, selected remote paths, and exact command preview before execution.
+  - **Extensive Vector Icon Library**: Searchable 3-column palette featuring 33+ clean vector SVG icons tailored for Linux administration (Deploy, Run, Shield, Lock, Key, Checksum, Archive, Logs, Database, Server, CPU, Cloud, Download, Upload, Restart, Trash, Wrench, Zap, Search, Alert, Code, Backup, Network, Health, Release, Git, Container, Web, Link, Config).
+  - **Export & Import**: Share custom actions between servers and teammates via standardized JSON export/import.
+- **Persistent Drag-to-Resize Properties Drawer**: An interactive vertical split handle allows dragging the right-side properties panel from 220px to 750px. Width persists in local storage across browser reloads. Double-click the handle to restore default width.
+- **Recursive Folder Drag-and-Drop**: Drag entire directory hierarchies from your local workstation directly into the browser — ShellMan automatically creates remote folders recursively (`mkdir -p`) and uploads all nested files.
+- **Target Folder Hover Detection**: Hover dropped files directly over a target folder row or grid tile to upload straight into that subdirectory.
+- **Dual View Modes & Batch Operations**: Switch between a compact details list and a responsive thumbnail grid. Inspect permissions (`chmod`), ownership (`chown`), file sizes, and timestamps. Batch move, copy, compress (`.zip`/`.tar.gz`), and delete items.
 
 ### 4. Monaco Code Workspace (VS Code Engine)
 - **Full-Fledged Editor**: Powered by Microsoft Monaco with syntax highlighting, bracket matching, line numbers, and multi-cursor support.
@@ -129,12 +139,42 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Disk Partition Mounts**: Visual usage meters for root (`/`), boot mounts, and external drives.
 - **OS & Kernel Specs**: Linux distribution detection, kernel release, uptime counter, and CPU architecture.
 
-### 6. System Services & Task Management
-- **Systemd Control**: Inspect all service unit states (`active`, `running`, `failed`, `inactive`) with one-click Start, Stop, and Restart actions.
-- **Task Manager & Process Control**: Live process list sorted by CPU and memory. Search by PID or process name and terminate with `SIGTERM (15)` or force `SIGKILL (-9)`.
+### 6. Real-Time Task Manager & Linux Process Control
+- **Agentless Process Telemetry (0 MB Resident Daemon)**: Reads process statistics directly via standard OpenSSH using `/proc` and `ps -eo` inspection — requiring zero agent daemons or background workers on remote servers.
+- **Multi-Metric Memory Footprint (RSS, PSS, VSZ & RAM%)**:
+  - **RSS (Resident Set Size)**: Physical RAM allocated to the process.
+  - **PSS (Proportional Set Size)**: Private memory plus proportional share of shared libraries (`/proc/[pid]/smaps_rollup`), revealing true individual memory weight.
+  - **VSZ (Virtual Size)**: Total virtual memory address space.
+  - **RAM%**: Formatted alongside exact memory footprint (e.g. `45.2 MB (2.3%)`).
+- **Decoded Linux Process State Engine**: Automatically translates Linux `STAT` codes into human-readable states with color-coded badges and explanatory tooltips:
+  - `Running` (`R`): Actively executing instructions on CPU.
+  - `Active` (`S`): Healthy process sleeping and waiting for incoming events or network requests.
+  - `Disk Wait` (`D`): Uninterruptible sleep awaiting disk or hardware I/O.
+  - `Zombie` (`Z`): Defunct process terminated but not yet reaped by its parent.
+  - `Stopped` (`T` / `t`): Paused by job control signals or an active debugger.
+  - `Idle` (`I`): Idle kernel worker thread.
+  - Modifiers: High priority (`<`), Nice low priority (`N`), Locked memory pages (`L`), Session leader (`s`), Multi-threaded (`l`), Foreground process (`+`).
+- **Full POSIX Signal Dispatch**: Right-click or menu actions for instant signal delivery:
+  - `SIGTERM (15)`: Request clean, graceful application shutdown.
+  - `SIGKILL (-9)`: Immediate forced termination for unkillable or frozen tasks.
+  - `SIGSTOP (19)`: Pause / freeze execution without losing process memory.
+  - `SIGCONT (18)`: Resume paused execution.
+  - Quick Copy: 1-click clipboard copy for PID and complete command line arguments.
+- **Host Telemetry Bar**: Integrated header meters displaying live host-wide CPU %, RAM %, and root partition disk % with animated capacity bars.
+- **Column Customization & Instant Filtering**: Select visible columns with localStorage persistence. Filter instantly across PID, username, command name, and argument flags. Sort columns ascending or descending with one click.
+
+### 7. System Services & Journalctl Logs
+- **Systemd Unit Control**: Inspect all service states (`active`, `running`, `failed`, `inactive`) with one-click Start, Stop, and Restart actions.
 - **System & Journalctl Logs**: Stream journal logs in real-time with filtering by service unit and severity level.
 
-### 7. Progressive Web App (PWA) Support
+### 8. Nginx Web Server, Reverse Proxy Routing & Certbot SSL
+- **Reverse Proxy Domain Routing**: Easily route public domain names to internal applications and microservices running on local ports (e.g. Node.js, Python, Flask, FastAPI, Docker containers).
+- **Automated Let's Encrypt SSL**: 1-click HTTPS certificate issuance and renewals powered by Certbot and the Certbot Nginx plugin. Automatically handles HTTP-to-HTTPS redirects.
+- **Safe Nginx Configuration Editor**: Inspect and edit `/etc/nginx/nginx.conf` and `sites-available` files directly within a syntax-highlighted editor with tab indentation.
+- **Automated Syntax Validation & Rollback**: Every configuration change is automatically tested with `nginx -t`. If syntax fails, changes are safely rolled back to a backup copy with zero service downtime.
+- **Service Controls**: One-click configuration reload (`nginx -s reload`), restart, and native package installer for Nginx and Certbot.
+
+### 9. Progressive Web App (PWA) Support
 - **Installable Desktop App**: Install ShellMan as a native desktop application in Chrome, Brave, Edge, or Safari with custom window controls overlay.
 - **Distraction-Free**: Runs in standalone mode without browser tabs, address bars, or extension clutter.
 

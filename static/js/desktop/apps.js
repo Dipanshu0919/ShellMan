@@ -55,6 +55,8 @@ class DesktopAppsController {
         return this.launchHardware(params);
       case 'network':
         return this.launchNetwork(params);
+      case 'nginx':
+        return this.launchNginx(params);
       case 'servers':
         return this.launchSettings({ tab: 'servers' });
       case 'settings':
@@ -128,10 +130,11 @@ class DesktopAppsController {
         const dotEl = bodyEl.querySelector(`#dot_${termWinId}`);
         const dimEl = bodyEl.querySelector(`#dim_${termWinId}`);
 
+        const baseFontPx = parseFloat(localStorage.getItem('shellman_font_size') || '16');
         const term = new Terminal({
           cursorBlink: true,
           cursorStyle: 'bar',
-          fontSize: 14,
+          fontSize: Math.max(10, Math.round(14 * (baseFontPx / 16))),
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
           theme: {
             background: '#090d16',
@@ -148,6 +151,9 @@ class DesktopAppsController {
 
         const fitAddon = new FitAddon.FitAddon();
         term.loadAddon(fitAddon);
+        term._fitAddon = fitAddon;
+        window._shellmanTerminals = window._shellmanTerminals || new Set();
+        window._shellmanTerminals.add(term);
         if (window.WebLinksAddon) term.loadAddon(new WebLinksAddon.WebLinksAddon());
 
         term.open(screenEl);
@@ -262,6 +268,7 @@ class DesktopAppsController {
         };
 
         winObj.onClose = () => {
+          if (window._shellmanTerminals) window._shellmanTerminals.delete(term);
           if (socket) socket.close();
           term.dispose();
         };
@@ -403,6 +410,9 @@ class DesktopAppsController {
               <div id="gridView_${fileWinId}" style="display:none; padding:0.75rem; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:0.65rem;"></div>
             </div>
 
+            <!-- Properties Resizer Handle -->
+            <div class="files-props-resizer" id="propsResizer_${fileWinId}" title="Drag to resize properties panel (Double-click to reset)"></div>
+
             <!-- Properties Panel (Right-Side Drawer) -->
             <aside class="files-props-panel" id="propsPanel_${fileWinId}">
               <div id="propsContent_${fileWinId}" style="padding:0.9rem; display:flex; flex-direction:column; gap:0.9rem;">
@@ -509,6 +519,7 @@ class DesktopAppsController {
         const folderInput = bodyEl.querySelector(`#folderInput_${fileWinId}`);
         const uploadFolderBtn = bodyEl.querySelector(`#uploadFolderBtn_${fileWinId}`);
         const splitBody = bodyEl.querySelector(`#splitBody_${fileWinId}`);
+        const propsResizer = bodyEl.querySelector(`#propsResizer_${fileWinId}`);
         const propsPanel = bodyEl.querySelector(`#propsPanel_${fileWinId}`);
         const propsContent = bodyEl.querySelector(`#propsContent_${fileWinId}`);
         const togglePropsBtn = bodyEl.querySelector(`#togglePropsBtn_${fileWinId}`);
@@ -517,8 +528,83 @@ class DesktopAppsController {
           togglePropsBtn.onclick = () => {
             isPropsOpen = !isPropsOpen;
             if (propsPanel) propsPanel.style.display = isPropsOpen ? 'flex' : 'none';
+            if (propsResizer) propsResizer.style.display = isPropsOpen ? 'block' : 'none';
             togglePropsBtn.classList.toggle('active', isPropsOpen);
           };
+        }
+
+        // Properties panel width persistence & interactive drag resize
+        const PROPS_WIDTH_STORAGE_KEY = 'shellman_files_props_width';
+        const DEFAULT_PROPS_WIDTH = 285;
+        const MIN_PROPS_WIDTH = 220;
+        const MAX_PROPS_WIDTH = 750;
+
+        const restorePropsWidth = () => {
+          if (!propsPanel) return;
+          const savedWidth = parseInt(localStorage.getItem(PROPS_WIDTH_STORAGE_KEY), 10);
+          if (savedWidth && !isNaN(savedWidth) && savedWidth >= MIN_PROPS_WIDTH && savedWidth <= MAX_PROPS_WIDTH) {
+            propsPanel.style.width = savedWidth + 'px';
+          }
+        };
+
+        restorePropsWidth();
+
+        if (propsResizer && propsPanel) {
+          let isResizing = false;
+          let startX = 0;
+          let startW = 0;
+
+          const onPointerMove = (e) => {
+            if (!isResizing) return;
+            const deltaX = startX - e.clientX; // Dragging left expands right-side panel
+            const availableSpace = splitBody ? splitBody.offsetWidth - 220 : window.innerWidth - 300;
+            const maxClamp = Math.min(MAX_PROPS_WIDTH, Math.max(MIN_PROPS_WIDTH, availableSpace));
+            const newW = Math.max(MIN_PROPS_WIDTH, Math.min(maxClamp, Math.round(startW + deltaX)));
+            propsPanel.style.width = newW + 'px';
+          };
+
+          const onPointerUp = (e) => {
+            if (!isResizing) return;
+            isResizing = false;
+            propsResizer.classList.remove('is-resizing');
+            if (e && e.pointerId) {
+              try { propsResizer.releasePointerCapture(e.pointerId); } catch (_) {}
+            }
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+            document.removeEventListener('pointercancel', onPointerUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+
+            const currentW = Math.round(propsPanel.getBoundingClientRect().width);
+            if (currentW >= MIN_PROPS_WIDTH && currentW <= MAX_PROPS_WIDTH) {
+              localStorage.setItem(PROPS_WIDTH_STORAGE_KEY, currentW.toString());
+            }
+          };
+
+          propsResizer.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            e.stopPropagation();
+            isResizing = true;
+            startX = e.clientX;
+            startW = propsPanel.getBoundingClientRect().width;
+            propsResizer.classList.add('is-resizing');
+            try { propsResizer.setPointerCapture(e.pointerId); } catch (_) {}
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+
+            document.addEventListener('pointermove', onPointerMove);
+            document.addEventListener('pointerup', onPointerUp);
+            document.addEventListener('pointercancel', onPointerUp);
+          });
+
+          // Double click on splitter resets to default width (285px)
+          propsResizer.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            propsPanel.style.width = DEFAULT_PROPS_WIDTH + 'px';
+            localStorage.setItem(PROPS_WIDTH_STORAGE_KEY, DEFAULT_PROPS_WIDTH.toString());
+          });
         }
 
         // Two-tone icon generator based on file extension
@@ -552,6 +638,742 @@ class DesktopAppsController {
           return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff', 'avif'].includes(ext);
         };
 
+        // =====================================================================
+        // CUSTOM ACTIONS ENGINE & SYSTEM HELPERS
+        // =====================================================================
+        const getActionIconSvg = (icon) => {
+          switch (icon) {
+            case 'deploy':
+              return `<svg style="width:15px;height:15px;color:#10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
+            case 'play':
+              return `<svg style="width:15px;height:15px;color:#22c55e;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`;
+            case 'shield':
+              return `<svg style="width:15px;height:15px;color:#a78bfa;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`;
+            case 'lock':
+              return `<svg style="width:15px;height:15px;color:#f59e0b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+            case 'key':
+              return `<svg style="width:15px;height:15px;color:#fbbf24;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1.5 1.5L14 9l-3-3L3.5 13.5a5 5 0 1 0 7 7L18 13l2-2 1-5z"></path></svg>`;
+            case 'checksum':
+              return `<svg style="width:15px;height:15px;color:#eab308;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>`;
+            case 'archive':
+              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>`;
+            case 'file-text':
+              return `<svg style="width:15px;height:15px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`;
+            case 'file':
+              return `<svg style="width:15px;height:15px;color:#64748b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
+            case 'folder':
+              return `<svg style="width:15px;height:15px;color:#f59e0b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`;
+            case 'database':
+              return `<svg style="width:15px;height:15px;color:#06b6d4;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`;
+            case 'server':
+              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>`;
+            case 'cpu':
+              return `<svg style="width:15px;height:15px;color:#f97316;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>`;
+            case 'cloud':
+              return `<svg style="width:15px;height:15px;color:#60a5fa;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>`;
+            case 'download':
+              return `<svg style="width:15px;height:15px;color:#10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`;
+            case 'upload':
+              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`;
+            case 'refresh':
+              return `<svg style="width:15px;height:15px;color:#06b6d4;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>`;
+            case 'trash':
+              return `<svg style="width:15px;height:15px;color:#ef4444;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>`;
+            case 'wrench':
+              return `<svg style="width:15px;height:15px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>`;
+            case 'zap':
+              return `<svg style="width:15px;height:15px;color:#eab308;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+            case 'search':
+              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
+            case 'bell':
+              return `<svg style="width:15px;height:15px;color:#f59e0b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
+            case 'code':
+              return `<svg style="width:15px;height:15px;color:#818cf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>`;
+            case 'copy':
+              return `<svg style="width:15px;height:15px;color:#60a5fa;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+            case 'network':
+              return `<svg style="width:15px;height:15px;color:#2dd4bf;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+            case 'activity':
+              return `<svg style="width:15px;height:15px;color:#ec4899;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>`;
+            case 'tag':
+              return `<svg style="width:15px;height:15px;color:#a855f7;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>`;
+            case 'git':
+              return `<svg style="width:15px;height:15px;color:#f97316;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="6" y1="9" x2="6" y2="15"></line><path d="M18 15a9 9 0 0 0-9-9"></path></svg>`;
+            case 'docker':
+              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M6 7V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v3"></path><line x1="10" y1="11" x2="14" y2="11"></line></svg>`;
+            case 'globe':
+              return `<svg style="width:15px;height:15px;color:#3b82f6;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+            case 'link':
+              return `<svg style="width:15px;height:15px;color:#14b8a6;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`;
+            case 'settings':
+              return `<svg style="width:15px;height:15px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
+            case 'terminal':
+            default:
+              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
+          }
+        };
+
+        const showActionConfirmModal = (action, preview, targetPath, targetPaths) => {
+          showModal(
+            `Confirm Action: ${action.name}`,
+            `
+              <div style="font-size:0.78rem; display:flex; flex-direction:column; gap:0.75rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.08);">
+                  <span style="color:var(--text-muted);">Target Server:</span>
+                  <strong style="color:#38bdf8; font-family:var(--font-mono);">${escapeHtml(preview.server_name)} (${escapeHtml(preview.server_host)})</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.08);">
+                  <span style="color:var(--text-muted); flex-shrink:0;">Selected Path:</span>
+                  <span style="color:#cbd5e1; font-family:var(--font-mono); font-size:0.72rem; word-break:break-all; text-align:right;">${escapeHtml(targetPath)}</span>
+                </div>
+                <div>
+                  <div style="color:var(--text-muted); font-size:0.72rem; margin-bottom:0.35rem;">Command Preview:</div>
+                  <div style="background:#050810; border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:0.65rem; font-family:var(--font-mono); font-size:0.74rem; color:#38bdf8; white-space:pre-wrap; word-break:break-all; max-height:160px; overflow-y:auto;">${escapeHtml(preview.resolved_command)}</div>
+                </div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">
+                  This custom action will be executed securely on the remote host via your active SSH connection.
+                </div>
+              </div>
+            `,
+            async () => {
+              runActionExecution(action, targetPath, targetPaths, preview.resolved_command);
+              return true;
+            },
+            'Execute Action',
+            false
+          );
+        };
+
+        const showActionOutputModal = (action, targetPath, targetPaths, initialCmd = '') => {
+          const appContainer = bodyEl.querySelector(`#fapp_${fileWinId}`);
+          const backdrop = document.createElement('div');
+          backdrop.className = 'file-modal-backdrop';
+          const outModalId = 'actOut_' + Date.now();
+
+          backdrop.innerHTML = `
+            <div class="file-modal-box" style="max-width:88vw; width:720px; max-height:86vh; display:flex; flex-direction:column; overflow:hidden;">
+              <div class="file-modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.95rem; border-bottom:1px solid rgba(255,255,255,0.08); background:#111827;">
+                <div style="display:flex; align-items:center; gap:0.6rem; min-width:0;">
+                  <span style="font-weight:700; font-size:0.85rem; color:#f8fafc;">${escapeHtml(action.name)}</span>
+                  <span id="stBadge_${outModalId}" style="font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:12px; background:rgba(56,189,248,0.15); color:#38bdf8;">Running...</span>
+                  <span id="durBadge_${outModalId}" style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-muted);"></span>
+                </div>
+                <button class="win-btn win-close" id="closeBtn_${outModalId}">×</button>
+              </div>
+              <div style="padding:0.5rem 0.95rem; background:#0b101b; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.72rem; display:flex; justify-content:space-between; align-items:center;">
+                <span id="cmdPreviewText_${outModalId}" style="color:var(--text-muted); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:550px;">$ ${escapeHtml(initialCmd || action.command)}</span>
+                <span style="color:#38bdf8; font-weight:600;">${escapeHtml(this.serverName)}</span>
+              </div>
+              <div style="flex:1; overflow:auto; padding:0.85rem; background:#050810; min-height:280px; max-height:calc(82vh - 120px);">
+                <pre class="action-output-box" id="consoleEl_${outModalId}" style="margin:0; border:none; background:transparent; padding:0; min-height:100%; color:#cbd5e1;">Executing action on remote host via SSH...</pre>
+              </div>
+              <div class="file-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:0.65rem 0.95rem; border-top:1px solid rgba(255,255,255,0.08); background:#0c1220;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <button class="btn btn-secondary btn-xs" id="copyBtn_${outModalId}" style="display:inline-flex; align-items:center; gap:4px;">
+                    <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copy Output
+                  </button>
+                  <button class="btn btn-secondary btn-xs" id="rerunBtn_${outModalId}" style="display:inline-flex; align-items:center; gap:4px;">
+                    <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    Re-run
+                  </button>
+                  <button class="btn btn-ghost btn-xs" id="termHandoffBtn_${outModalId}" style="color:#38bdf8;">
+                    Run in Terminal
+                  </button>
+                </div>
+                <button class="btn btn-primary btn-sm" id="doneBtn_${outModalId}">Done</button>
+              </div>
+            </div>
+          `;
+          appContainer.appendChild(backdrop);
+
+          const closeModal = () => { if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); };
+          backdrop.querySelector(`#closeBtn_${outModalId}`).onclick = closeModal;
+          backdrop.querySelector(`#doneBtn_${outModalId}`).onclick = closeModal;
+
+          const consoleEl = backdrop.querySelector(`#consoleEl_${outModalId}`);
+          const stBadge = backdrop.querySelector(`#stBadge_${outModalId}`);
+          const durBadge = backdrop.querySelector(`#durBadge_${outModalId}`);
+          const cmdText = backdrop.querySelector(`#cmdPreviewText_${outModalId}`);
+          let lastResult = null;
+
+          const execute = async () => {
+            stBadge.textContent = 'Running...';
+            stBadge.style.background = 'rgba(56,189,248,0.15)';
+            stBadge.style.color = '#38bdf8';
+            durBadge.textContent = '';
+            consoleEl.textContent = 'Executing action on remote host via SSH...';
+
+            try {
+              const resp = await fetch(`/api/actions/${action.id}/execute`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  server_id: this.serverId,
+                  selected_path: targetPath,
+                  selected_paths: targetPaths,
+                  current_dir: currentPath
+                })
+              });
+              const data = await resp.json();
+              lastResult = data.result;
+
+              if (lastResult) {
+                if (lastResult.command_executed) {
+                  cmdText.textContent = `$ ${lastResult.command_executed}`;
+                }
+                durBadge.textContent = `${lastResult.duration_ms} ms`;
+                if (lastResult.success) {
+                  stBadge.textContent = 'Exit 0 Success';
+                  stBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+                  stBadge.style.color = '#34d399';
+                } else {
+                  stBadge.textContent = `Exit ${lastResult.exit_code} Failed`;
+                  stBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+                  stBadge.style.color = '#f87171';
+                }
+
+                let outText = '';
+                if (lastResult.stdout) outText += lastResult.stdout;
+                if (lastResult.stderr) {
+                  outText += (outText ? '\n--- STDERR ---\n' : '') + lastResult.stderr;
+                }
+                if (!outText.trim()) outText = '(Action executed successfully with no output)';
+                consoleEl.textContent = outText;
+              } else {
+                stBadge.textContent = 'Execution Error';
+                stBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+                stBadge.style.color = '#f87171';
+                consoleEl.textContent = data.error || 'Unknown execution error';
+              }
+            } catch (err) {
+              stBadge.textContent = 'Network Error';
+              stBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+              stBadge.style.color = '#f87171';
+              consoleEl.textContent = `Failed to send request: ${err.message}`;
+            }
+          };
+
+          backdrop.querySelector(`#copyBtn_${outModalId}`).onclick = () => {
+            navigator.clipboard.writeText(consoleEl.textContent);
+            const btn = backdrop.querySelector(`#copyBtn_${outModalId}`);
+            const oldHtml = btn.innerHTML;
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.innerHTML = oldHtml; }, 1500);
+          };
+
+          backdrop.querySelector(`#rerunBtn_${outModalId}`).onclick = execute;
+
+          backdrop.querySelector(`#termHandoffBtn_${outModalId}`).onclick = () => {
+            closeModal();
+            const cmdToRun = (lastResult && lastResult.command_executed) ? lastResult.command_executed : action.command;
+            DesktopApps.launch('terminal', { serverId: this.serverId, path: currentPath, command: cmdToRun, newWindow: true });
+          };
+
+          execute();
+        };
+
+        const runActionExecution = async (action, targetPath, targetPaths, resolvedCmd = '') => {
+          if (action.output_target === 'terminal') {
+            let cmdToRun = resolvedCmd;
+            if (!cmdToRun) {
+              try {
+                const pResp = await fetch(`/api/actions/${action.id}/preview`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    server_id: this.serverId,
+                    selected_path: targetPath,
+                    selected_paths: targetPaths,
+                    current_dir: currentPath
+                  })
+                });
+                const pRes = await pResp.json();
+                if (pRes.success && pRes.preview) {
+                  cmdToRun = pRes.preview.resolved_command;
+                }
+              } catch (_) {}
+            }
+            DesktopApps.launch('terminal', { serverId: this.serverId, path: currentPath, command: cmdToRun || action.command, newWindow: true });
+          } else {
+            showActionOutputModal(action, targetPath, targetPaths, resolvedCmd);
+          }
+        };
+
+        const showCustomActionBuilderModal = (actionToEdit = null) => {
+          const appContainer = bodyEl.querySelector(`#fapp_${fileWinId}`);
+          const backdrop = document.createElement('div');
+          backdrop.className = 'file-modal-backdrop';
+          const bModalId = 'actBld_' + Date.now();
+          const isEdit = !!actionToEdit;
+
+          const ACTION_ICONS = [
+            { id: 'terminal', label: 'Terminal' },
+            { id: 'deploy', label: 'Deploy' },
+            { id: 'play', label: 'Run' },
+            { id: 'shield', label: 'Shield' },
+            { id: 'lock', label: 'Lock' },
+            { id: 'key', label: 'Key' },
+            { id: 'checksum', label: 'Checksum' },
+            { id: 'archive', label: 'Archive' },
+            { id: 'file-text', label: 'Logs' },
+            { id: 'file', label: 'File' },
+            { id: 'folder', label: 'Folder' },
+            { id: 'database', label: 'Database' },
+            { id: 'server', label: 'Server' },
+            { id: 'cpu', label: 'CPU' },
+            { id: 'cloud', label: 'Cloud' },
+            { id: 'download', label: 'Download' },
+            { id: 'upload', label: 'Upload' },
+            { id: 'refresh', label: 'Restart' },
+            { id: 'trash', label: 'Trash' },
+            { id: 'wrench', label: 'Wrench' },
+            { id: 'zap', label: 'Zap' },
+            { id: 'search', label: 'Search' },
+            { id: 'bell', label: 'Alert' },
+            { id: 'code', label: 'Code' },
+            { id: 'copy', label: 'Backup' },
+            { id: 'network', label: 'Network' },
+            { id: 'activity', label: 'Health' },
+            { id: 'tag', label: 'Release' },
+            { id: 'git', label: 'Git' },
+            { id: 'docker', label: 'Container' },
+            { id: 'globe', label: 'Web' },
+            { id: 'link', label: 'Link' },
+            { id: 'settings', label: 'Config' }
+          ];
+          const selectedIconId = (isEdit && actionToEdit.icon) ? actionToEdit.icon : 'terminal';
+          const selectedIconObj = ACTION_ICONS.find(i => i.id === selectedIconId) || ACTION_ICONS[0];
+
+          backdrop.innerHTML = `
+            <div class="file-modal-box" style="max-width:88vw; width:620px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden;">
+              <div class="file-modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.95rem; border-bottom:1px solid rgba(255,255,255,0.08); background:#111827;">
+                <span style="font-weight:700; font-size:0.85rem; color:#f8fafc;">${isEdit ? 'Edit Custom Action' : 'Add Custom Action'}</span>
+                <button class="win-btn win-close" id="bClose_${bModalId}">×</button>
+              </div>
+              <div class="file-modal-body" style="padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.85rem; font-size:0.78rem;">
+                <div>
+                  <label style="display:block; margin-bottom:0.35rem; color:var(--text-muted); font-size:0.72rem; font-weight:600;">Action name</label>
+                  <input type="text" id="bName_${bModalId}" class="form-control" placeholder="Deploy Website" value="${isEdit ? escapeHtml(actionToEdit.name) : ''}" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                </div>
+
+                <div>
+                  <label style="display:block; margin-bottom:0.35rem; color:var(--text-muted); font-size:0.72rem; font-weight:600;">Command to execute on the remote server</label>
+                  <textarea id="bCmd_${bModalId}" class="form-control" rows="3" placeholder="bash ./deploy.sh" style="width:100%; font-family:var(--font-mono); font-size:0.76rem; padding:0.45rem 0.6rem; line-height:1.4; resize:vertical;">${isEdit ? escapeHtml(actionToEdit.command) : ''}</textarea>
+                  <div style="margin-top:0.35rem; display:flex; align-items:center; gap:0.35rem; flex-wrap:wrap;">
+                    <span style="font-size:0.68rem; color:var(--text-muted);">Insert variable:</span>
+                    <span class="custom-action-pill-var" data-vchip="{{selected_path}}" title="Full path of selected file or folder">{{selected_path}}</span>
+                    <span class="custom-action-pill-var" data-vchip="{{selected_name}}" title="Filename/Basename only">{{selected_name}}</span>
+                    <span class="custom-action-pill-var" data-vchip="{{current_dir}}" title="Current working directory">{{current_dir}}</span>
+                    <span class="custom-action-pill-var" data-vchip="{{selected_paths}}" title="All selected paths">{{selected_paths}}</span>
+                    <span class="custom-action-pill-var" data-vchip="{{server_name}}" title="Current server name">{{server_name}}</span>
+                  </div>
+                  <div style="font-size:0.68rem; color:var(--text-muted); margin-top:4px;">ShellMan safely quotes all parameters with POSIX escaping to prevent command injection.</div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                  <div>
+                    <label style="display:block; margin-bottom:0.35rem; color:var(--text-muted); font-size:0.72rem; font-weight:600;">Description (optional)</label>
+                    <input type="text" id="bDesc_${bModalId}" class="form-control" placeholder="Runs deployment script" value="${isEdit ? escapeHtml(actionToEdit.description || '') : ''}" style="width:100%; font-size:0.78rem; padding:0.35rem 0.55rem;">
+                  </div>
+                  <div style="position:relative;">
+                    <label style="display:block; margin-bottom:0.35rem; color:var(--text-muted); font-size:0.72rem; font-weight:600;">Icon</label>
+                    <button type="button" id="bIconTrigger_${bModalId}" class="form-control" style="width:100%; display:flex; align-items:center; justify-content:space-between; font-size:0.78rem; padding:0.35rem 0.55rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:6px; color:#f8fafc; cursor:pointer;">
+                      <span style="display:flex; align-items:center; gap:0.45rem; min-width:0; overflow:hidden;">
+                        <span id="bIconPreview_${bModalId}" style="display:flex; align-items:center; flex-shrink:0;">${getActionIconSvg(selectedIconObj.id)}</span>
+                        <span id="bIconLabel_${bModalId}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${selectedIconObj.label}</span>
+                      </span>
+                      <svg style="width:12px; height:12px; color:#94a3b8; flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <input type="hidden" id="bIcon_${bModalId}" value="${selectedIconObj.id}">
+
+                    <div id="bIconDropdown_${bModalId}" style="display:none; position:absolute; top:calc(100% + 4px); right:0; width:330px; background:#0b111e; border:1px solid rgba(255,255,255,0.16); border-radius:8px; box-shadow:0 14px 36px rgba(0,0,0,0.9); z-index:150; max-height:260px; overflow-y:auto; padding:8px;">
+                      <div style="margin-bottom:6px;">
+                        <input type="text" id="bIconSearch_${bModalId}" class="form-control" placeholder="Search 30+ icons..." style="width:100%; font-size:0.72rem; padding:0.3rem 0.5rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:4px;">
+                      </div>
+                      <div id="bIconGrid_${bModalId}" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px;">
+                        ${ACTION_ICONS.map(opt => `
+                          <div class="custom-action-icon-opt" data-icon-val="${opt.id}" data-icon-label="${opt.label.toLowerCase()}" style="display:flex; align-items:center; gap:0.45rem; padding:0.38rem 0.5rem; border-radius:5px; cursor:pointer; font-size:0.73rem; color:#cbd5e1; border:1px solid ${opt.id === selectedIconObj.id ? 'rgba(56,189,248,0.45)' : 'rgba(255,255,255,0.06)'}; ${opt.id === selectedIconObj.id ? 'background:rgba(56,189,248,0.15); color:#38bdf8;' : 'background:rgba(255,255,255,0.02);'}">
+                            <span style="display:flex; align-items:center; flex-shrink:0;">${getActionIconSvg(opt.id)}</span>
+                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${opt.label}</span>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label style="display:block; margin-bottom:0.35rem; color:var(--text-muted); font-size:0.72rem; font-weight:600;">Available for</label>
+                  <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                    <label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;"><input type="radio" name="bTargetType_${bModalId}" value="files" ${isEdit && actionToEdit.target_type === 'files' ? 'checked' : ''}> Files only</label>
+                    <label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;"><input type="radio" name="bTargetType_${bModalId}" value="folders" ${isEdit && actionToEdit.target_type === 'folders' ? 'checked' : ''}> Folders only</label>
+                    <label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;"><input type="radio" name="bTargetType_${bModalId}" value="both" ${!isEdit || actionToEdit.target_type === 'both' ? 'checked' : ''}> Files and folders</label>
+                    <label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;"><input type="radio" name="bTargetType_${bModalId}" value="multiple" ${isEdit && actionToEdit.target_type === 'multiple' ? 'checked' : ''}> Multiple selected items</label>
+                  </div>
+                </div>
+
+                <div>
+                  <label style="display:block; margin-bottom:0.35rem; color:var(--text-muted); font-size:0.72rem; font-weight:600;">How should the result appear?</label>
+                  <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                    <label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;"><input type="radio" name="bOutTarget_${bModalId}" value="panel" ${!isEdit || actionToEdit.output_target === 'panel' ? 'checked' : ''}> Output panel inside ShellMan</label>
+                    <label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer;"><input type="radio" name="bOutTarget_${bModalId}" value="terminal" ${isEdit && actionToEdit.output_target === 'terminal' ? 'checked' : ''}> Run in terminal</label>
+                  </div>
+                </div>
+
+                <div>
+                  <label style="display:flex; align-items:center; gap:0.45rem; cursor:pointer; font-weight:600; color:#f8fafc;">
+                    <input type="checkbox" id="bConfirm_${bModalId}" ${!isEdit || actionToEdit.require_confirm ? 'checked' : ''}> Ask for confirmation before running
+                  </label>
+                </div>
+
+                <div id="bErr_${bModalId}" style="display:none; color:#ef4444; font-size:0.72rem;"></div>
+              </div>
+              <div class="file-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:0.65rem 0.95rem; border-top:1px solid rgba(255,255,255,0.08); background:#0c1220;">
+                <div>
+                  ${isEdit ? `<button class="btn btn-danger btn-sm" id="bDelete_${bModalId}">Delete Action</button>` : ''}
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                  <button class="btn btn-ghost btn-sm" id="bCancel_${bModalId}">Cancel</button>
+                  <button class="btn btn-primary btn-sm" id="bSave_${bModalId}">${isEdit ? 'Update Action' : 'Save Custom Action'}</button>
+                </div>
+              </div>
+            </div>
+          `;
+          appContainer.appendChild(backdrop);
+
+          const closeModal = () => { if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); };
+          backdrop.querySelector(`#bClose_${bModalId}`).onclick = closeModal;
+          backdrop.querySelector(`#bCancel_${bModalId}`).onclick = closeModal;
+
+          if (isEdit) {
+            const delBtn = backdrop.querySelector(`#bDelete_${bModalId}`);
+            if (delBtn) {
+              delBtn.onclick = async () => {
+                if (!confirm(`Are you sure you want to permanently delete custom action "${actionToEdit.name}"?`)) return;
+                try {
+                  const resp = await fetch(`/api/actions/${actionToEdit.id}`, { method: 'DELETE' });
+                  const res = await resp.json();
+                  if (res.success) {
+                    closeModal();
+                    updatePropertiesPane();
+                  } else {
+                    alert(res.error || 'Failed to delete action');
+                  }
+                } catch (e) {
+                  alert(e.message);
+                }
+              };
+            }
+          }
+
+          const iconTrigger = backdrop.querySelector(`#bIconTrigger_${bModalId}`);
+          const iconDropdown = backdrop.querySelector(`#bIconDropdown_${bModalId}`);
+          const iconSearch = backdrop.querySelector(`#bIconSearch_${bModalId}`);
+          const iconHidden = backdrop.querySelector(`#bIcon_${bModalId}`);
+          const iconPreview = backdrop.querySelector(`#bIconPreview_${bModalId}`);
+          const iconLabel = backdrop.querySelector(`#bIconLabel_${bModalId}`);
+
+          if (iconTrigger && iconDropdown) {
+            iconTrigger.onclick = (e) => {
+              e.stopPropagation();
+              const isVisible = iconDropdown.style.display === 'block';
+              iconDropdown.style.display = isVisible ? 'none' : 'block';
+              if (!isVisible && iconSearch) {
+                iconSearch.value = '';
+                iconDropdown.querySelectorAll('.custom-action-icon-opt').forEach(el => { el.style.display = 'flex'; });
+                setTimeout(() => iconSearch.focus(), 60);
+              }
+            };
+
+            if (iconSearch) {
+              iconSearch.onclick = (e) => e.stopPropagation();
+              iconSearch.oninput = (e) => {
+                const q = e.target.value.toLowerCase().trim();
+                iconDropdown.querySelectorAll('.custom-action-icon-opt').forEach(el => {
+                  const lbl = (el.dataset.iconLabel || '').toLowerCase();
+                  const val = (el.dataset.iconVal || '').toLowerCase();
+                  const match = !q || lbl.includes(q) || val.includes(q);
+                  el.style.display = match ? 'flex' : 'none';
+                });
+              };
+            }
+
+            iconDropdown.querySelectorAll('.custom-action-icon-opt').forEach(optEl => {
+              optEl.onclick = (e) => {
+                e.stopPropagation();
+                const chosenId = optEl.dataset.iconVal;
+                const found = ACTION_ICONS.find(i => i.id === chosenId);
+                if (found) {
+                  iconHidden.value = found.id;
+                  iconPreview.innerHTML = getActionIconSvg(found.id);
+                  iconLabel.textContent = found.label;
+                  iconDropdown.querySelectorAll('.custom-action-icon-opt').forEach(el => {
+                    const isSelected = el.dataset.iconVal === chosenId;
+                    el.style.background = isSelected ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.02)';
+                    el.style.borderColor = isSelected ? 'rgba(56,189,248,0.45)' : 'rgba(255,255,255,0.06)';
+                    el.style.color = isSelected ? '#38bdf8' : '#cbd5e1';
+                  });
+                }
+                iconDropdown.style.display = 'none';
+              };
+            });
+
+            backdrop.addEventListener('click', (e) => {
+              if (!iconTrigger.contains(e.target) && !iconDropdown.contains(e.target)) {
+                iconDropdown.style.display = 'none';
+              }
+            });
+          }
+
+          const cmdArea = backdrop.querySelector(`#bCmd_${bModalId}`);
+          backdrop.querySelectorAll('[data-vchip]').forEach(chip => {
+            chip.onclick = () => {
+              const v = chip.dataset.vchip;
+              const start = cmdArea.selectionStart || cmdArea.value.length;
+              const end = cmdArea.selectionEnd || cmdArea.value.length;
+              cmdArea.value = cmdArea.value.substring(0, start) + v + cmdArea.value.substring(end);
+              cmdArea.focus();
+              cmdArea.selectionStart = cmdArea.selectionEnd = start + v.length;
+            };
+          });
+
+          backdrop.querySelector(`#bSave_${bModalId}`).onclick = async () => {
+            const name = backdrop.querySelector(`#bName_${bModalId}`).value.trim();
+            const cmd = cmdArea.value.trim();
+            const desc = backdrop.querySelector(`#bDesc_${bModalId}`).value.trim();
+            const icon = backdrop.querySelector(`#bIcon_${bModalId}`).value;
+            const targetType = backdrop.querySelector(`input[name="bTargetType_${bModalId}"]:checked`).value;
+            const outputTarget = backdrop.querySelector(`input[name="bOutTarget_${bModalId}"]:checked`).value;
+            const requireConfirm = backdrop.querySelector(`#bConfirm_${bModalId}`).checked;
+            const errEl = backdrop.querySelector(`#bErr_${bModalId}`);
+
+            if (!name) {
+              errEl.style.display = 'block';
+              errEl.textContent = 'Action name is required';
+              return;
+            }
+            if (!cmd) {
+              errEl.style.display = 'block';
+              errEl.textContent = 'Command is required';
+              return;
+            }
+
+            const payload = {
+              name,
+              command: cmd,
+              description: desc,
+              icon,
+              target_type: targetType,
+              output_target: outputTarget,
+              require_confirm: requireConfirm,
+              server_id: null
+            };
+
+            try {
+              const url = isEdit ? `/api/actions/${actionToEdit.id}` : '/api/actions';
+              const method = isEdit ? 'PUT' : 'POST';
+              const resp = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              const res = await resp.json();
+              if (res.success) {
+                closeModal();
+                updatePropertiesPane();
+              } else {
+                errEl.style.display = 'block';
+                errEl.textContent = res.error || 'Failed to save action';
+              }
+            } catch (e) {
+              errEl.style.display = 'block';
+              errEl.textContent = `Error: ${e.message}`;
+            }
+          };
+        };
+
+        const showImportModal = () => {
+          showModal(
+            'Import Custom Actions',
+            `
+              <div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.5rem;">Paste exported ShellMan actions JSON payload below:</p>
+                <textarea id="importPayloadInp" class="form-control" rows="6" placeholder='{ "actions": [ ... ] }' style="width:100%; font-family:var(--font-mono); font-size:0.75rem;"></textarea>
+                <div id="importErr" style="display:none; color:#ef4444; font-size:0.72rem; margin-top:0.35rem;"></div>
+              </div>
+            `,
+            async (modalEl) => {
+              const raw = modalEl.querySelector('#importPayloadInp').value.trim();
+              const errEl = modalEl.querySelector('#importErr');
+              if (!raw) return false;
+              try {
+                const parsed = JSON.parse(raw);
+                const resp = await fetch('/api/actions/import', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(parsed)
+                });
+                const res = await resp.json();
+                if (res.success) {
+                  updatePropertiesPane();
+                  return true;
+                } else {
+                  errEl.style.display = 'block';
+                  errEl.textContent = res.error || 'Import failed';
+                  return false;
+                }
+              } catch (e) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Invalid JSON: ' + e.message;
+                return false;
+              }
+            },
+            'Import Actions'
+          );
+        };
+
+        const loadCustomActions = async (targetType, extension, targetPath, targetPaths) => {
+          const listEl = propsContent.querySelector(`#customActionsList_${fileWinId}`);
+          if (!listEl) return;
+          try {
+            const url = `/api/actions?server_id=${this.serverId}&target_type=${targetType}&extension=${encodeURIComponent(extension || '')}`;
+            const resp = await fetch(url);
+            const res = await resp.json();
+            if (res.success && res.actions) {
+              if (res.actions.length === 0) {
+                listEl.innerHTML = `<div style="font-size:0.7rem; color:var(--text-muted); padding:0.25rem 0;">No custom actions configured</div>`;
+              } else {
+                listEl.innerHTML = res.actions.map(act => {
+                  let cardTheme = '';
+                  if (act.icon === 'deploy') cardTheme = 'builtin-deploy';
+                  else if (act.icon === 'shield') cardTheme = 'builtin-shield';
+                  else if (act.icon === 'checksum') cardTheme = 'builtin-checksum';
+
+                  return `
+                    <div class="custom-action-card ${cardTheme}" data-action-id="${act.id}" title="${escapeHtml(act.description || act.name)}">
+                      <div style="display:flex; align-items:center; gap:0.55rem; min-width:0; flex:1;">
+                        <div class="custom-action-icon">${getActionIconSvg(act.icon)}</div>
+                        <div style="min-width:0; flex:1;">
+                          <div style="font-weight:700; font-size:0.78rem; color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(act.name)}</div>
+                          <div style="font-size:0.66rem; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px;">${escapeHtml(act.description || act.command)}</div>
+                        </div>
+                      </div>
+                      <div style="display:flex; align-items:center; gap:0.35rem; flex-shrink:0;">
+                        <button class="custom-action-del-btn" data-action-del="${act.id}" title="Delete ${escapeHtml(act.name)}">
+                          <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+                        </button>
+                        <button class="custom-action-run-btn" data-action-run="${act.id}" title="Run ${escapeHtml(act.name)}">
+                          <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 19 12 6 20 6 4"></polygon></svg>
+                        </button>
+                      </div>
+                    </div>
+                  `;
+                }).join('');
+
+                const handleTrigger = (actId) => {
+                  const act = res.actions.find(a => a.id === actId);
+                  if (act) {
+                    if (act.require_confirm) {
+                      fetch(`/api/actions/${act.id}/preview`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          server_id: this.serverId,
+                          selected_path: targetPath,
+                          selected_paths: targetPaths,
+                          current_dir: currentPath
+                        })
+                      })
+                      .then(r => r.json())
+                      .then(pRes => {
+                        if (pRes.success && pRes.preview) {
+                          showActionConfirmModal(act, pRes.preview, targetPath, targetPaths);
+                        } else {
+                          runActionExecution(act, targetPath, targetPaths);
+                        }
+                      })
+                      .catch(() => runActionExecution(act, targetPath, targetPaths));
+                    } else {
+                      runActionExecution(act, targetPath, targetPaths);
+                    }
+                  }
+                };
+
+                listEl.querySelectorAll('[data-action-run]').forEach(btn => {
+                  btn.onclick = (e) => {
+                    e.stopPropagation();
+                    handleTrigger(parseInt(btn.dataset.actionRun, 10));
+                  };
+                });
+
+                listEl.querySelectorAll('[data-action-del]').forEach(btn => {
+                  btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const actId = parseInt(btn.dataset.actionDel, 10);
+                    const act = res.actions.find(a => a.id === actId);
+                    if (!act) return;
+
+                    showModal(
+                      `Delete Action: ${act.name}`,
+                      `
+                        <div style="font-size:0.78rem; color:#f1f5f9; display:flex; flex-direction:column; gap:0.5rem;">
+                          <div>Are you sure you want to permanently delete the custom action <strong>${escapeHtml(act.name)}</strong>?</div>
+                          <div style="background:#050810; border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:0.55rem; font-family:var(--font-mono); font-size:0.72rem; color:#94a3b8; word-break:break-all;">
+                            ${escapeHtml(act.command)}
+                          </div>
+                          <div style="color:var(--accent-rose); font-size:0.72rem; display:flex; align-items:center; gap:0.35rem; margin-top:0.25rem;">
+                            <svg style="width:13px;height:13px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <span>Warning: This operation cannot be undone.</span>
+                          </div>
+                          <div id="delActErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.3rem;"></div>
+                        </div>
+                      `,
+                      async (modalEl) => {
+                        const errEl = modalEl.querySelector(`#delActErr_${fileWinId}`);
+                        try {
+                          const resp = await fetch(`/api/actions/${act.id}`, { method: 'DELETE' });
+                          const dRes = await resp.json();
+                          if (dRes.success) {
+                            loadCustomActions(targetType, extension, targetPath, targetPaths);
+                            return true;
+                          } else {
+                            if (errEl) { errEl.textContent = dRes.error || 'Failed to delete action'; errEl.style.display = 'block'; }
+                            return false;
+                          }
+                        } catch (err) {
+                          if (errEl) { errEl.textContent = err.message; errEl.style.display = 'block'; }
+                          return false;
+                        }
+                      },
+                      'Delete Action',
+                      'btn-danger'
+                    );
+                  };
+                });
+
+                listEl.querySelectorAll('.custom-action-card').forEach(card => {
+                  card.onclick = () => {
+                    handleTrigger(parseInt(card.dataset.actionId, 10));
+                  };
+                });
+              }
+            }
+          } catch (err) {
+            if (listEl) listEl.innerHTML = `<div style="font-size:0.7rem; color:#ef4444;">Failed to load actions</div>`;
+          }
+
+          // Wire Add Custom Action & Export / Import
+          const addBtn = propsContent.querySelector(`#addCustomActionBtn_${fileWinId}`);
+          if (addBtn) addBtn.onclick = () => showCustomActionBuilderModal();
+
+          const exportBtn = propsContent.querySelector(`#exportActionsBtn_${fileWinId}`);
+          if (exportBtn) exportBtn.onclick = () => { window.location.href = '/api/actions/export'; };
+
+          const importBtn = propsContent.querySelector(`#importActionsBtn_${fileWinId}`);
+          if (importBtn) importBtn.onclick = () => showImportModal();
+        };
+
         const updatePropertiesPane = () => {
           if (!propsContent) return;
           const count = selectedPaths.size;
@@ -561,27 +1383,32 @@ class DesktopAppsController {
             const item = items.find(i => i.path === p);
             if (!item) return;
 
-            const iconHtml = renderItemIcon(item, 44);
+            const iconHtml = renderItemIcon(item, 34);
             const typeDesc = getTypeDescription(item);
             const isDir = !!item.is_dir;
             const isImg = isImage(item.name);
             const isArch = isArchive(item.name);
 
             propsContent.innerHTML = `
-              <div style="display:flex; align-items:center; gap:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08);">
-                <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                  ${iconHtml}
+              <div style="font-size:0.85rem; font-weight:700; color:#f8fafc; margin-bottom:0.75rem;">File Actions</div>
+              
+              <div class="file-action-selected-pill">
+                <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex:1;">
+                  <div style="width:34px; height:34px; border-radius:6px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    ${iconHtml}
+                  </div>
+                  <div style="min-width:0; flex:1;">
+                    <div style="font-size:0.78rem; font-weight:700; color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+                    <div style="font-size:0.67rem; color:#94a3b8; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(item.path)}</div>
+                  </div>
                 </div>
-                <div style="min-width:0; flex:1;">
-                  <div style="font-size:0.85rem; font-weight:700; color:#f8fafc; word-break:break-all; line-height:1.25;" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-                  <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;">${typeDesc}</div>
-                </div>
+                <span class="file-action-selected-badge">Selected</span>
               </div>
 
-              <div style="display:flex; flex-direction:column; gap:0.5rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08); font-size:0.73rem;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
-                  <span style="color:#64748b; flex-shrink:0; width:75px;">Path</span>
-                  <span style="color:#94a3b8; font-family:var(--font-mono); font-size:0.7rem; word-break:break-all; text-align:right;" title="${escapeHtml(item.path)}">${escapeHtml(item.path)}</span>
+              <div style="display:flex; flex-direction:column; gap:0.45rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08); font-size:0.73rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
+                  <span style="color:#64748b; flex-shrink:0; width:75px;">Type</span>
+                  <span style="color:#cbd5e1;">${typeDesc}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
                   <span style="color:#64748b; flex-shrink:0; width:75px;">Size</span>
@@ -602,95 +1429,114 @@ class DesktopAppsController {
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
                   <span style="color:#64748b; flex-shrink:0; width:75px;">Owner</span>
-                  <span style="color:#cbd5e1; font-family:var(--font-mono);">${escapeHtml(item.owner || '-')}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
-                  <span style="color:#64748b; flex-shrink:0; width:75px;">Group</span>
-                  <span style="color:#cbd5e1; font-family:var(--font-mono);">${escapeHtml(item.group || '-')}</span>
+                  <span style="color:#cbd5e1; font-family:var(--font-mono);">${escapeHtml(item.owner || '-')} : ${escapeHtml(item.group || '-')}</span>
                 </div>
               </div>
 
-              <div style="display:flex; flex-direction:column; gap:0.35rem;">
-                <div style="font-size:0.72rem; font-weight:700; color:#f1f5f9; margin-bottom:0.25rem;">Actions</div>
-                ${isDir ? `
-                  <button class="props-action-btn" id="propBtn_open_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                    <span>Open Folder</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_code_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                    <span>Open in Code</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_term_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-                    <span>Open Terminal Here</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_compress_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                    <span>Compress (zip)</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_dl_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <span>Download as Archive</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_copy_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    <span>Copy</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_move_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
-                    <span>Move</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_rename_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                    <span>Rename</span>
-                  </button>
-                  <button class="props-action-btn danger" id="propBtn_delete_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
-                    <span>Delete</span>
-                  </button>
-                ` : `
-                  ${isImg ? `
-                    <button class="props-action-btn" id="propBtn_preview_${fileWinId}" style="color:#38bdf8;">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                      <span>Preview Image</span>
+              <!-- Built-in Actions -->
+              <div style="margin-top:0.75rem;">
+                <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin-bottom:0.35rem;">Built-in Actions</div>
+                <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                  ${isDir ? `
+                    <button class="props-action-btn" id="propBtn_open_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      <span>Open Folder</span>
                     </button>
-                  ` : ''}
-                  <button class="props-action-btn" id="propBtn_code_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                    <span>Open in Code</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_dl_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                    <span>Download</span>
-                  </button>
-                  ${isArch ? `
-                    <button class="props-action-btn" id="propBtn_extract_${fileWinId}">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline></svg>
-                      <span>Extract Here</span>
+                    <button class="props-action-btn" id="propBtn_code_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                      <span>Open in Code</span>
                     </button>
-                  ` : ''}
-                  <button class="props-action-btn" id="propBtn_compress_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                    <span>Compress (zip)</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_copy_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    <span>Copy</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_move_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
-                    <span>Move</span>
-                  </button>
-                  <button class="props-action-btn" id="propBtn_rename_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                    <span>Rename</span>
-                  </button>
-                  <button class="props-action-btn danger" id="propBtn_delete_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
-                    <span>Delete</span>
-                  </button>
-                `}
+                    <button class="props-action-btn" id="propBtn_term_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                      <span>Open Terminal Here</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_compress_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                      <span>Compress (zip)</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_dl_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                      <span>Download as Archive</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_copy_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <span>Copy</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_move_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                      <span>Move</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_rename_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                      <span>Rename</span>
+                    </button>
+                    <button class="props-action-btn danger" id="propBtn_delete_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+                      <span>Delete</span>
+                    </button>
+                  ` : `
+                    ${isImg ? `
+                      <button class="props-action-btn" id="propBtn_preview_${fileWinId}" style="color:#38bdf8;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <span>Preview Image</span>
+                      </button>
+                    ` : ''}
+                    <button class="props-action-btn" id="propBtn_code_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                      <span>Open in Code</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_dl_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                      <span>Download</span>
+                    </button>
+                    ${isArch ? `
+                      <button class="props-action-btn" id="propBtn_extract_${fileWinId}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline></svg>
+                        <span>Extract Here</span>
+                      </button>
+                    ` : ''}
+                    <button class="props-action-btn" id="propBtn_compress_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                      <span>Compress (zip)</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_copy_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <span>Copy</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_move_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                      <span>Move</span>
+                    </button>
+                    <button class="props-action-btn" id="propBtn_rename_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                      <span>Rename</span>
+                    </button>
+                    <button class="props-action-btn danger" id="propBtn_delete_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+                      <span>Delete</span>
+                    </button>
+                  `}
+                </div>
+              </div>
+
+              <!-- Custom Actions Section -->
+              <div style="margin-top:1.1rem; padding-top:0.85rem; border-top:1px solid rgba(255,255,255,0.08);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Custom Actions</div>
+                  <div style="display:flex; gap:0.35rem;">
+                    <button id="exportActionsBtn_${fileWinId}" class="btn-ghost btn-xs" title="Export actions to JSON" style="padding:1px 6px; font-size:0.65rem; color:#94a3b8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; cursor:pointer;">Export</button>
+                    <button id="importActionsBtn_${fileWinId}" class="btn-ghost btn-xs" title="Import actions from JSON" style="padding:1px 6px; font-size:0.65rem; color:#94a3b8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; cursor:pointer;">Import</button>
+                  </div>
+                </div>
+                <div id="customActionsList_${fileWinId}">
+                  <div style="font-size:0.7rem; color:#64748b; padding:0.25rem 0;">Loading actions...</div>
+                </div>
+                <button class="add-custom-action-card" id="addCustomActionBtn_${fileWinId}" style="margin-top:0.4rem; width:100%;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; color:#38bdf8; font-size:0.75rem; font-weight:600;">
+                    <svg style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>+ Add Custom Action</span>
+                  </div>
+                </button>
               </div>
             `;
 
@@ -734,6 +1580,10 @@ class DesktopAppsController {
               wire('propBtn_delete', () => showDeleteModal([item.path], false));
             }
 
+            // Load Custom Actions matching this item
+            const ext = isDir ? '' : (item.name.includes('.') ? item.name.split('.').pop() : '');
+            loadCustomActions(isDir ? 'directory' : 'file', ext, item.path, [item.path]);
+
           } else if (count > 1) {
             // Multi-selection
             const selItems = items.filter(i => selectedPaths.has(i.path));
@@ -743,17 +1593,22 @@ class DesktopAppsController {
             const hasArchives = selItems.some(i => isArchive(i.name));
 
             propsContent.innerHTML = `
-              <div style="display:flex; align-items:center; gap:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08);">
-                <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:rgba(56,189,248,0.12); border-radius:8px;">
-                  <svg style="width:26px; height:26px; color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <div style="font-size:0.85rem; font-weight:700; color:#f8fafc; margin-bottom:0.75rem;">File Actions</div>
+
+              <div class="file-action-selected-pill">
+                <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex:1;">
+                  <div style="width:34px; height:34px; border-radius:6px; background:rgba(56,189,248,0.12); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg style="width:18px; height:18px; color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  </div>
+                  <div style="min-width:0; flex:1;">
+                    <div style="font-size:0.78rem; font-weight:700; color:#f8fafc;">${count} Items Selected</div>
+                    <div style="font-size:0.67rem; color:#94a3b8; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(currentPath)}</div>
+                  </div>
                 </div>
-                <div style="min-width:0; flex:1;">
-                  <div style="font-size:0.85rem; font-weight:700; color:#f8fafc;">${count} Items Selected</div>
-                  <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;">Multiple Selection</div>
-                </div>
+                <span class="file-action-selected-badge">${count} items</span>
               </div>
 
-              <div style="display:flex; flex-direction:column; gap:0.5rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08); font-size:0.73rem;">
+              <div style="display:flex; flex-direction:column; gap:0.45rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08); font-size:0.73rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
                   <span style="color:#64748b; flex-shrink:0; width:75px;">Selected</span>
                   <span style="color:#cbd5e1; font-family:var(--font-mono);">${count} items</span>
@@ -763,42 +1618,65 @@ class DesktopAppsController {
                   <span style="color:#cbd5e1; font-family:var(--font-mono);">${formattedTotalSize}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
-                  <span style="color:#64748b; flex-shrink:0; width:75px;">Folder</span>
+                  <span style="color:#64748b; flex-shrink:0; width:75px;">Directory</span>
                   <span style="color:#94a3b8; font-family:var(--font-mono); font-size:0.7rem; word-break:break-all; text-align:right;" title="${escapeHtml(currentPath)}">${escapeHtml(currentPath)}</span>
                 </div>
               </div>
 
-              <div style="display:flex; flex-direction:column; gap:0.35rem;">
-                <div style="font-size:0.72rem; font-weight:700; color:#f1f5f9; margin-bottom:0.25rem;">Batch Actions</div>
-                <button class="props-action-btn" id="propBtn_batch_code_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                  <span>Open in Code</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_batch_copy_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                  <span>Copy (${count} items)...</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_batch_move_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
-                  <span>Move (${count} items)...</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_batch_compress_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                  <span>Compress (${count} items)</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_batch_dl_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  <span>Download Archive</span>
-                </button>
-                ${hasArchives ? `
-                  <button class="props-action-btn" id="propBtn_batch_extract_${fileWinId}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline></svg>
-                    <span>Extract Archive(s)</span>
+              <!-- Batch Built-in Actions -->
+              <div style="margin-top:0.75rem;">
+                <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin-bottom:0.35rem;">Batch Actions</div>
+                <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                  <button class="props-action-btn" id="propBtn_batch_code_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    <span>Open in Code</span>
                   </button>
-                ` : ''}
-                <button class="props-action-btn danger" id="propBtn_batch_delete_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
-                  <span>Delete (${count} items)</span>
+                  <button class="props-action-btn" id="propBtn_batch_copy_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>Copy (${count} items)...</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_batch_move_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                    <span>Move (${count} items)...</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_batch_compress_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                    <span>Compress (${count} items)</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_batch_dl_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>Download Archive</span>
+                  </button>
+                  ${hasArchives ? `
+                    <button class="props-action-btn" id="propBtn_batch_extract_${fileWinId}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline></svg>
+                      <span>Extract Archive(s)</span>
+                    </button>
+                  ` : ''}
+                  <button class="props-action-btn danger" id="propBtn_batch_delete_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+                    <span>Delete (${count} items)</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Custom Actions Section -->
+              <div style="margin-top:1.1rem; padding-top:0.85rem; border-top:1px solid rgba(255,255,255,0.08);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Custom Actions</div>
+                  <div style="display:flex; gap:0.35rem;">
+                    <button id="exportActionsBtn_${fileWinId}" class="btn-ghost btn-xs" title="Export actions to JSON" style="padding:1px 6px; font-size:0.65rem; color:#94a3b8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; cursor:pointer;">Export</button>
+                    <button id="importActionsBtn_${fileWinId}" class="btn-ghost btn-xs" title="Import actions from JSON" style="padding:1px 6px; font-size:0.65rem; color:#94a3b8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; cursor:pointer;">Import</button>
+                  </div>
+                </div>
+                <div id="customActionsList_${fileWinId}">
+                  <div style="font-size:0.7rem; color:#64748b; padding:0.25rem 0;">Loading actions...</div>
+                </div>
+                <button class="add-custom-action-card" id="addCustomActionBtn_${fileWinId}" style="margin-top:0.4rem; width:100%;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; color:#38bdf8; font-size:0.75rem; font-weight:600;">
+                    <svg style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>+ Add Custom Action</span>
+                  </div>
                 </button>
               </div>
             `;
@@ -826,21 +1704,29 @@ class DesktopAppsController {
             }
             wire('propBtn_batch_delete', () => showDeleteModal(selectedList));
 
+            // Load Custom Actions matching multiple files
+            loadCustomActions('multiple', '', selectedList[0], selectedList);
+
           } else {
             // No selection -> Current folder properties
             const dirName = currentPath.split('/').filter(Boolean).pop() || '/';
             propsContent.innerHTML = `
-              <div style="display:flex; align-items:center; gap:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08);">
-                <div style="width:44px; height:44px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                  ${renderItemIcon({ is_dir: true, name: dirName }, 44)}
+              <div style="font-size:0.85rem; font-weight:700; color:#f8fafc; margin-bottom:0.75rem;">File Actions</div>
+
+              <div class="file-action-selected-pill">
+                <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex:1;">
+                  <div style="width:34px; height:34px; border-radius:6px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    ${renderItemIcon({ is_dir: true, name: dirName }, 34)}
+                  </div>
+                  <div style="min-width:0; flex:1;">
+                    <div style="font-size:0.78rem; font-weight:700; color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(dirName)}">${escapeHtml(dirName)}</div>
+                    <div style="font-size:0.67rem; color:#94a3b8; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(currentPath)}</div>
+                  </div>
                 </div>
-                <div style="min-width:0; flex:1;">
-                  <div style="font-size:0.85rem; font-weight:700; color:#f8fafc; word-break:break-all; line-height:1.25;" title="${escapeHtml(dirName)}">${escapeHtml(dirName)}</div>
-                  <div style="font-size:0.72rem; color:#94a3b8; margin-top:2px;">Current Directory</div>
-                </div>
+                <span class="file-action-selected-badge">Current Dir</span>
               </div>
 
-              <div style="display:flex; flex-direction:column; gap:0.5rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08); font-size:0.73rem;">
+              <div style="display:flex; flex-direction:column; gap:0.45rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(255,255,255,0.08); font-size:0.73rem;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
                   <span style="color:#64748b; flex-shrink:0; width:75px;">Path</span>
                   <span style="color:#94a3b8; font-family:var(--font-mono); font-size:0.7rem; word-break:break-all; text-align:right;" title="${escapeHtml(currentPath)}">${escapeHtml(currentPath)}</span>
@@ -856,35 +1742,58 @@ class DesktopAppsController {
                 </div>` : ''}
               </div>
 
-              <div style="display:flex; flex-direction:column; gap:0.35rem;">
-                <div style="font-size:0.72rem; font-weight:700; color:#f1f5f9; margin-bottom:0.25rem;">Directory Actions</div>
-                <button class="props-action-btn" id="propBtn_cur_newfile_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
-                  <span>New File</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_cur_newdir_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
-                  <span>New Folder</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_cur_upload_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  <span>Upload Files Here</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_cur_upload_folder_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polyline points="12 11 12 17"></polyline><polyline points="9 14 12 11 15 14"></polyline></svg>
-                  <span>Upload Folder Here</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_cur_term_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-                  <span>Open Terminal in Directory</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_cur_code_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                  <span>Open in Code Workspace</span>
-                </button>
-                <button class="props-action-btn" id="propBtn_cur_refresh_${fileWinId}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                  <span>Refresh Directory</span>
+              <!-- Directory Built-in Actions -->
+              <div style="margin-top:0.75rem;">
+                <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8; margin-bottom:0.35rem;">Directory Actions</div>
+                <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                  <button class="props-action-btn" id="propBtn_cur_newfile_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+                    <span>New File</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_cur_newdir_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+                    <span>New Folder</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_cur_upload_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>Upload Files Here</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_cur_upload_folder_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><polyline points="12 11 12 17"></polyline><polyline points="9 14 12 11 15 14"></polyline></svg>
+                    <span>Upload Folder Here</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_cur_term_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                    <span>Open Terminal in Directory</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_cur_code_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    <span>Open in Code Workspace</span>
+                  </button>
+                  <button class="props-action-btn" id="propBtn_cur_refresh_${fileWinId}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>Refresh Directory</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Custom Actions Section -->
+              <div style="margin-top:1.1rem; padding-top:0.85rem; border-top:1px solid rgba(255,255,255,0.08);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#94a3b8;">Custom Actions</div>
+                  <div style="display:flex; gap:0.35rem;">
+                    <button id="exportActionsBtn_${fileWinId}" class="btn-ghost btn-xs" title="Export actions to JSON" style="padding:1px 6px; font-size:0.65rem; color:#94a3b8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; cursor:pointer;">Export</button>
+                    <button id="importActionsBtn_${fileWinId}" class="btn-ghost btn-xs" title="Import actions from JSON" style="padding:1px 6px; font-size:0.65rem; color:#94a3b8; border:1px solid rgba(255,255,255,0.1); border-radius:4px; cursor:pointer;">Import</button>
+                  </div>
+                </div>
+                <div id="customActionsList_${fileWinId}">
+                  <div style="font-size:0.7rem; color:#64748b; padding:0.25rem 0;">Loading actions...</div>
+                </div>
+                <button class="add-custom-action-card" id="addCustomActionBtn_${fileWinId}" style="margin-top:0.4rem; width:100%;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; color:#38bdf8; font-size:0.75rem; font-weight:600;">
+                    <svg style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>+ Add Custom Action</span>
+                  </div>
                 </button>
               </div>
             `;
@@ -901,6 +1810,9 @@ class DesktopAppsController {
             wire('propBtn_cur_term', () => DesktopApps.launch('terminal', { path: currentPath, newWindow: true }));
             wire('propBtn_cur_code', () => DesktopApps.launch('code', { root: currentPath, isDir: true }));
             wire('propBtn_cur_refresh', () => loadDir(currentPath, false));
+
+            // Load Custom Actions matching current directory
+            loadCustomActions('directory', '', currentPath, [currentPath]);
           }
         };
 
@@ -2167,8 +3079,9 @@ class DesktopAppsController {
                   ${paths.map(p => `<div>• ${p.split('/').pop().replace(/</g, '&lt;')}</div>`).join('')}
                 </div>
               ` : ''}
-              <div style="color:var(--accent-rose); font-size:0.72rem; margin-top:0.6rem;">
-                ⚠ Warning: This operation cannot be undone.
+              <div style="color:var(--accent-rose); font-size:0.72rem; margin-top:0.6rem; display:flex; align-items:center; gap:0.35rem;">
+                <svg style="width:13px;height:13px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span>Warning: This operation cannot be undone.</span>
               </div>
               <div id="deleteErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(244,63,94,0.1); border-radius:4px;"></div>
             </div>
@@ -3470,82 +4383,80 @@ class DesktopAppsController {
           return `${val.toFixed(val >= 100 ? 1 : 2)} ${units[u]}`;
         };
 
-        const poll = async () => {
-          if (!bodyEl.isConnected) { clearInterval(timer); return; }
-          try {
-            const resp = await fetch(`/api/servers/${this.serverId}/metrics`);
-            const res = await resp.json();
-            if (res.online && res.metrics) {
-              const m = res.metrics;
-              const cpuEl = bodyEl.querySelector('#ov_cpu');
-              const cpuBar = bodyEl.querySelector('#ov_cpubar');
-              const loadEl = bodyEl.querySelector('#ov_load');
-              if (cpuEl) cpuEl.textContent = m.cpu;
-              if (cpuBar) cpuBar.style.width = `${m.cpu}%`;
-              if (m.load && loadEl) loadEl.textContent = `Load: ${m.load.join(', ')}`;
+        const updateOverviewUI = (m) => {
+          if (!bodyEl.isConnected || !m) return;
+          const cpuEl = bodyEl.querySelector('#ov_cpu');
+          const cpuBar = bodyEl.querySelector('#ov_cpubar');
+          const loadEl = bodyEl.querySelector('#ov_load');
+          if (cpuEl && m.cpu !== undefined) cpuEl.textContent = m.cpu;
+          if (cpuBar && m.cpu !== undefined) cpuBar.style.width = `${m.cpu}%`;
+          if (m.load && loadEl) loadEl.textContent = `Load: ${m.load.join(', ')}`;
 
-              const memEl = bodyEl.querySelector('#ov_mem');
-              const memBar = bodyEl.querySelector('#ov_membar');
-              const memTxt = bodyEl.querySelector('#ov_memtxt');
-              if (memEl) memEl.textContent = m.memory.percent;
-              if (memBar) memBar.style.width = `${m.memory.percent}%`;
-              if (memTxt) {
-                const usedM = m.memory.used_formatted || formatBytes(m.memory.used);
-                const totalM = m.memory.total_formatted || formatBytes(m.memory.total);
-                memTxt.textContent = `Used: ${usedM} / ${totalM}`;
-              }
+          const memEl = bodyEl.querySelector('#ov_mem');
+          const memBar = bodyEl.querySelector('#ov_membar');
+          const memTxt = bodyEl.querySelector('#ov_memtxt');
+          if (memEl && m.memory) memEl.textContent = m.memory.percent;
+          if (memBar && m.memory) memBar.style.width = `${m.memory.percent}%`;
+          if (memTxt && m.memory) {
+            const usedM = m.memory.used_formatted || formatBytes(m.memory.used);
+            const totalM = m.memory.total_formatted || formatBytes(m.memory.total);
+            memTxt.textContent = `Used: ${usedM} / ${totalM}`;
+          }
 
-              const diskEl = bodyEl.querySelector('#ov_disk');
-              const diskBar = bodyEl.querySelector('#ov_diskbar');
-              const diskTxt = bodyEl.querySelector('#ov_disktxt');
-              if (diskEl) diskEl.textContent = m.disk.percent;
-              if (diskBar) diskBar.style.width = `${m.disk.percent}%`;
-              if (diskTxt) {
-                const usedD = m.disk.used_formatted || formatBytes(m.disk.used);
-                const totalD = m.disk.total_formatted || formatBytes(m.disk.total);
-                diskTxt.textContent = `Used: ${usedD} / ${totalD}`;
-              }
+          const diskEl = bodyEl.querySelector('#ov_disk');
+          const diskBar = bodyEl.querySelector('#ov_diskbar');
+          const diskTxt = bodyEl.querySelector('#ov_disktxt');
+          if (diskEl && m.disk) diskEl.textContent = m.disk.percent;
+          if (diskBar && m.disk) diskBar.style.width = `${m.disk.percent}%`;
+          if (diskTxt && m.disk) {
+            const usedD = m.disk.used_formatted || formatBytes(m.disk.used);
+            const totalD = m.disk.total_formatted || formatBytes(m.disk.total);
+            diskTxt.textContent = `Used: ${usedD} / ${totalD}`;
+          }
 
-              const d = Math.floor(m.uptime / (3600*24));
-              const h = Math.floor((m.uptime % (3600*24)) / 3600);
-              const min = Math.floor((m.uptime % 3600) / 60);
-              const upEl = bodyEl.querySelector('#ov_uptime');
-              if (upEl) upEl.textContent = `${d}d ${h}h ${min}m`;
+          if (m.uptime !== undefined) {
+            const d = Math.floor(m.uptime / (3600*24));
+            const h = Math.floor((m.uptime % (3600*24)) / 3600);
+            const min = Math.floor((m.uptime % 3600) / 60);
+            const upEl = bodyEl.querySelector('#ov_uptime');
+            if (upEl) upEl.textContent = `${d}d ${h}h ${min}m`;
+          }
 
-              // Partition Mounts
-              const tbody = bodyEl.querySelector('#ov_mounts');
-              if (tbody && m.disk.filesystems && m.disk.filesystems.length > 0) {
-                tbody.innerHTML = m.disk.filesystems.map(fs => {
-                  const usedStr = fs.used_formatted || formatBytes(fs.used);
-                  const availStr = fs.avail_formatted || formatBytes(fs.avail);
-                  const totalStr = fs.total_formatted || formatBytes(fs.total);
-                  const pct = fs.percent || 0;
-                  return `
-                    <tr>
-                      <td><strong style="color:var(--text-primary);">${fs.mount}</strong></td>
-                      <td><code style="color:var(--accent-cyan);">${fs.filesystem}</code></td>
-                      <td style="font-family:var(--font-mono);">${usedStr}</td>
-                      <td style="font-family:var(--font-mono); color:var(--text-secondary);">${availStr}</td>
-                      <td style="font-family:var(--font-mono); color:var(--text-muted);">${totalStr}</td>
-                      <td>
-                        <div style="display:flex; align-items:center; gap:0.6rem; min-width:120px;">
-                          <div class="progress-bar-bg" style="flex:1; height:6px;">
-                            <div class="progress-bar-fill fill-blue" style="width:${pct}%;"></div>
-                          </div>
-                          <span style="font-family:var(--font-mono); font-size:0.75rem; min-width:32px; text-align:right;">${pct}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  `;
-                }).join('');
-              }
-            }
-          } catch (_) {}
+          // Partition Mounts
+          const tbody = bodyEl.querySelector('#ov_mounts');
+          if (tbody && m.disk && m.disk.filesystems && m.disk.filesystems.length > 0) {
+            tbody.innerHTML = m.disk.filesystems.map(fs => {
+              const usedStr = fs.used_formatted || formatBytes(fs.used);
+              const availStr = fs.avail_formatted || formatBytes(fs.avail);
+              const totalStr = fs.total_formatted || formatBytes(fs.total);
+              const pct = fs.percent || 0;
+              return `
+                <tr>
+                  <td><strong style="color:var(--text-primary);">${fs.mount}</strong></td>
+                  <td><code style="color:var(--accent-cyan);">${fs.filesystem}</code></td>
+                  <td style="font-family:var(--font-mono);">${usedStr}</td>
+                  <td style="font-family:var(--font-mono); color:var(--text-secondary);">${availStr}</td>
+                  <td style="font-family:var(--font-mono); color:var(--text-muted);">${totalStr}</td>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:0.6rem; min-width:120px;">
+                      <div class="progress-bar-bg" style="flex:1; height:6px;">
+                        <div class="progress-bar-fill fill-blue" style="width:${pct}%;"></div>
+                      </div>
+                      <span style="font-family:var(--font-mono); font-size:0.75rem; min-width:32px; text-align:right;">${pct}%</span>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('');
+          }
         };
 
-        poll();
-        const timer = setInterval(poll, 2000);
-        winObj.onClose = () => clearInterval(timer);
+        const unsubOverview = window.DesktopTelemetry ? window.DesktopTelemetry.subscribe(updateOverviewUI) : null;
+        if (window.DesktopTelemetry) window.DesktopTelemetry.poll();
+
+        winObj.onClose = () => {
+          if (unsubOverview) unsubOverview();
+        };
       }
     });
   }
@@ -3559,23 +4470,72 @@ class DesktopAppsController {
       multiInstance: false,
       title: `Task Manager - ${this.serverName}`,
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#34d399"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>',
-      width: 860,
-      height: 520,
-      minWidth: 460,
-      minHeight: 280,
+      width: 960,
+      height: 560,
+      minWidth: 540,
+      minHeight: 300,
       contentHtml: `
         <div style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas);">
-          <div style="height:36px; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem;">
-            <input type="text" id="procSearchInput" placeholder="Filter PID, user, command..." class="form-control" style="width:240px; padding:0.2rem 0.5rem; font-size:0.75rem;">
-            <button class="btn btn-secondary btn-sm" id="procRefreshBtn">Refresh</button>
+          <div style="background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; padding:0.45rem 0.75rem; flex-wrap:wrap; gap:0.5rem; position:relative;">
+            <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+              <input type="text" id="procSearchInput" placeholder="Filter PID, user, cmd..." class="form-control" style="width:170px; padding:0.25rem 0.5rem; font-size:0.75rem;">
+              
+              <!-- Total System Telemetry: CPU, RAM, Storage -->
+              <div id="procSysMetrics" style="display:flex; align-items:center; gap:0.45rem;">
+                <!-- CPU -->
+                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);" title="Host CPU Usage">
+                  <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700;">CPU:</span>
+                  <span id="procMetricCpuVal" style="color:#34d399; font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
+                  <div style="width:32px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
+                    <div id="procMetricCpuBar" style="width:0%; height:100%; background:#34d399; transition:width 0.3s ease;"></div>
+                  </div>
+                </div>
+
+                <!-- RAM -->
+                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);" title="Total Host Memory Usage">
+                  <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700;">RAM:</span>
+                  <span id="procMetricMemVal" style="color:#38bdf8; font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
+                  <div style="width:32px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
+                    <div id="procMetricMemBar" style="width:0%; height:100%; background:#38bdf8; transition:width 0.3s ease;"></div>
+                  </div>
+                </div>
+
+                <!-- Storage / Disk -->
+                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);" title="Total Root Storage Usage">
+                  <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700;">Disk:</span>
+                  <span id="procMetricDiskVal" style="color:#a78bfa; font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
+                  <div style="width:32px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
+                    <div id="procMetricDiskBar" style="width:0%; height:100%; background:#a78bfa; transition:width 0.3s ease;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:0.5rem; position:relative;">
+              <span id="procCountBadge" style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">0 procs</span>
+              
+              <!-- Column Visibility Preferences Button & Popover -->
+              <div style="position:relative;">
+                <button class="btn btn-secondary btn-xs" id="procColsBtn" style="padding:0.25rem 0.55rem; display:inline-flex; align-items:center; gap:4px;" title="Choose which columns to show or hide">
+                  <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"/></svg>
+                  <span>Columns &#9662;</span>
+                </button>
+                <div id="procColsPopover" class="proc-cols-popover" style="display:none;">
+                  <div class="proc-cols-title">Visible Columns</div>
+                  <div id="procColsList" style="display:flex; flex-direction:column; gap:2px;"></div>
+                </div>
+              </div>
+
+              <button class="btn btn-secondary btn-xs" id="procRefreshBtn" style="padding:0.25rem 0.6rem;">Refresh</button>
+            </div>
           </div>
           <div class="table-responsive" style="flex:1; overflow-y:auto;">
-            <table class="table">
+            <table class="table" style="margin:0; width:100%; border-collapse:collapse; font-size:0.78rem;">
               <thead>
-                <tr><th style="width:70px;">PID</th><th style="width:90px;">User</th><th style="width:70px;">CPU%</th><th style="width:70px;">MEM%</th><th style="width:60px;">Stat</th><th>Command</th><th style="width:110px; text-align:right;">Signals</th></tr>
+                <tr id="procTableHeadRow" style="position:sticky; top:0; background:#0d131f; z-index:2; border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;"></tr>
               </thead>
               <tbody id="procTableBody">
-                <tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading processes...</td></tr>
+                <tr><td colspan="9" style="text-align:center; padding:3rem; color:var(--text-muted);">Loading processes...</td></tr>
               </tbody>
             </table>
           </div>
@@ -3583,8 +4543,358 @@ class DesktopAppsController {
       `,
       onInit: (bodyEl, winObj) => {
         let procs = [];
+        let sortCol = 'cpu';
+        let sortDir = 'desc';
+        let activeCtxMenu = null;
+
         const tbody = bodyEl.querySelector('#procTableBody');
+        const theadRow = bodyEl.querySelector('#procTableHeadRow');
         const input = bodyEl.querySelector('#procSearchInput');
+        const countBadge = bodyEl.querySelector('#procCountBadge');
+        const colsBtn = bodyEl.querySelector('#procColsBtn');
+        const colsPopover = bodyEl.querySelector('#procColsPopover');
+        const colsList = bodyEl.querySelector('#procColsList');
+
+        // Column Definitions
+        const ALL_COLS = [
+          { id: 'pid', label: 'PID', width: '75px', default: true },
+          { id: 'user', label: 'User', width: '110px', default: true },
+          { id: 'cpu', label: 'CPU%', width: '75px', default: true },
+          { id: 'mem', label: 'RAM%', width: '80px', title: 'Memory Usage %', default: true },
+          { id: 'rss', label: 'RSS', width: '85px', title: 'Resident Set Size: physical RAM allocated', default: true },
+          { id: 'pss', label: 'PSS', width: '85px', title: 'Proportional Set Size: private memory + proportional share of shared memory', default: true },
+          { id: 'vsz', label: 'VSZ', width: '80px', title: 'Virtual Memory Size', default: false },
+          { id: 'stat', label: 'Status', width: '115px', title: 'Process execution state', default: true },
+          { id: 'comm', label: 'Command', width: 'auto', title: 'Process command and arguments', default: true }
+        ];
+
+        // Column preferences backed by localStorage
+        let visibleCols = {};
+        ALL_COLS.forEach(c => visibleCols[c.id] = c.default);
+        try {
+          const savedCols = localStorage.getItem('shellman_taskmgr_cols');
+          if (savedCols) {
+            const parsed = JSON.parse(savedCols);
+            ALL_COLS.forEach(c => {
+              if (parsed[c.id] !== undefined) visibleCols[c.id] = !!parsed[c.id];
+            });
+          }
+        } catch (_) {}
+
+        const saveColPrefs = () => {
+          try {
+            localStorage.setItem('shellman_taskmgr_cols', JSON.stringify(visibleCols));
+          } catch (_) {}
+        };
+
+        const formatKb = (kb) => {
+          if (kb === null || kb === undefined || isNaN(kb)) return '-';
+          if (kb < 1024) return kb + ' KB';
+          if (kb < 1024 * 1024) return (kb / 1024).toFixed(1) + ' MB';
+          return (kb / (1024 * 1024)).toFixed(2) + ' GB';
+        };
+
+        const formatRam = (rssKb, memPct) => {
+          const sizeStr = (rssKb !== null && rssKb !== undefined && !isNaN(rssKb)) ? formatKb(rssKb) : null;
+          const pctStr = (memPct !== null && memPct !== undefined) ? `${memPct}%` : '0%';
+          if (!sizeStr) return pctStr;
+          return `${sizeStr} (${pctStr})`;
+        };
+
+        // Decodes Linux process STAT codes into human-readable states with colored badges and rich tooltips
+        const parseProcessState = (stat) => {
+          if (!stat) return { label: 'Unknown', color: '#94a3b8', bg: 'rgba(148,163,184,0.14)', desc: 'Unknown state' };
+          const s = String(stat).trim();
+          const primary = s.charAt(0);
+          let label = 'Unknown';
+          let color = '#94a3b8';
+          let bg = 'rgba(148,163,184,0.14)';
+          let baseDesc = '';
+
+          switch (primary) {
+            case 'R':
+              label = 'Running';
+              color = '#34d399';
+              bg = 'rgba(52,211,153,0.14)';
+              baseDesc = 'Running (actively executing instructions on CPU)';
+              break;
+            case 'S':
+              label = 'Active';
+              color = '#34d399';
+              bg = 'rgba(52,211,153,0.14)';
+              baseDesc = 'Active and healthy (listening & waiting for incoming requests / I/O)';
+              break;
+            case 'D':
+              label = 'Disk Wait';
+              color = '#fbbf24';
+              bg = 'rgba(251,191,36,0.14)';
+              baseDesc = 'Uninterruptible sleep (usually waiting for disk I/O)';
+              break;
+            case 'Z':
+              label = 'Zombie';
+              color = '#f87171';
+              bg = 'rgba(248,113,113,0.16)';
+              baseDesc = 'Defunct / Zombie (terminated, waiting for parent to reap)';
+              break;
+            case 'T':
+              label = 'Stopped';
+              color = '#fb923c';
+              bg = 'rgba(251,146,60,0.14)';
+              baseDesc = 'Stopped by job control signal or SIGSTOP';
+              break;
+            case 't':
+              label = 'Traced';
+              color = '#fb923c';
+              bg = 'rgba(251,146,60,0.14)';
+              baseDesc = 'Stopped by debugger during code tracing';
+              break;
+            case 'I':
+              label = 'Idle';
+              color = '#94a3b8';
+              bg = 'rgba(148,163,184,0.12)';
+              baseDesc = 'Idle kernel thread';
+              break;
+            default:
+              label = s;
+              baseDesc = `Status code: ${s}`;
+          }
+
+          const modifiers = [];
+          for (let i = 1; i < s.length; i++) {
+            const ch = s.charAt(i);
+            if (ch === '<') modifiers.push('High priority');
+            else if (ch === 'N') modifiers.push('Low priority (nice)');
+            else if (ch === 'L') modifiers.push('Pages locked into memory');
+            else if (ch === 's') modifiers.push('Session leader');
+            else if (ch === 'l') modifiers.push('Multi-threaded');
+            else if (ch === '+') modifiers.push('Foreground process');
+          }
+
+          const fullDesc = `Status: ${label} (${s})\n${baseDesc}` + (modifiers.length ? `\nAttributes: ${modifiers.join(', ')}` : '');
+          return { label, color, bg, desc: fullDesc, raw: s };
+        };
+
+        // Context Menu Management
+        const hideCtxMenu = () => {
+          if (activeCtxMenu && activeCtxMenu.parentNode) {
+            activeCtxMenu.parentNode.removeChild(activeCtxMenu);
+          }
+          activeCtxMenu = null;
+        };
+
+        const showProcContextMenu = (x, y, proc) => {
+          hideCtxMenu();
+          const st = parseProcessState(proc.stat);
+          const menu = document.createElement('div');
+          menu.className = 'proc-ctx-menu';
+          menu.innerHTML = `
+            <div class="proc-ctx-header">
+              <div class="proc-ctx-title">
+                <span>PID ${proc.pid} &bull; ${escapeHtml(proc.comm)}</span>
+                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.68rem; color:${st.color}; font-weight:600;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:${st.color};"></span>${escapeHtml(st.label)}
+                </span>
+              </div>
+              <div class="proc-ctx-subtitle" title="${escapeHtml(proc.args || proc.comm)}">${escapeHtml(proc.args || proc.comm)}</div>
+            </div>
+            <button class="proc-ctx-item" id="ctx_term">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+              <span>Terminate (SIGTERM)</span>
+            </button>
+            <button class="proc-ctx-item danger" id="ctx_kill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              <span>Force Kill (SIGKILL)</span>
+            </button>
+            <button class="proc-ctx-item" id="ctx_stop">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+              <span>Pause Process (SIGSTOP)</span>
+            </button>
+            <button class="proc-ctx-item" id="ctx_cont">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Resume Process (SIGCONT)</span>
+            </button>
+            <div class="proc-ctx-divider"></div>
+            <button class="proc-ctx-item" id="ctx_copy_pid">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy PID</span>
+            </button>
+            <button class="proc-ctx-item" id="ctx_copy_cmd">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              <span>Copy Command</span>
+            </button>
+          `;
+
+          document.body.appendChild(menu);
+          activeCtxMenu = menu;
+
+          const menuW = 220;
+          const menuH = menu.offsetHeight || 230;
+          const clampedX = Math.min(x, window.innerWidth - menuW - 12);
+          const clampedY = Math.min(y, window.innerHeight - menuH - 12);
+          menu.style.left = `${Math.max(10, clampedX)}px`;
+          menu.style.top = `${Math.max(10, clampedY)}px`;
+
+          menu.querySelector('#ctx_term').onclick = async () => {
+            hideCtxMenu();
+            const ok = await DesktopApps.killProcess(this.serverId, proc.pid, 'SIGTERM', proc.comm);
+            if (ok) fetchProcs();
+          };
+          menu.querySelector('#ctx_kill').onclick = async () => {
+            hideCtxMenu();
+            const ok = await DesktopApps.killProcess(this.serverId, proc.pid, 'SIGKILL', proc.comm);
+            if (ok) fetchProcs();
+          };
+          menu.querySelector('#ctx_stop').onclick = async () => {
+            hideCtxMenu();
+            const ok = await DesktopApps.killProcess(this.serverId, proc.pid, 'SIGSTOP', proc.comm);
+            if (ok) fetchProcs();
+          };
+          menu.querySelector('#ctx_cont').onclick = async () => {
+            hideCtxMenu();
+            const ok = await DesktopApps.killProcess(this.serverId, proc.pid, 'SIGCONT', proc.comm);
+            if (ok) fetchProcs();
+          };
+          menu.querySelector('#ctx_copy_pid').onclick = () => {
+            hideCtxMenu();
+            navigator.clipboard.writeText(String(proc.pid));
+            if (window.showToast) window.showToast(`PID ${proc.pid} copied to clipboard`, 'info');
+          };
+          menu.querySelector('#ctx_copy_cmd').onclick = () => {
+            hideCtxMenu();
+            navigator.clipboard.writeText(proc.args || proc.comm);
+            if (window.showToast) window.showToast('Command copied to clipboard', 'info');
+          };
+        };
+
+        const onDocPointerDown = (e) => {
+          if (activeCtxMenu && !e.target.closest('.proc-ctx-menu')) hideCtxMenu();
+          if (colsPopover && !colsPopover.contains(e.target) && !colsBtn.contains(e.target)) {
+            colsPopover.style.display = 'none';
+          }
+        };
+
+        const onDocKeyDown = (e) => {
+          if (e.key === 'Escape') {
+            hideCtxMenu();
+            if (colsPopover) colsPopover.style.display = 'none';
+          }
+        };
+
+        document.addEventListener('pointerdown', onDocPointerDown);
+        document.addEventListener('keydown', onDocKeyDown);
+
+        // Columns Visibility Popover Setup
+        const renderColsPopover = () => {
+          colsList.innerHTML = ALL_COLS.map(c => `
+            <label class="proc-col-checkbox-label">
+              <input type="checkbox" data-col="${c.id}" ${visibleCols[c.id] ? 'checked' : ''}>
+              <span>${c.label}</span>
+            </label>
+          `).join('');
+
+          colsList.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+            chk.onchange = () => {
+              visibleCols[chk.dataset.col] = chk.checked;
+              saveColPrefs();
+              renderHeaders();
+              render(procs);
+            };
+          });
+        };
+
+        colsBtn.onclick = (e) => {
+          e.stopPropagation();
+          const isShown = colsPopover.style.display !== 'none';
+          colsPopover.style.display = isShown ? 'none' : 'flex';
+          if (!isShown) renderColsPopover();
+        };
+
+        const updateSortIndicators = () => {
+          theadRow.querySelectorAll('th[data-col]').forEach(th => {
+            const col = th.dataset.col;
+            const span = th.querySelector('.sort-icon');
+            if (span) {
+              if (col === sortCol) {
+                span.innerHTML = sortDir === 'asc'
+                  ? `<svg style="width:7px; height:7px; margin-left:3px; vertical-align:1px; display:inline-block;" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`
+                  : `<svg style="width:7px; height:7px; margin-left:3px; vertical-align:1px; display:inline-block;" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+                th.style.color = '#ffffff';
+              } else {
+                span.innerHTML = '';
+                th.style.color = 'var(--text-muted)';
+              }
+            }
+          });
+        };
+
+        const setSort = (col) => {
+          if (sortCol === col) {
+            sortDir = (sortDir === 'desc') ? 'asc' : 'desc';
+          } else {
+            sortCol = col;
+            sortDir = ['cpu', 'mem', 'rss', 'pss', 'vsz'].includes(col) ? 'desc' : 'asc';
+          }
+          render(procs);
+        };
+
+        const renderHeaders = () => {
+          theadRow.innerHTML = ALL_COLS.filter(c => visibleCols[c.id]).map(c => `
+            <th style="width:${c.width}; cursor:pointer; user-select:none; padding:0.55rem 0.65rem;" data-col="${c.id}" ${c.title ? `title="${c.title}"` : ''}>
+              ${c.label} <span class="sort-icon" id="sortIcon_${c.id}"></span>
+            </th>
+          `).join('');
+
+          theadRow.querySelectorAll('th[data-col]').forEach(th => {
+            th.onclick = () => setSort(th.dataset.col);
+          });
+          updateSortIndicators();
+        };
+
+        const updateProcMetrics = (m) => {
+          if (!bodyEl.isConnected || !m) return;
+          const cpu = m.cpu !== undefined ? m.cpu : 0;
+          const mem = m.memory ? m.memory.percent : 0;
+          const disk = m.disk ? m.disk.percent : 0;
+
+          const cpuVal = bodyEl.querySelector('#procMetricCpuVal');
+          const cpuBar = bodyEl.querySelector('#procMetricCpuBar');
+          if (cpuVal) {
+            cpuVal.textContent = `${cpu}%`;
+            cpuVal.style.color = cpu > 80 ? '#ef4444' : (cpu > 50 ? '#f59e0b' : '#34d399');
+          }
+          if (cpuBar) {
+            cpuBar.style.width = `${Math.min(100, Math.max(0, cpu))}%`;
+            cpuBar.style.background = cpu > 80 ? '#ef4444' : (cpu > 50 ? '#f59e0b' : '#34d399');
+          }
+
+          const memVal = bodyEl.querySelector('#procMetricMemVal');
+          const memBar = bodyEl.querySelector('#procMetricMemBar');
+          if (memVal) {
+            memVal.textContent = `${mem}%`;
+            if (m.memory && m.memory.used_formatted && m.memory.total_formatted) {
+              memVal.parentElement.title = `Total Host Memory Usage: ${m.memory.used_formatted} / ${m.memory.total_formatted}`;
+            }
+            memVal.style.color = mem > 85 ? '#ef4444' : (mem > 60 ? '#f59e0b' : '#38bdf8');
+          }
+          if (memBar) {
+            memBar.style.width = `${Math.min(100, Math.max(0, mem))}%`;
+            memBar.style.background = mem > 85 ? '#ef4444' : (mem > 60 ? '#f59e0b' : '#38bdf8');
+          }
+
+          const diskVal = bodyEl.querySelector('#procMetricDiskVal');
+          const diskBar = bodyEl.querySelector('#procMetricDiskBar');
+          if (diskVal) {
+            diskVal.textContent = `${disk}%`;
+            if (m.disk && m.disk.used_formatted && m.disk.total_formatted) {
+              diskVal.parentElement.title = `Total Root Storage Usage: ${m.disk.used_formatted} / ${m.disk.total_formatted}`;
+            }
+            diskVal.style.color = disk > 90 ? '#ef4444' : (disk > 75 ? '#f59e0b' : '#a78bfa');
+          }
+          if (diskBar) {
+            diskBar.style.width = `${Math.min(100, Math.max(0, disk))}%`;
+            diskBar.style.background = disk > 90 ? '#ef4444' : (disk > 75 ? '#f59e0b' : '#a78bfa');
+          }
+        };
 
         const fetchProcs = async () => {
           if (!bodyEl.isConnected) { clearInterval(timer); return; }
@@ -3600,49 +4910,140 @@ class DesktopAppsController {
 
         const render = (list) => {
           const q = input.value.toLowerCase().trim();
-          const filtered = q ? list.filter(p => p.pid.toString().includes(q) || p.user.toLowerCase().includes(q) || p.comm.toLowerCase().includes(q) || p.args.toLowerCase().includes(q)) : list;
+          let filtered = q ? list.filter(p => (
+            p.pid.toString().includes(q) ||
+            p.user.toLowerCase().includes(q) ||
+            p.comm.toLowerCase().includes(q) ||
+            (p.args && p.args.toLowerCase().includes(q))
+          )) : list;
+
+          // Multi-attribute sorting
+          filtered = [...filtered].sort((a, b) => {
+            let valA = a[sortCol];
+            let valB = b[sortCol];
+            if (['cpu', 'mem', 'rss', 'pss', 'vsz', 'pid'].includes(sortCol)) {
+              valA = (valA === null || valA === undefined) ? -1 : Number(valA);
+              valB = (valB === null || valB === undefined) ? -1 : Number(valB);
+              return sortDir === 'asc' ? valA - valB : valB - valA;
+            }
+            valA = (valA || '').toString().toLowerCase();
+            valB = (valB || '').toString().toLowerCase();
+            return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          });
+
+          if (countBadge) countBadge.textContent = `${filtered.length} / ${list.length} procs`;
+          updateSortIndicators();
+
+          const visibleCount = ALL_COLS.filter(c => visibleCols[c.id]).length;
           if (filtered.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-muted);">No matching processes</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${visibleCount || 1}" style="text-align:center; padding:3rem; color:var(--text-muted);">No matching processes found</td></tr>`;
             return;
           }
-          tbody.innerHTML = filtered.map(p => `
-            <tr>
-              <td><code>${p.pid}</code></td>
-              <td style="color:var(--text-secondary);">${p.user}</td>
-              <td><strong>${p.cpu}%</strong></td>
-              <td>${p.mem}%</td>
-              <td><code>${p.stat}</code></td>
-              <td style="font-family:var(--font-mono); font-size:0.75rem; max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.args}</td>
-              <td style="text-align:right;">
-                <button class="btn btn-secondary btn-sm sig-btn" data-pid="${p.pid}" data-comm="${encodeURIComponent(p.comm)}" data-sig="SIGTERM">Term</button>
-                <button class="btn btn-danger btn-sm sig-btn" data-pid="${p.pid}" data-comm="${encodeURIComponent(p.comm)}" data-sig="SIGKILL">Kill</button>
-              </td>
-            </tr>
-          `).join('');
+
+          tbody.innerHTML = filtered.map(p => {
+            const cpuColor = p.cpu > 50 ? '#ef4444' : (p.cpu > 15 ? '#f59e0b' : '#34d399');
+            const memColor = p.mem > 50 ? '#ef4444' : (p.mem > 20 ? '#f59e0b' : 'inherit');
+            const rssDisplay = formatKb(p.rss);
+            const pssDisplay = (p.pss !== null && p.pss !== undefined) ? formatKb(p.pss) : '<span style="color:var(--text-muted);">-</span>';
+            const vszDisplay = formatKb(p.vsz);
+            const st = parseProcessState(p.stat);
+
+            const cells = [];
+            if (visibleCols.pid) {
+              cells.push(`<td style="padding:0.45rem 0.65rem;"><code>${p.pid}</code></td>`);
+            }
+            if (visibleCols.user) {
+              cells.push(`<td style="padding:0.45rem 0.65rem; color:var(--text-secondary); max-width:125px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500;" title="${escapeHtml(p.user)}">${escapeHtml(p.user)}</td>`);
+            }
+            if (visibleCols.cpu) {
+              cells.push(`<td style="padding:0.45rem 0.65rem;"><strong style="color:${cpuColor};">${p.cpu}%</strong></td>`);
+            }
+            if (visibleCols.mem) {
+              cells.push(`<td style="padding:0.45rem 0.65rem; color:${memColor}; font-weight:600; font-family:var(--font-mono); font-size:0.75rem;" title="Physical RSS: ${rssDisplay}">${p.mem}%</td>`);
+            }
+            if (visibleCols.rss) {
+              cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.73rem; color:#38bdf8;" title="Resident Physical Memory (RSS): ${p.rss} KB">${rssDisplay}</td>`);
+            }
+            if (visibleCols.pss) {
+              cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.73rem; color:#a78bfa;" title="Proportional Set Size (PSS): ${p.pss !== null && p.pss !== undefined ? p.pss + ' KB' : 'Unavailable'}">${pssDisplay}</td>`);
+            }
+            if (visibleCols.vsz) {
+              cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.7rem; color:var(--text-muted);" title="Virtual Memory Size: ${p.vsz} KB">${vszDisplay}</td>`);
+            }
+            if (visibleCols.stat) {
+              cells.push(`
+                <td style="padding:0.45rem 0.65rem;">
+                  <span title="${escapeHtml(st.desc)}" style="display:inline-flex; align-items:center; gap:5px; padding:2px 7px; border-radius:12px; background:${st.bg}; color:${st.color}; font-size:0.71rem; font-weight:500; cursor:help;">
+                    <span style="width:6px; height:6px; border-radius:50%; background:${st.color}; flex-shrink:0;"></span>
+                    <span>${escapeHtml(st.label)}</span>
+                  </span>
+                </td>
+              `);
+            }
+            if (visibleCols.comm) {
+              cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.74rem; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(p.args || p.comm)}">${escapeHtml(p.args || p.comm)}</td>`);
+            }
+
+            return `
+              <tr data-pid="${p.pid}" style="border-bottom:1px solid rgba(255,255,255,0.04); cursor:context-menu;">
+                ${cells.join('')}
+              </tr>
+            `;
+          }).join('');
         };
 
-        tbody.onclick = (e) => {
-          const btn = e.target.closest('.sig-btn');
-          if (btn) {
-            const pid = btn.dataset.pid;
-            const comm = decodeURIComponent(btn.dataset.comm);
-            const sig = btn.dataset.sig;
-            DesktopApps.killProcess(this.serverId, pid, sig, comm);
+        // Wire right click context menu on process rows
+        tbody.addEventListener('contextmenu', (e) => {
+          const row = e.target.closest('tr[data-pid]');
+          if (!row) return;
+          e.preventDefault();
+          e.stopPropagation();
+
+          const pid = parseInt(row.dataset.pid, 10);
+          const proc = procs.find(p => p.pid === pid);
+          if (proc) {
+            showProcContextMenu(e.clientX, e.clientY, proc);
           }
-        };
+        });
 
         input.oninput = () => render(procs);
-        bodyEl.querySelector('#procRefreshBtn').onclick = fetchProcs;
+        bodyEl.querySelector('#procRefreshBtn').onclick = () => {
+          fetchProcs();
+          if (window.DesktopTelemetry) window.DesktopTelemetry.poll(true);
+        };
 
+        renderHeaders();
         fetchProcs();
-        const timer = setInterval(fetchProcs, 8000);
-        winObj.onClose = () => clearInterval(timer);
+        const unsubProcMetrics = window.DesktopTelemetry ? window.DesktopTelemetry.subscribe(updateProcMetrics) : null;
+        if (window.DesktopTelemetry) window.DesktopTelemetry.poll();
+
+        const timer = setInterval(() => {
+          fetchProcs();
+        }, 8000);
+        winObj.onClose = () => {
+          clearInterval(timer);
+          if (unsubProcMetrics) unsubProcMetrics();
+          hideCtxMenu();
+          document.removeEventListener('pointerdown', onDocPointerDown);
+          document.removeEventListener('keydown', onDocKeyDown);
+        };
       }
     });
   }
 
   async killProcess(serverId, pid, signal, comm) {
-    if (!confirm(`Send ${signal} to PID ${pid} (${comm})?`)) return;
+    let confirmMsg = `Send ${signal} to PID ${pid} (${comm})?`;
+    if (signal === 'SIGKILL') {
+      confirmMsg = `FORCE KILL: Are you sure you want to terminate PID ${pid} (${comm}) immediately with SIGKILL (-9)?`;
+    } else if (signal === 'SIGTERM') {
+      confirmMsg = `Terminate PID ${pid} (${comm}) gracefully with SIGTERM (-15)?`;
+    } else if (signal === 'SIGSTOP') {
+      confirmMsg = `Pause execution of PID ${pid} (${comm}) with SIGSTOP (-19)?`;
+    } else if (signal === 'SIGCONT') {
+      confirmMsg = `Resume execution of PID ${pid} (${comm}) with SIGCONT (-18)?`;
+    }
+
+    if (!confirm(confirmMsg)) return false;
     try {
       const resp = await fetch(`/api/servers/${serverId}/processes/kill`, {
         method: 'POST',
@@ -3650,9 +5051,15 @@ class DesktopAppsController {
         body: JSON.stringify({ pid, signal })
       });
       const res = await resp.json();
-      if (window.showToast) window.showToast(res.message, res.success ? 'success' : 'error');
+      if (window.showToast) {
+        window.showToast(res.message, res.success ? 'success' : 'error');
+      } else {
+        alert(res.message);
+      }
+      return res.success;
     } catch (e) {
-      alert('Error: ' + e);
+      alert('Error signalling process: ' + e);
+      return false;
     }
   }
 
@@ -3924,8 +5331,1233 @@ class DesktopAppsController {
   }
 
   // =========================================================================
-  // 11. SYSTEM SETTINGS APPLICATION (Server Nodes, Admin Credentials, Theme)
+  // 10. NGINX & DOMAINS (Reverse Proxy, Config Editor & Let's Encrypt SSL)
   // =========================================================================
+  launchNginx(params = {}) {
+    const existing = WindowManager.getWindowByAppId('nginx');
+    if (existing) {
+      if (existing.isMinimized) WindowManager.restoreWindow(existing.id);
+      WindowManager.focusWindow(existing.id);
+      if (params.tab && existing._switchTab) {
+        existing._switchTab(params.tab, params);
+      }
+      return existing;
+    }
+
+    const ngxWinId = 'nginx_' + Date.now();
+    let currentTab = params.tab || 'domains';
+    let statusData = null;
+    let sitesList = [];
+    let certsList = [];
+    let currentEditFile = params.file || '';
+    let isFileDirty = false;
+
+    return WindowManager.createWindow({
+      appId: 'nginx',
+      multiInstance: false,
+      title: `Nginx & Domains (Proxy & SSL) - ${this.serverName}`,
+      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(5,150,105,0.2)" stroke="#10b981" stroke-width="1.6"/><path d="M7 16V8l5 8V8M16 8v8" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      width: 960,
+      height: 600,
+      minWidth: 640,
+      minHeight: 380,
+      contentHtml: `
+        <div class="nginx-app-container" id="nginxContainer_${ngxWinId}" style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-sans); position:relative; overflow:hidden;">
+          <!-- Top App Bar / Status Header -->
+          <div style="background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); padding:0.55rem 0.9rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; z-index:10;">
+            <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:0.4rem;" id="nginxStatusPill_${ngxWinId}">
+                <span class="status-dot disconnected" id="nginxDot_${ngxWinId}"></span>
+                <span style="font-size:0.78rem; font-weight:600;" id="nginxStatusText_${ngxWinId}">Checking Nginx...</span>
+              </div>
+              <span style="color:var(--border-subtle);">|</span>
+              <div style="display:flex; align-items:center; gap:0.4rem;" id="certbotStatusPill_${ngxWinId}">
+                <span class="status-dot disconnected" id="certbotDot_${ngxWinId}"></span>
+                <span style="font-size:0.75rem; color:var(--text-secondary);" id="certbotStatusText_${ngxWinId}">Checking Certbot...</span>
+              </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <button class="btn btn-secondary btn-xs" id="testNginxBtn_${ngxWinId}" title="Run nginx -t syntax verification">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                nginx -t
+              </button>
+              <button class="btn btn-secondary btn-xs" id="reloadNginxBtn_${ngxWinId}" title="Gracefully reload Nginx configuration">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:3px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                Reload
+              </button>
+              <button class="btn btn-secondary btn-xs" id="restartNginxBtn_${ngxWinId}" title="Restart Nginx service">
+                Restart
+              </button>
+              <button class="btn btn-ghost btn-xs" id="refreshAllBtn_${ngxWinId}" title="Refresh status and sites">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab Bar Navigation -->
+          <div style="background:#0b101b; border-bottom:1px solid var(--border-subtle); display:flex; padding:0 0.85rem; gap:0.4rem; align-items:center;">
+            <button class="ngx-tab-nav-btn active" data-tab="domains" id="tabBtn_domains_${ngxWinId}" style="background:none; border:none; border-bottom:2px solid #10b981; color:#ffffff; font-weight:600; font-size:0.78rem; padding:0.55rem 0.75rem; cursor:pointer; display:flex; align-items:center; gap:0.45rem;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+              Domains &amp; Reverse Proxy Routing
+            </button>
+            <button class="ngx-tab-nav-btn" data-tab="editor" id="tabBtn_editor_${ngxWinId}" style="background:none; border:none; border-bottom:2px solid transparent; color:var(--text-secondary); font-weight:500; font-size:0.78rem; padding:0.55rem 0.75rem; cursor:pointer; display:flex; align-items:center; gap:0.45rem;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              Config Files Editor
+            </button>
+            <button class="ngx-tab-nav-btn" data-tab="ssl" id="tabBtn_ssl_${ngxWinId}" style="background:none; border:none; border-bottom:2px solid transparent; color:var(--text-secondary); font-weight:500; font-size:0.78rem; padding:0.55rem 0.75rem; cursor:pointer; display:flex; align-items:center; gap:0.45rem;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              SSL Certificates (Certbot)
+            </button>
+          </div>
+
+          <!-- Tab Content Area -->
+          <div style="flex:1; overflow-y:auto; position:relative; display:flex; flex-direction:column;" id="tabContent_${ngxWinId}">
+          </div>
+        </div>
+      `,
+      onInit: (bodyEl, winObj) => {
+        const container = bodyEl.querySelector(`#nginxContainer_${ngxWinId}`);
+        const contentPane = bodyEl.querySelector(`#tabContent_${ngxWinId}`);
+        const ngxDot = bodyEl.querySelector(`#nginxDot_${ngxWinId}`);
+        const ngxText = bodyEl.querySelector(`#nginxStatusText_${ngxWinId}`);
+        const certDot = bodyEl.querySelector(`#certbotDot_${ngxWinId}`);
+        const certText = bodyEl.querySelector(`#certbotStatusText_${ngxWinId}`);
+
+        // Modal for displaying real Linux command and Certbot outputs
+        const showCommandOutputModal = (title, outputText, isSuccess) => {
+          const modalBackdrop = document.createElement('div');
+          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:110; padding:1rem;';
+          modalBackdrop.innerHTML = `
+            <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; width:100%; max-width:620px; box-shadow:0 20px 40px rgba(0,0,0,0.65); display:flex; flex-direction:column; overflow:hidden;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.8rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:#0c121e;">
+                <h4 style="margin:0; font-size:0.92rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
+                  <span class="status-dot ${isSuccess ? 'connected' : 'disconnected'}"></span>
+                  ${escapeHtml(title)}
+                </h4>
+                <button type="button" class="btn btn-ghost btn-xs" id="closeCmdModalBtn_${ngxWinId}" style="padding:2px 6px;">&times;</button>
+              </div>
+              <div style="padding:1rem; background:#070b12; max-height:55vh; overflow-y:auto;">
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:0.4rem; font-family:var(--font-sans);">Server Command Execution Output:</div>
+                <pre style="margin:0; font-family:'Fira Code', monospace; font-size:0.75rem; line-height:1.55; color:${isSuccess ? '#34d399' : '#f87171'}; white-space:pre-wrap; word-break:break-all;">${escapeHtml(outputText || 'Command executed with no output.')}</pre>
+              </div>
+              <div style="display:flex; justify-content:flex-end; padding:0.65rem 1.1rem; border-top:1px solid var(--border-subtle); background:#0c121e;">
+                <button type="button" class="btn btn-secondary btn-sm" id="okCmdModalBtn_${ngxWinId}">Close</button>
+              </div>
+            </div>
+          `;
+          container.appendChild(modalBackdrop);
+          const closeModal = () => { if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop); };
+          modalBackdrop.querySelector(`#closeCmdModalBtn_${ngxWinId}`).onclick = closeModal;
+          modalBackdrop.querySelector(`#okCmdModalBtn_${ngxWinId}`).onclick = closeModal;
+        };
+
+        // Safe JSON fetcher that never throws SyntaxError on HTML/500 errors
+        const safeFetchJson = async (url, options = {}) => {
+          try {
+            const resp = await fetch(url, options);
+            const contentType = resp.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              return await resp.json();
+            }
+            const text = await resp.text();
+            return {
+              success: false,
+              message: text ? `Server Error (${resp.status}): ${text.substring(0, 300)}` : `Request failed (${resp.status})`
+            };
+          } catch (err) {
+            return {
+              success: false,
+              message: `Network/Request Error: ${err.message || err}`
+            };
+          }
+        };
+
+        // 1. Fetch Status
+        const fetchStatus = async () => {
+          try {
+            const res = await safeFetchJson(`/api/servers/${this.serverId}/nginx/status`);
+            if (res.success && res.status) {
+              statusData = res.status;
+              updateStatusHeader(statusData);
+            }
+          } catch (e) {
+            console.error('Error fetching Nginx status:', e);
+          }
+        };
+
+        const updateStatusHeader = (st) => {
+          if (!st) return;
+          if (st.nginx_installed) {
+            if (st.nginx_running) {
+              ngxDot.className = 'status-dot connected';
+              const verDisplay = (st.nginx_version && !st.nginx_version.toLowerCase().includes('not found')) ? `(${escapeHtml(st.nginx_version)})` : '';
+              ngxText.innerHTML = `Nginx: <span style="color:#10b981;">Active</span> <span style="font-weight:400;color:var(--text-muted);font-size:0.72rem;">${verDisplay}</span>`;
+            } else {
+              ngxDot.className = 'status-dot disconnected';
+              ngxText.innerHTML = `Nginx: <span style="color:#f59e0b;">Inactive (Stopped)</span>`;
+            }
+          } else {
+            ngxDot.className = 'status-dot disconnected';
+            ngxText.innerHTML = `Nginx: <span style="color:#ef4444;">Not Installed</span> <button class="btn btn-primary btn-xs" id="hdrInstallNginx_${ngxWinId}" style="margin-left:6px;padding:1px 6px;font-size:0.68rem;">Install Nginx</button>`;
+            const instBtn = bodyEl.querySelector(`#hdrInstallNginx_${ngxWinId}`);
+            if (instBtn) instBtn.onclick = () => installSoftware('nginx');
+          }
+
+          if (st.certbot_installed) {
+            certDot.className = 'status-dot connected';
+            certText.innerHTML = `Certbot: <span style="color:#10b981;">Ready</span> <span style="font-weight:400;color:var(--text-muted);font-size:0.72rem;">(${escapeHtml(st.certbot_version)})</span>`;
+          } else if (st.certbot_broken) {
+            certDot.className = 'status-dot disconnected';
+            certText.innerHTML = `Certbot: <span style="color:#ef4444;" title="${escapeHtml(st.certbot_error || 'Dependency conflict')}">Broken (OpenSSL Error)</span> <button class="btn btn-secondary btn-xs" id="hdrRepairCert_${ngxWinId}" style="margin-left:6px;padding:1px 6px;font-size:0.68rem;" title="Reinstall and repair Certbot OpenSSL dependencies">Repair Certbot</button>`;
+            const repBtn = bodyEl.querySelector(`#hdrRepairCert_${ngxWinId}`);
+            if (repBtn) repBtn.onclick = () => installSoftware('certbot');
+          } else {
+            certDot.className = 'status-dot disconnected';
+            certText.innerHTML = `Certbot: <span style="color:var(--text-muted);">Not Installed</span> <button class="btn btn-secondary btn-xs" id="hdrInstallCert_${ngxWinId}" style="margin-left:6px;padding:1px 6px;font-size:0.68rem;">Install Certbot</button>`;
+            const instBtn = bodyEl.querySelector(`#hdrInstallCert_${ngxWinId}`);
+            if (instBtn) instBtn.onclick = () => installSoftware('certbot');
+          }
+        };
+
+        // 2. Fetch Sites
+        const fetchSites = async () => {
+          try {
+            const resp = await fetch(`/api/servers/${this.serverId}/nginx/sites`);
+            const res = await resp.json();
+            if (res.success && res.sites) {
+              sitesList = res.sites;
+            }
+          } catch (e) {
+            console.error('Error fetching sites:', e);
+          }
+        };
+
+        // 3. Fetch Certificates
+        const fetchCertificates = async () => {
+          try {
+            const resp = await fetch(`/api/servers/${this.serverId}/nginx/ssl/certificates`);
+            const res = await resp.json();
+            if (res.success && res.certificates) {
+              certsList = res.certificates;
+            }
+          } catch (e) {
+            console.error('Error fetching certificates:', e);
+          }
+        };
+
+        // 4. Render Domains Tab
+        const renderDomainsTab = async () => {
+          contentPane.innerHTML = `
+            <div style="padding:0.9rem; display:flex; flex-direction:column; height:100%; box-sizing:border-box;">
+              <!-- Sub-header Toolbar -->
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.85rem; flex-wrap:wrap; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.6rem; flex:1; max-width:440px;">
+                  <div style="position:relative; flex:1;">
+                    <input type="text" id="domainFilterInput_${ngxWinId}" placeholder="Filter domains, proxy targets, or configs..." class="form-control" style="width:100%; font-size:0.78rem; padding:0.35rem 0.6rem 0.35rem 1.85rem; box-sizing:border-box;">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  </div>
+                  <button class="btn btn-secondary btn-sm" id="domainRefreshBtn_${ngxWinId}" title="Refresh site listings" style="padding:0.35rem 0.65rem;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                  </button>
+                </div>
+                <button class="btn btn-primary btn-sm" id="openAddDomainBtn_${ngxWinId}" style="display:flex; align-items:center; gap:0.4rem; padding:0.4rem 0.8rem; font-weight:600;">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Add Domain / Reverse Proxy
+                </button>
+              </div>
+
+              <!-- Sites Table Container -->
+              <div class="table-responsive" style="flex:1; overflow-y:auto; border:1px solid var(--border-subtle); border-radius:6px; background:var(--bg-surface);">
+                <table class="table" style="margin:0; width:100%; border-collapse:collapse; font-size:0.78rem;">
+                  <thead>
+                    <tr style="background:#0d131f; border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;">
+                      <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Domain / Server Name</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Routing Target</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Ports</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">SSL (HTTPS)</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:center; font-weight:600; width:90px;">Status</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:right; font-weight:600; width:190px;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sitesTableBody_${ngxWinId}">
+                    <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted);"><span class="spinner-border spinner-border-sm" style="margin-right:6px;"></span>Loading domains &amp; routes...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+
+          const addBtn = contentPane.querySelector(`#openAddDomainBtn_${ngxWinId}`);
+          if (addBtn) addBtn.onclick = () => openAddDomainModal();
+
+          const filterInput = contentPane.querySelector(`#domainFilterInput_${ngxWinId}`);
+          if (filterInput) filterInput.oninput = () => renderSitesList();
+
+          const refreshBtn = contentPane.querySelector(`#domainRefreshBtn_${ngxWinId}`);
+          if (refreshBtn) refreshBtn.onclick = async () => {
+            refreshBtn.disabled = true;
+            await fetchSites();
+            renderSitesList();
+            refreshBtn.disabled = false;
+          };
+
+          await fetchSites();
+          renderSitesList();
+        };
+
+        const renderSitesList = () => {
+          const tbody = contentPane.querySelector(`#sitesTableBody_${ngxWinId}`);
+          if (!tbody) return;
+
+          const filterInput = contentPane.querySelector(`#domainFilterInput_${ngxWinId}`);
+          const q = filterInput ? filterInput.value.toLowerCase().trim() : '';
+
+          let filtered = sitesList;
+          if (q) {
+            filtered = sitesList.filter(s => {
+              const names = (s.server_names || []).join(' ').toLowerCase();
+              const target = (s.proxy_pass || s.root || '').toLowerCase();
+              const fname = (s.filename || '').toLowerCase();
+              return names.includes(q) || target.includes(q) || fname.includes(q);
+            });
+          }
+
+          if (filtered.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="6" style="text-align:center; padding:3.5rem 1.5rem;">
+                  <div style="display:flex; flex-direction:column; align-items:center; gap:0.6rem; color:var(--text-muted);">
+                    <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.3" style="color:var(--text-muted); opacity:0.6;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    <div style="font-weight:600; font-size:0.88rem; color:var(--text-primary);">${q ? 'No matching domains found' : 'No Domains or Proxy Routes Configured'}</div>
+                    <div style="font-size:0.75rem; max-width:380px;">${q ? 'Try clearing your search query.' : 'Forward traffic from your domains to background apps running on specific ports (e.g. Node, Python, Docker) with automated SSL.'}</div>
+                    ${!q ? `<button class="btn btn-primary btn-sm" id="emptyAddBtn_${ngxWinId}" style="margin-top:0.4rem;">Add Your First Domain / Reverse Proxy</button>` : ''}
+                  </div>
+                </td>
+              </tr>
+            `;
+            const emptyBtn = tbody.querySelector(`#emptyAddBtn_${ngxWinId}`);
+            if (emptyBtn) emptyBtn.onclick = () => openAddDomainModal();
+            return;
+          }
+
+          tbody.innerHTML = filtered.map(site => {
+            const domainDisplay = (site.server_names && site.server_names.length > 0 && site.server_names[0] !== '_')
+              ? site.server_names.join(', ')
+              : (site.filename === 'default' ? 'Default Host (_)' : site.filename);
+
+            const isProxy = site.site_type === 'proxy' || Boolean(site.proxy_pass);
+            const targetBadge = isProxy
+              ? `<span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.22); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); font-size:0.72rem; display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(site.proxy_pass)}">Proxy &rarr; ${escapeHtml(site.proxy_pass || 'Port Routing')}</span>`
+              : `<span style="background:rgba(203,213,225,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.12); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); font-size:0.72rem; display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(site.root)}">Static &rarr; ${escapeHtml(site.root || '/var/www')}</span>`;
+
+            const portsBadges = (site.ports && site.ports.length > 0)
+              ? site.ports.map(p => {
+                  const isSslPort = (p === 443 || String(p).includes('443') || String(p).includes('ssl'));
+                  return `<span style="background:${isSslPort ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.1)'}; color:${isSslPort ? '#34d399' : '#94a3b8'}; border:1px solid ${isSslPort ? 'rgba(16,185,129,0.25)' : 'rgba(148,163,184,0.2)'}; padding:1px 5px; border-radius:3px; font-family:var(--font-mono); font-size:0.68rem; margin-right:3px;">${escapeHtml(p)}</span>`;
+                }).join('')
+              : '<span style="color:var(--text-muted);">-</span>';
+
+            const sslCell = site.has_ssl
+              ? `<span class="badge badge-online" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 6px;">
+                   <span class="status-dot connected"></span> HTTPS
+                 </span>`
+              : `<div style="display:flex; align-items:center; gap:4px;">
+                   <span class="badge badge-offline" style="display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; padding:2px 6px;">
+                     <span class="status-dot disconnected"></span> HTTP Only
+                   </span>
+                   <button class="btn btn-secondary btn-xs issue-ssl-btn" data-domain="${escapeHtml(site.server_names[0] || site.filename)}" title="Issue Let's Encrypt certificate" style="padding:1px 6px; font-size:0.68rem;">+ SSL</button>
+                 </div>`;
+
+            const statusToggle = site.is_conf_d
+              ? `<span style="font-size:0.7rem; color:var(--text-muted);" title="File resides in conf.d/ (always loaded)">conf.d</span>`
+              : `<button class="btn btn-xs toggle-site-btn ${site.enabled ? 'btn-secondary' : 'btn-ghost'}" data-file="${escapeHtml(site.filename)}" data-enable="${!site.enabled}" style="padding:2px 8px; font-size:0.7rem; min-width:64px;">
+                   ${site.enabled ? '<span style="color:#10b981;">Enabled</span>' : '<span style="color:var(--text-muted);">Disabled</span>'}
+                 </button>`;
+
+            return `
+              <tr style="border-bottom:1px solid var(--border-subtle);">
+                <td style="padding:0.6rem 0.75rem;">
+                  <div style="font-weight:600; color:var(--text-primary);">${escapeHtml(domainDisplay)}</div>
+                  <div style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-muted); margin-top:1px;">${escapeHtml(site.filename)}</div>
+                </td>
+                <td style="padding:0.6rem 0.75rem;">${targetBadge}</td>
+                <td style="padding:0.6rem 0.75rem;">${portsBadges}</td>
+                <td style="padding:0.6rem 0.75rem;">${sslCell}</td>
+                <td style="padding:0.6rem 0.75rem; text-align:center;">${statusToggle}</td>
+                <td style="padding:0.6rem 0.75rem; text-align:right;">
+                  <div style="display:flex; align-items:center; justify-content:flex-end; gap:0.35rem;">
+                    <button class="btn btn-secondary btn-xs edit-config-btn" data-file="${escapeHtml(site.filename)}" title="Edit configuration file">
+                      Config
+                    </button>
+                    <button class="btn btn-danger btn-xs delete-site-btn" data-file="${escapeHtml(site.filename)}" data-domain="${escapeHtml(domainDisplay)}" title="Delete site configuration">
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+
+          // Wire row event listeners
+          tbody.querySelectorAll('.toggle-site-btn').forEach(btn => {
+            btn.onclick = async () => {
+              const filename = btn.dataset.file;
+              const enable = btn.dataset.enable === 'true';
+              btn.disabled = true;
+              try {
+                const resp = await fetch(`/api/servers/${this.serverId}/nginx/site/toggle`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ filename, enable })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                  if (window.showToast) window.showToast(res.message || 'Site toggled successfully', 'success');
+                  await fetchSites();
+                  renderSitesList();
+                } else {
+                  if (window.showToast) window.showToast(res.message || 'Failed to toggle site', 'error');
+                }
+              } catch (e) {
+                alert('Error toggling site: ' + e);
+              } finally {
+                btn.disabled = false;
+              }
+            };
+          });
+
+          tbody.querySelectorAll('.edit-config-btn').forEach(btn => {
+            btn.onclick = () => {
+              const filename = btn.dataset.file;
+              switchTab('editor', { file: filename });
+            };
+          });
+
+          tbody.querySelectorAll('.issue-ssl-btn').forEach(btn => {
+            btn.onclick = () => {
+              const domain = btn.dataset.domain;
+              openIssueSslModal(domain);
+            };
+          });
+
+          tbody.querySelectorAll('.delete-site-btn').forEach(btn => {
+            btn.onclick = async () => {
+              const filename = btn.dataset.file;
+              const domain = btn.dataset.domain;
+              if (!confirm(`Are you sure you want to permanently delete the site configuration '${filename}' (${domain})?\n\nThis will remove the configuration and its enabled symlink.`)) {
+                return;
+              }
+              btn.disabled = true;
+              try {
+                const resp = await fetch(`/api/servers/${this.serverId}/nginx/site/delete`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ filename })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                  if (window.showToast) window.showToast(res.message || 'Site deleted successfully', 'success');
+                  await fetchSites();
+                  renderSitesList();
+                } else {
+                  if (window.showToast) window.showToast(res.message || 'Failed to delete site', 'error');
+                }
+              } catch (e) {
+                alert('Error deleting site: ' + e);
+              } finally {
+                btn.disabled = false;
+              }
+            };
+          });
+        };
+
+        // 5. Render Editor Tab
+        const renderEditorTab = async (opts = {}) => {
+          if (opts.file) {
+            currentEditFile = opts.file;
+          }
+
+          contentPane.innerHTML = `
+            <div style="display:flex; flex-direction:column; height:100%; box-sizing:border-box;">
+              <!-- Editor Sub-bar -->
+              <div style="background:#090d16; border-bottom:1px solid var(--border-subtle); padding:0.45rem 0.9rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                <div style="display:flex; align-items:center; gap:0.6rem;">
+                  <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Config File:</span>
+                  <select class="form-control" id="editorFileSelect_${ngxWinId}" style="width:260px; font-size:0.78rem; padding:0.25rem 0.5rem; font-family:var(--font-mono);">
+                    <option value="/etc/nginx/nginx.conf">/etc/nginx/nginx.conf (Main)</option>
+                    ${sitesList.map(s => `
+                      <option value="${escapeHtml(s.filename)}" ${s.filename === currentEditFile ? 'selected' : ''}>
+                        ${escapeHtml(s.filename)} (${(s.server_names || []).slice(0, 1).join('') || 'site'})
+                      </option>
+                    `).join('')}
+                  </select>
+                  <button class="btn btn-ghost btn-xs" id="reloadEditorFileBtn_${ngxWinId}" title="Reload file from disk">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                  </button>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:0.4rem;">
+                  <button class="btn btn-secondary btn-xs" id="editorTestBtn_${ngxWinId}" title="Test syntax on remote host without saving">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    Test Syntax (nginx -t)
+                  </button>
+                  <button class="btn btn-primary btn-xs" id="editorSaveBtn_${ngxWinId}" style="display:flex; align-items:center; gap:4px; font-weight:600; padding:0.35rem 0.75rem;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Save &amp; Reload Nginx
+                  </button>
+                </div>
+              </div>
+
+              <!-- Main Code Surface -->
+              <div style="flex:1; position:relative; display:flex; flex-direction:column; background:#070b12;">
+                <textarea id="ngxCodeArea_${ngxWinId}" spellcheck="false" placeholder="Loading configuration..." style="flex:1; width:100%; border:none; outline:none; background:#070b12; color:#f8fafc; font-family:'Fira Code', 'Cascadia Code', monospace; font-size:0.8rem; line-height:1.55; padding:0.85rem; box-sizing:border-box; resize:none; white-space:pre;"></textarea>
+              </div>
+
+              <!-- Console Output Banner -->
+              <div id="editorOutputBox_${ngxWinId}" style="display:none; background:#0d131f; border-top:1px solid var(--border-subtle); padding:0.5rem 0.85rem; font-family:var(--font-mono); font-size:0.72rem; max-height:120px; overflow-y:auto;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.25rem;">
+                  <span id="editorOutputTitle_${ngxWinId}" style="font-weight:600; font-size:0.72rem;">Nginx Syntax Validation Result:</span>
+                  <button type="button" class="btn btn-ghost btn-xs" id="closeEditorOutputBtn_${ngxWinId}" style="padding:0 4px; font-size:0.68rem;">Dismiss</button>
+                </div>
+                <pre id="editorOutputText_${ngxWinId}" style="margin:0; white-space:pre-wrap; word-break:break-all;"></pre>
+              </div>
+            </div>
+          `;
+
+          const fileSelect = contentPane.querySelector(`#editorFileSelect_${ngxWinId}`);
+          const codeArea = contentPane.querySelector(`#ngxCodeArea_${ngxWinId}`);
+          const saveBtn = contentPane.querySelector(`#editorSaveBtn_${ngxWinId}`);
+          const testBtn = contentPane.querySelector(`#editorTestBtn_${ngxWinId}`);
+          const reloadBtn = contentPane.querySelector(`#reloadEditorFileBtn_${ngxWinId}`);
+          const outputBox = contentPane.querySelector(`#editorOutputBox_${ngxWinId}`);
+          const outputTitle = contentPane.querySelector(`#editorOutputTitle_${ngxWinId}`);
+          const outputText = contentPane.querySelector(`#editorOutputText_${ngxWinId}`);
+          const closeOutputBtn = contentPane.querySelector(`#closeEditorOutputBtn_${ngxWinId}`);
+
+          if (closeOutputBtn) {
+            closeOutputBtn.onclick = () => { outputBox.style.display = 'none'; };
+          }
+
+          // Tab key handling in textarea
+          codeArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+              e.preventDefault();
+              const s = codeArea.selectionStart;
+              const end = codeArea.selectionEnd;
+              codeArea.value = codeArea.value.substring(0, s) + '    ' + codeArea.value.substring(end);
+              codeArea.selectionStart = codeArea.selectionEnd = s + 4;
+            }
+          });
+
+          // Load file content
+          const loadCurrentFile = async () => {
+            const chosenFile = fileSelect.value;
+            currentEditFile = chosenFile;
+            codeArea.disabled = true;
+            codeArea.value = `// Loading ${chosenFile}...`;
+            try {
+              const resp = await fetch(`/api/servers/${this.serverId}/nginx/site/config?file=${encodeURIComponent(chosenFile)}`);
+              const res = await resp.json();
+              if (res.success) {
+                codeArea.value = res.content || '';
+              } else {
+                codeArea.value = `// Error loading file: ${res.error || 'Unknown error'}`;
+              }
+            } catch (e) {
+              codeArea.value = `// Network error: ${e}`;
+            } finally {
+              codeArea.disabled = false;
+            }
+          };
+
+          fileSelect.onchange = loadCurrentFile;
+          reloadBtn.onclick = loadCurrentFile;
+
+          testBtn.onclick = async () => {
+            testBtn.disabled = true;
+            testBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;margin-right:4px;"></span>Testing...`;
+            try {
+              const resp = await fetch(`/api/servers/${this.serverId}/nginx/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'test' })
+              });
+              const res = await resp.json();
+              outputBox.style.display = 'block';
+              if (res.success) {
+                outputTitle.innerHTML = `<span style="color:#10b981;">&check; Syntax OK</span> - Nginx configuration test successful`;
+                outputText.style.color = '#34d399';
+                outputText.textContent = res.message || 'Syntax is ok, test is successful.';
+              } else {
+                outputTitle.innerHTML = `<span style="color:#ef4444;">&cross; Syntax Error</span> in configuration`;
+                outputText.style.color = '#f87171';
+                outputText.textContent = res.message || 'Syntax check failed';
+              }
+            } catch (e) {
+              alert('Test error: ' + e);
+            } finally {
+              testBtn.disabled = false;
+              testBtn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Test Syntax (nginx -t)`;
+            }
+          };
+
+          saveBtn.onclick = async () => {
+            const filename = fileSelect.value;
+            const content = codeArea.value;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;margin-right:4px;"></span>Validating &amp; Saving...`;
+            try {
+              const resp = await fetch(`/api/servers/${this.serverId}/nginx/site/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename, content })
+              });
+              const res = await resp.json();
+              outputBox.style.display = 'block';
+              if (res.success) {
+                outputTitle.innerHTML = `<span style="color:#10b981;">&check; Saved &amp; Reloaded</span>`;
+                outputText.style.color = '#34d399';
+                outputText.textContent = res.message || 'Configuration saved and Nginx reloaded successfully.';
+                if (window.showToast) window.showToast('Config saved and Nginx reloaded!', 'success');
+              } else {
+                outputTitle.innerHTML = `<span style="color:#ef4444;">&cross; Syntax Error - Save Rolled Back</span>`;
+                outputText.style.color = '#f87171';
+                outputText.textContent = res.message || 'Syntax check failed. Reverted to previous backup.';
+                if (window.showToast) window.showToast('Syntax error! Rolled back to safe backup.', 'error');
+              }
+            } catch (e) {
+              alert('Error saving configuration: ' + e);
+            } finally {
+              saveBtn.disabled = false;
+              saveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Save &amp; Reload Nginx`;
+            }
+          };
+
+          await loadCurrentFile();
+        };
+
+        // 6. Render SSL Certificates Tab
+        const renderSslTab = async () => {
+          contentPane.innerHTML = `
+            <div style="padding:0.9rem; display:flex; flex-direction:column; height:100%; box-sizing:border-box;">
+              <!-- Sub-bar -->
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.85rem; flex-wrap:wrap; gap:0.5rem;">
+                <div>
+                  <h3 style="margin:0; font-size:0.95rem; font-weight:600; color:var(--text-primary);">Let's Encrypt SSL Certificates</h3>
+                  <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-secondary);">Automated zero-downtime certificate issuance and renewal via Certbot Nginx plugin.</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.4rem;">
+                  <button class="btn btn-secondary btn-sm" id="renewAllSslBtn_${ngxWinId}" style="display:flex; align-items:center; gap:0.35rem; font-weight:500;">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    Renew All Certificates
+                  </button>
+                  <button class="btn btn-primary btn-sm" id="issueNewCertBtn_${ngxWinId}" style="display:flex; align-items:center; gap:0.35rem; font-weight:600;">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Issue New Certificate
+                  </button>
+                </div>
+              </div>
+
+              <!-- Certbot Not Installed Warning Banner -->
+              <div id="certbotNotInstalledBox_${ngxWinId}" style="display:none; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:0.75rem 1rem; margin-bottom:0.85rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                  <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <span style="font-size:0.78rem; color:#fde68a;">Certbot is not installed on this server. Install it to manage SSL certificates.</span>
+                  </div>
+                  <button class="btn btn-primary btn-xs" id="installCertbotBannerBtn_${ngxWinId}" style="padding:0.3rem 0.7rem;">Install Certbot</button>
+                </div>
+              </div>
+
+              <!-- Certificates Table -->
+              <div class="table-responsive" style="flex:1; overflow-y:auto; border:1px solid var(--border-subtle); border-radius:6px; background:var(--bg-surface);">
+                <table class="table" style="margin:0; width:100%; border-collapse:collapse; font-size:0.78rem;">
+                  <thead>
+                    <tr style="background:#0d131f; border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;">
+                      <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Certificate Name</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Covered Domains</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Expiry &amp; Validity</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Certificate Path</th>
+                      <th style="padding:0.6rem 0.75rem; text-align:right; font-weight:600; width:120px;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="certsTableBody_${ngxWinId}">
+                    <tr><td colspan="5" style="text-align:center; padding:3rem; color:var(--text-muted);"><span class="spinner-border spinner-border-sm" style="margin-right:6px;"></span>Loading certificates...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+
+          if (statusData && !statusData.certbot_installed) {
+            const notInstBox = contentPane.querySelector(`#certbotNotInstalledBox_${ngxWinId}`);
+            if (notInstBox) {
+              notInstBox.style.display = 'block';
+              if (statusData.certbot_broken) {
+                const spanEl = notInstBox.querySelector('span');
+                if (spanEl) spanEl.textContent = 'Certbot has a Python OpenSSL dependency conflict on this server. Click Repair Certbot to fix it.';
+                const bBtn = notInstBox.querySelector(`#installCertbotBannerBtn_${ngxWinId}`);
+                if (bBtn) bBtn.textContent = 'Repair Certbot';
+              }
+            }
+            const instBtn = contentPane.querySelector(`#installCertbotBannerBtn_${ngxWinId}`);
+            if (instBtn) instBtn.onclick = () => installSoftware('certbot');
+          }
+
+          const renewAllBtn = contentPane.querySelector(`#renewAllSslBtn_${ngxWinId}`);
+          if (renewAllBtn) {
+            renewAllBtn.onclick = async () => {
+              const forceRenew = confirm("Force renewal for all certificates now?\n\n- Press OK for Force Renewal (--force-renewal: contacts Let's Encrypt to re-issue new 90-day certificates immediately).\n- Press Cancel to only renew certificates due for renewal (< 30 days left).");
+              renewAllBtn.disabled = true;
+              renewAllBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;margin-right:4px;"></span>Renewing...`;
+              try {
+                const res = await safeFetchJson(`/api/servers/${this.serverId}/nginx/ssl/renew`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ force: forceRenew })
+                });
+                showCommandOutputModal(`Certbot SSL Renewal Result (${forceRenew ? 'Forced' : 'Standard'})`, res.message || 'Renewal complete.', res.success);
+                if (res.success) {
+                  if (window.showToast) window.showToast('Renewal command completed', 'success');
+                  await fetchCertificates();
+                  renderCertsList();
+                } else {
+                  if (window.showToast) window.showToast(res.message || 'Renewal failed', 'error');
+                }
+              } catch (e) {
+                showCommandOutputModal('Renewal Error', String(e), false);
+              } finally {
+                renewAllBtn.disabled = false;
+                renewAllBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Renew All Certificates`;
+              }
+            };
+          }
+
+          const issueNewBtn = contentPane.querySelector(`#issueNewCertBtn_${ngxWinId}`);
+          if (issueNewBtn) {
+            issueNewBtn.onclick = () => openIssueSslModal();
+          }
+
+          await fetchCertificates();
+          renderCertsList();
+        };
+
+        const renderCertsList = () => {
+          const tbody = contentPane.querySelector(`#certsTableBody_${ngxWinId}`);
+          if (!tbody) return;
+
+          if (certsList.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="5" style="text-align:center; padding:3.5rem 1.5rem;">
+                  <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem; color:var(--text-muted);">
+                    <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.3" style="color:var(--text-muted); opacity:0.6;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <div style="font-weight:600; font-size:0.88rem; color:var(--text-primary);">No Active Let's Encrypt Certificates</div>
+                    <div style="font-size:0.75rem; max-width:380px;">Free 90-day SSL certificates issued via Certbot will be automatically monitored and listed here.</div>
+                    <button class="btn btn-primary btn-sm" id="emptyCertBtn_${ngxWinId}" style="margin-top:0.4rem;">Issue New Certificate</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+            const emptyBtn = tbody.querySelector(`#emptyCertBtn_${ngxWinId}`);
+            if (emptyBtn) emptyBtn.onclick = () => openIssueSslModal();
+            return;
+          }
+
+          tbody.innerHTML = certsList.map(c => {
+            const daysLeft = c.valid_days;
+            let validityBadge = '';
+            if (daysLeft !== null && daysLeft !== undefined) {
+              if (daysLeft > 30) {
+                validityBadge = `<span class="badge badge-online" style="font-size:0.7rem; padding:2px 6px;">${daysLeft} days remaining</span>`;
+              } else if (daysLeft > 0) {
+                validityBadge = `<span class="badge" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); font-size:0.7rem; padding:2px 6px;">${daysLeft} days left (Expiring soon)</span>`;
+              } else {
+                validityBadge = `<span class="badge badge-offline" style="font-size:0.7rem; padding:2px 6px;">Expired</span>`;
+              }
+            }
+
+            const domainsBadges = (c.domains && c.domains.length > 0)
+              ? c.domains.map(d => `<span style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.2); padding:1px 6px; border-radius:3px; font-family:var(--font-mono); font-size:0.7rem; margin-right:3px;">${escapeHtml(d)}</span>`).join('')
+              : '<span style="color:var(--text-muted);">-</span>';
+
+            return `
+              <tr style="border-bottom:1px solid var(--border-subtle);">
+                <td style="padding:0.6rem 0.75rem;">
+                  <strong style="color:var(--text-primary);">${escapeHtml(c.name)}</strong>
+                </td>
+                <td style="padding:0.6rem 0.75rem;">${domainsBadges}</td>
+                <td style="padding:0.6rem 0.75rem;">
+                  <div>${validityBadge}</div>
+                  <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(c.expiry || '')}</div>
+                </td>
+                <td style="padding:0.6rem 0.75rem;">
+                  <span style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary); max-width:220px; overflow:hidden; text-overflow:ellipsis; display:inline-block;" title="${escapeHtml(c.path || '')}">${escapeHtml(c.path || '-')}</span>
+                </td>
+                <td style="padding:0.6rem 0.75rem; text-align:right;">
+                  <button class="btn btn-secondary btn-xs renew-cert-row-btn" data-certname="${escapeHtml(c.name)}" data-domain="${escapeHtml(c.domains[0] || c.name)}" title="Renew this certificate">
+                    Renew
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+
+          tbody.querySelectorAll('.renew-cert-row-btn').forEach(btn => {
+            btn.onclick = async () => {
+              const certName = btn.dataset.certname || btn.dataset.domain;
+              const forceRenew = confirm(`Renew certificate '${certName}' immediately via Let's Encrypt?\n\nThis will execute on your server:\nsudo certbot renew --cert-name ${certName} --force-renewal`);
+              if (!forceRenew) return;
+
+              btn.disabled = true;
+              btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></span>`;
+              try {
+                const res = await safeFetchJson(`/api/servers/${this.serverId}/nginx/ssl/renew`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ domain: certName, force: true })
+                });
+                showCommandOutputModal(`Certbot Renewal Output: ${certName}`, res.message || 'Renewal completed.', res.success);
+                if (res.success) {
+                  if (window.showToast) window.showToast(`Certificate '${certName}' renewed!`, 'success');
+                  await fetchCertificates();
+                  renderCertsList();
+                } else {
+                  if (window.showToast) window.showToast(res.message || 'Renewal failed', 'error');
+                }
+              } catch (e) {
+                showCommandOutputModal(`Renewal Error: ${certName}`, String(e), false);
+              } finally {
+                btn.disabled = false;
+                btn.textContent = 'Renew';
+              }
+            };
+          });
+        };
+
+        // 7. Tab Switching
+        const switchTab = (tab, opts = {}) => {
+          currentTab = tab;
+          bodyEl.querySelectorAll('.ngx-tab-nav-btn').forEach(b => {
+            const isActive = (b.dataset.tab === tab);
+            b.classList.toggle('active', isActive);
+            b.style.borderBottomColor = isActive ? '#10b981' : 'transparent';
+            b.style.color = isActive ? '#ffffff' : 'var(--text-secondary)';
+            b.style.fontWeight = isActive ? '600' : '500';
+          });
+
+          if (tab === 'domains') renderDomainsTab();
+          else if (tab === 'editor') renderEditorTab(opts);
+          else if (tab === 'ssl') renderSslTab();
+        };
+
+        bodyEl.querySelectorAll('.ngx-tab-nav-btn').forEach(btn => {
+          btn.onclick = () => switchTab(btn.dataset.tab);
+        });
+
+        winObj._switchTab = (tab, opts) => switchTab(tab, opts);
+
+        // 8. Add Domain / Reverse Proxy Modal
+        const openAddDomainModal = () => {
+          const modalBackdrop = document.createElement('div');
+          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; padding:1rem;';
+          modalBackdrop.innerHTML = `
+            <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; width:100%; max-width:520px; box-shadow:0 20px 40px rgba(0,0,0,0.6); display:flex; flex-direction:column; overflow:hidden;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:#0c121e;">
+                <h4 style="margin:0; font-size:0.92rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+                  Add Domain / Reverse Proxy
+                </h4>
+                <button type="button" class="btn btn-ghost btn-xs" id="closeAddModalBtn_${ngxWinId}" style="padding:2px 6px;">&times;</button>
+              </div>
+
+              <div style="padding:1.1rem; display:flex; flex-direction:column; gap:0.9rem; max-height:75vh; overflow-y:auto;">
+                <!-- Domain Name -->
+                <div>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Domain Name (FQDN) *</label>
+                  <input type="text" class="form-control" id="mDomainName_${ngxWinId}" placeholder="e.g. app.yourdomain.com or mydomain.com" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box;">
+                  <span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:block;">Ensure your DNS A/AAAA record points to this server IP before obtaining SSL.</span>
+                </div>
+
+                <!-- Routing Type -->
+                <div>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.35rem; color:#cbd5e1;">Routing Target Type</label>
+                  <div style="display:flex; gap:1.25rem; font-size:0.78rem;">
+                    <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;">
+                      <input type="radio" name="mRouteType_${ngxWinId}" value="proxy" checked>
+                      <span>Reverse Proxy (Port)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;">
+                      <input type="radio" name="mRouteType_${ngxWinId}" value="static">
+                      <span>Static Directory</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Proxy Port Input -->
+                <div id="mProxyBox_${ngxWinId}">
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Application Port / Internal Address *</label>
+                  <input type="text" class="form-control" id="mProxyPort_${ngxWinId}" placeholder="e.g. 3000, 8080, or 127.0.0.1:5000" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box; font-family:var(--font-mono);">
+                  <span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:block;">Requests for this domain will be forwarded internally to this local port.</span>
+                </div>
+
+                <!-- Static Directory Input -->
+                <div id="mStaticBox_${ngxWinId}" style="display:none;">
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Web Root Path *</label>
+                  <input type="text" class="form-control" id="mStaticRoot_${ngxWinId}" placeholder="/var/www/my-domain" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box; font-family:var(--font-mono);">
+                </div>
+
+                <!-- Let's Encrypt Checkbox -->
+                <div style="background:#0a0f1a; border:1px solid var(--border-subtle); border-radius:6px; padding:0.75rem;">
+                  <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; font-size:0.78rem;">
+                    <input type="checkbox" id="mEnableSsl_${ngxWinId}" style="margin-top:2px;">
+                    <div>
+                      <span style="font-weight:600; color:#34d399;">Obtain Free Let's Encrypt SSL Certificate</span>
+                      <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:1px;">Automatically configures HTTPS with HTTP-to-HTTPS redirect.</div>
+                    </div>
+                  </label>
+
+                  <div id="mEmailBox_${ngxWinId}" style="display:none; margin-top:0.6rem; padding-left:1.45rem;">
+                    <label style="display:block; font-weight:600; font-size:0.74rem; margin-bottom:0.25rem; color:#cbd5e1;">Admin Email Address *</label>
+                    <input type="email" class="form-control" id="mSslEmail_${ngxWinId}" placeholder="admin@yourdomain.com" style="width:100%; font-size:0.78rem; padding:0.35rem 0.55rem; box-sizing:border-box;">
+                    <span style="font-size:0.68rem; color:var(--text-muted); margin-top:2px; display:block;">Required by Let's Encrypt for urgent security and renewal alerts.</span>
+                  </div>
+                </div>
+
+                <div id="mAddStatus_${ngxWinId}" style="display:none; padding:0.5rem 0.75rem; border-radius:4px; font-size:0.74rem;"></div>
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:0.4rem; padding:0.75rem 1.1rem; border-top:1px solid var(--border-subtle); background:#0c121e;">
+                <button type="button" class="btn btn-ghost btn-sm" id="mCancelAddBtn_${ngxWinId}">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="mSubmitAddBtn_${ngxWinId}" style="font-weight:600;">Deploy Domain Route</button>
+              </div>
+            </div>
+          `;
+          container.appendChild(modalBackdrop);
+
+          const closeModal = () => {
+            if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+          };
+
+          modalBackdrop.querySelector(`#closeAddModalBtn_${ngxWinId}`).onclick = closeModal;
+          modalBackdrop.querySelector(`#mCancelAddBtn_${ngxWinId}`).onclick = closeModal;
+
+          // Route type toggle
+          const proxyBox = modalBackdrop.querySelector(`#mProxyBox_${ngxWinId}`);
+          const staticBox = modalBackdrop.querySelector(`#mStaticBox_${ngxWinId}`);
+          modalBackdrop.querySelectorAll(`input[name="mRouteType_${ngxWinId}"]`).forEach(r => {
+            r.onchange = () => {
+              proxyBox.style.display = (r.value === 'proxy') ? 'block' : 'none';
+              staticBox.style.display = (r.value === 'static') ? 'block' : 'none';
+            };
+          });
+
+          // SSL checkbox toggle
+          const enableSslCb = modalBackdrop.querySelector(`#mEnableSsl_${ngxWinId}`);
+          const emailBox = modalBackdrop.querySelector(`#mEmailBox_${ngxWinId}`);
+          enableSslCb.onchange = () => {
+            emailBox.style.display = enableSslCb.checked ? 'block' : 'none';
+          };
+
+          // Submit handler
+          const submitBtn = modalBackdrop.querySelector(`#mSubmitAddBtn_${ngxWinId}`);
+          const statusBox = modalBackdrop.querySelector(`#mAddStatus_${ngxWinId}`);
+
+          submitBtn.onclick = async () => {
+            const domain = modalBackdrop.querySelector(`#mDomainName_${ngxWinId}`).value.trim().toLowerCase();
+            const routeType = modalBackdrop.querySelector(`input[name="mRouteType_${ngxWinId}"]:checked`).value;
+            const portOrUrl = modalBackdrop.querySelector(`#mProxyPort_${ngxWinId}`).value.trim();
+            const rootPath = modalBackdrop.querySelector(`#mStaticRoot_${ngxWinId}`).value.trim();
+            const enableSsl = enableSslCb.checked;
+            const email = modalBackdrop.querySelector(`#mSslEmail_${ngxWinId}`).value.trim();
+
+            if (!domain) {
+              alert('Please enter a valid domain name.');
+              return;
+            }
+
+            if (routeType === 'proxy' && !portOrUrl) {
+              alert('Please enter a proxy port or URL (e.g. 3000 or 127.0.0.1:3000).');
+              return;
+            }
+
+            if (routeType === 'static' && !rootPath) {
+              alert('Please enter a static web root path (e.g. /var/www/my-domain).');
+              return;
+            }
+
+            if (enableSsl && !email) {
+              alert('Please provide an email address for Let\'s Encrypt SSL registration.');
+              return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;margin-right:5px;"></span>Deploying...`;
+            statusBox.style.display = 'block';
+            statusBox.style.background = 'rgba(56,189,248,0.1)';
+            statusBox.style.color = '#38bdf8';
+            statusBox.style.border = '1px solid rgba(56,189,248,0.2)';
+            statusBox.textContent = enableSsl
+              ? 'Creating Nginx configuration, testing syntax, and obtaining Let\'s Encrypt SSL certificate...'
+              : 'Creating Nginx configuration and reloading service...';
+
+            try {
+              const resp = await fetch(`/api/servers/${this.serverId}/nginx/site/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  domain,
+                  site_type: routeType,
+                  port_or_url: portOrUrl,
+                  root_path: rootPath,
+                  enable_ssl: enableSsl,
+                  email
+                })
+              });
+              const res = await resp.json();
+              if (res.success) {
+                if (window.showToast) window.showToast(`Domain '${domain}' deployed successfully!`, 'success');
+                closeModal();
+                await fetchSites();
+                if (currentTab === 'domains') renderSitesList();
+              } else {
+                statusBox.style.background = 'rgba(239,68,68,0.1)';
+                statusBox.style.color = '#f87171';
+                statusBox.style.border = '1px solid rgba(239,68,68,0.25)';
+                statusBox.textContent = `Deployment Failed: ${res.message || 'Unknown error'}`;
+              }
+            } catch (e) {
+              statusBox.style.background = 'rgba(239,68,68,0.1)';
+              statusBox.style.color = '#f87171';
+              statusBox.textContent = `Network error: ${e}`;
+            } finally {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Deploy Domain Route';
+            }
+          };
+        };
+
+        // 9. Issue SSL Modal
+        const openIssueSslModal = (defaultDomain = '') => {
+          const modalBackdrop = document.createElement('div');
+          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; padding:1rem;';
+          modalBackdrop.innerHTML = `
+            <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; width:100%; max-width:480px; box-shadow:0 20px 40px rgba(0,0,0,0.6); display:flex; flex-direction:column; overflow:hidden;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:#0c121e;">
+                <h4 style="margin:0; font-size:0.92rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  Issue Let's Encrypt Certificate
+                </h4>
+                <button type="button" class="btn btn-ghost btn-xs" id="closeIssueModalBtn_${ngxWinId}" style="padding:2px 6px;">&times;</button>
+              </div>
+
+              <div style="padding:1.1rem; display:flex; flex-direction:column; gap:0.85rem;">
+                <div>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Domain Name *</label>
+                  <input type="text" class="form-control" id="mSslDomain_${ngxWinId}" value="${escapeHtml(defaultDomain)}" placeholder="e.g. app.yourdomain.com" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box;">
+                  <span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:block;">Domain must resolve to this server IP address over port 80.</span>
+                </div>
+
+                <div>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Admin Email Address *</label>
+                  <input type="email" class="form-control" id="mIssueEmail_${ngxWinId}" placeholder="admin@yourdomain.com" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box;">
+                </div>
+
+                <div id="mIssueStatus_${ngxWinId}" style="display:none; padding:0.5rem 0.75rem; border-radius:4px; font-size:0.74rem;"></div>
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:0.4rem; padding:0.75rem 1.1rem; border-top:1px solid var(--border-subtle); background:#0c121e;">
+                <button type="button" class="btn btn-ghost btn-sm" id="mCancelIssueBtn_${ngxWinId}">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="mSubmitIssueBtn_${ngxWinId}" style="font-weight:600;">Issue Certificate</button>
+              </div>
+            </div>
+          `;
+          container.appendChild(modalBackdrop);
+
+          const closeModal = () => {
+            if (modalBackdrop.parentNode) modalBackdrop.parentNode.removeChild(modalBackdrop);
+          };
+
+          modalBackdrop.querySelector(`#closeIssueModalBtn_${ngxWinId}`).onclick = closeModal;
+          modalBackdrop.querySelector(`#mCancelIssueBtn_${ngxWinId}`).onclick = closeModal;
+
+          const submitBtn = modalBackdrop.querySelector(`#mSubmitIssueBtn_${ngxWinId}`);
+          const statusBox = modalBackdrop.querySelector(`#mIssueStatus_${ngxWinId}`);
+
+          submitBtn.onclick = async () => {
+            const domain = modalBackdrop.querySelector(`#mSslDomain_${ngxWinId}`).value.trim().toLowerCase();
+            const email = modalBackdrop.querySelector(`#mIssueEmail_${ngxWinId}`).value.trim();
+
+            if (!domain || !email) {
+              alert('Both domain name and email address are required.');
+              return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;margin-right:5px;"></span>Requesting SSL...`;
+            statusBox.style.display = 'block';
+            statusBox.style.background = 'rgba(56,189,248,0.1)';
+            statusBox.style.color = '#38bdf8';
+            statusBox.style.border = '1px solid rgba(56,189,248,0.2)';
+            statusBox.textContent = 'Requesting certificate from Let\'s Encrypt and updating Nginx configuration...';
+
+            try {
+              const resp = await fetch(`/api/servers/${this.serverId}/nginx/ssl/issue`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domain, email })
+              });
+              const res = await resp.json();
+              if (res.success) {
+                if (window.showToast) window.showToast(`SSL Certificate for '${domain}' issued successfully!`, 'success');
+                closeModal();
+                await fetchSites();
+                await fetchCertificates();
+                if (currentTab === 'domains') renderSitesList();
+                else if (currentTab === 'ssl') renderCertsList();
+              } else {
+                statusBox.style.background = 'rgba(239,68,68,0.1)';
+                statusBox.style.color = '#f87171';
+                statusBox.style.border = '1px solid rgba(239,68,68,0.25)';
+                statusBox.textContent = `Certificate Error: ${res.message || 'Unknown error'}`;
+              }
+            } catch (e) {
+              statusBox.style.background = 'rgba(239,68,68,0.1)';
+              statusBox.style.color = '#f87171';
+              statusBox.textContent = `Network error: ${e}`;
+            } finally {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Issue Certificate';
+            }
+          };
+        };
+
+        // 10. Software Installer Helper
+        const installSoftware = async (pkg) => {
+          if (!confirm(`Install ${pkg} via server's native package manager now?`)) return;
+          if (window.showToast) window.showToast(`Installing ${pkg} in background... Please wait.`, 'info');
+          try {
+            const resp = await fetch(`/api/servers/${this.serverId}/nginx/install`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ package: pkg })
+            });
+            const res = await resp.json();
+            if (res.success) {
+              if (window.showToast) window.showToast(`${pkg} installed successfully!`, 'success');
+              await fetchStatus();
+              await fetchSites();
+              if (currentTab === 'domains') renderSitesList();
+              else if (currentTab === 'ssl') renderSslTab();
+            } else {
+              if (window.showToast) window.showToast(`Installation failed: ${res.message}`, 'error');
+            }
+          } catch (e) {
+            alert('Install error: ' + e);
+          }
+        };
+
+        // 11. Wire Top Header Quick Action Buttons
+        const testBtn = bodyEl.querySelector(`#testNginxBtn_${ngxWinId}`);
+        if (testBtn) {
+          testBtn.onclick = async () => {
+            testBtn.disabled = true;
+            try {
+              const res = await safeFetchJson(`/api/servers/${this.serverId}/nginx/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'test' })
+              });
+              showCommandOutputModal('nginx -t (Configuration Test Output)', res.message || 'Syntax test complete.', res.success);
+              if (res.success) {
+                if (window.showToast) window.showToast('Nginx syntax is OK', 'success');
+              } else {
+                if (window.showToast) window.showToast('Nginx syntax error detected', 'error');
+              }
+            } catch (e) {
+              showCommandOutputModal('Test Error', String(e), false);
+            } finally {
+              testBtn.disabled = false;
+            }
+          };
+        }
+
+        const reloadBtn = bodyEl.querySelector(`#reloadNginxBtn_${ngxWinId}`);
+        if (reloadBtn) {
+          reloadBtn.onclick = async () => {
+            reloadBtn.disabled = true;
+            try {
+              const res = await safeFetchJson(`/api/servers/${this.serverId}/nginx/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reload' })
+              });
+              showCommandOutputModal('systemctl reload nginx (Live Process Verification)', res.message || 'Reload command finished.', res.success);
+              if (res.success) {
+                if (window.showToast) window.showToast('Nginx reloaded successfully', 'success');
+              } else {
+                if (window.showToast) window.showToast('Nginx reload failed: ' + res.message, 'error');
+              }
+            } catch (e) {
+              showCommandOutputModal('Reload Error', String(e), false);
+            } finally {
+              reloadBtn.disabled = false;
+              fetchStatus();
+            }
+          };
+        }
+
+        const restartBtn = bodyEl.querySelector(`#restartNginxBtn_${ngxWinId}`);
+        if (restartBtn) {
+          restartBtn.onclick = async () => {
+            if (!confirm('Restart Nginx service now? Active web connections may momentarily disconnect.')) return;
+            restartBtn.disabled = true;
+            try {
+              const res = await safeFetchJson(`/api/servers/${this.serverId}/nginx/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'restart' })
+              });
+              showCommandOutputModal('systemctl restart nginx (Live Process Verification)', res.message || 'Restart command finished.', res.success);
+              if (res.success) {
+                if (window.showToast) window.showToast('Nginx restarted successfully', 'success');
+              } else {
+                if (window.showToast) window.showToast('Nginx restart failed: ' + res.message, 'error');
+              }
+            } catch (e) {
+              showCommandOutputModal('Restart Error', String(e), false);
+            } finally {
+              restartBtn.disabled = false;
+              fetchStatus();
+            }
+          };
+        }
+
+        const refreshAllBtn = bodyEl.querySelector(`#refreshAllBtn_${ngxWinId}`);
+        if (refreshAllBtn) {
+          refreshAllBtn.onclick = async () => {
+            refreshAllBtn.disabled = true;
+            await fetchStatus();
+            await fetchSites();
+            await fetchCertificates();
+            if (currentTab === 'domains') renderSitesList();
+            else if (currentTab === 'ssl') renderCertsList();
+            refreshAllBtn.disabled = false;
+            if (window.showToast) window.showToast('Nginx state refreshed', 'info');
+          };
+        }
+
+        // Initialize state
+        fetchStatus();
+        fetchSites().then(() => {
+          switchTab(currentTab, { file: currentEditFile });
+        });
+      }
+    });
+  }
+
   launchSettings(params = {}) {
     const existing = WindowManager.getWindowByAppId('settings');
     if (existing) {
@@ -4197,8 +6829,8 @@ class DesktopAppsController {
                   </label>
                   <div style="display:flex; position:relative;">
                     <input type="password" class="form-control" id="mSrvPassword_${setWinId}" placeholder="${isEdit ? '••••••••' : 'Enter SSH user password'}" style="width:100%; font-size:0.8rem; padding:0.4rem 2rem 0.4rem 0.6rem;">
-                    <button type="button" class="btn btn-ghost btn-xs" id="mTogglePass_${setWinId}" style="position:absolute; right:4px; top:50%; transform:translateY(-50%); padding:2px 6px;">
-                      👁
+                    <button type="button" class="btn btn-ghost btn-xs" id="mTogglePass_${setWinId}" style="position:absolute; right:4px; top:50%; transform:translateY(-50%); padding:2px 6px; display:flex; align-items:center;">
+                      <svg style="width:14px;height:14px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
                   </div>
                 </div>
@@ -4519,11 +7151,65 @@ class DesktopAppsController {
 
         // Render Appearance Tab
         const renderAppearanceTab = () => {
+          const currentFontPx = parseInt(localStorage.getItem('shellman_font_size') || '16', 10);
+          const currentFontPct = Math.round((currentFontPx / 16) * 100);
+
           contentPane.innerHTML = `
             <div>
-              <h3 class="settings-section-title">Desktop Appearance</h3>
-              <p class="settings-section-desc">Personalize wallpaper, accents, and visual desktop atmosphere.</p>
+              <h3 class="settings-section-title">Desktop Appearance & Display</h3>
+              <p class="settings-section-desc">Personalize system typography, font scale, wallpaper, and visual theme.</p>
 
+              <!-- 1. System Font Size & UI Scale Card -->
+              <div class="settings-card" style="margin-bottom:1.25rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+                  <div>
+                    <div style="font-weight:700; font-size:0.88rem; color:#f8fafc;">System Font Size & Typography Scale</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+                      Applies globally across all windows, Task Manager, File Manager, Nginx editor, headers, and menus.
+                    </div>
+                  </div>
+                  <span id="fontScaleBadge_${setWinId}" style="font-family:var(--font-mono); font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:12px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">
+                    ${currentFontPx}px (${currentFontPct}%${currentFontPx === 16 ? ' Default' : ''})
+                  </span>
+                </div>
+
+                <!-- Quick Presets -->
+                <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:1rem; flex-wrap:wrap;">
+                  <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600; margin-right:4px;">Presets:</span>
+                  <button class="btn ${currentFontPx === 13 ? 'btn-primary' : 'btn-secondary'} btn-xs font-preset-btn" data-size="13">Small (13px)</button>
+                  <button class="btn ${currentFontPx === 14 ? 'btn-primary' : 'btn-secondary'} btn-xs font-preset-btn" data-size="14">Compact (14px)</button>
+                  <button class="btn ${currentFontPx === 16 ? 'btn-primary' : 'btn-secondary'} btn-xs font-preset-btn" data-size="16">Default (16px)</button>
+                  <button class="btn ${currentFontPx === 18 ? 'btn-primary' : 'btn-secondary'} btn-xs font-preset-btn" data-size="18">Medium (18px)</button>
+                  <button class="btn ${currentFontPx === 20 ? 'btn-primary' : 'btn-secondary'} btn-xs font-preset-btn" data-size="20">Large (20px)</button>
+                  <button class="btn ${currentFontPx === 22 ? 'btn-primary' : 'btn-secondary'} btn-xs font-preset-btn" data-size="22">Extra Large (22px)</button>
+                </div>
+
+                <!-- Range Slider -->
+                <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem;">
+                  <span style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">12px</span>
+                  <input type="range" class="form-range" id="fontSizeSlider_${setWinId}" min="12" max="24" step="1" value="${currentFontPx}" style="flex:1; accent-color:#38bdf8; cursor:pointer;">
+                  <span style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">24px</span>
+                  <button class="btn btn-ghost btn-xs" id="resetFontBtn_${setWinId}" title="Reset to standard 16px font size">Reset</button>
+                </div>
+
+                <!-- Live Preview Box -->
+                <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:0.85rem 1rem;">
+                  <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); font-weight:700; margin-bottom:0.4rem;">Live Preview</div>
+                  <div id="fontPreviewBox_${setWinId}" style="display:flex; flex-direction:column; gap:0.4rem;">
+                    <div style="font-size:0.95rem; font-weight:700; color:#f8fafc;">Task Manager & App Window Header</div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.45;">Process PID 1814781 (gunicorn) is active and running with 0% CPU and 9.6% RAM.</div>
+                    <div style="display:flex; gap:0.5rem; align-items:center; margin-top:2px;">
+                      <span style="display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:12px; background:rgba(52,211,153,0.14); color:#34d399; font-size:0.72rem; font-weight:600;">
+                        <span style="width:6px; height:6px; border-radius:50%; background:#34d399;"></span>Active
+                      </span>
+                      <span style="font-family:var(--font-mono); font-size:0.72rem; color:#38bdf8;">/var/www/site/app.py</span>
+                      <button class="btn btn-secondary btn-xs" style="pointer-events:none; padding:2px 8px;">Sample Button</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Preset Wallpapers -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
                 <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.75rem;">Preset Wallpapers</div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.85rem;">
@@ -4535,6 +7221,7 @@ class DesktopAppsController {
                 </div>
               </div>
 
+              <!-- 3. Custom Wallpaper URL -->
               <div class="settings-card">
                 <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.35rem;">Custom Wallpaper URL</div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Set an external image URL as your desktop background.</p>
@@ -4546,6 +7233,57 @@ class DesktopAppsController {
               </div>
             </div>
           `;
+
+          // Font scaling logic
+          const applyFontSize = (size) => {
+            const s = parseInt(size, 10) || 16;
+            document.documentElement.style.fontSize = `${s}px`;
+            document.documentElement.style.setProperty('--app-font-size', `${s}px`);
+            document.documentElement.style.setProperty('--app-font-scale', (s / 16).toString());
+            localStorage.setItem('shellman_font_size', s.toString());
+
+            const badge = contentPane.querySelector(`#fontScaleBadge_${setWinId}`);
+            if (badge) {
+              const pct = Math.round((s / 16) * 100);
+              badge.textContent = `${s}px (${pct}%${s === 16 ? ' Default' : ''})`;
+            }
+
+            const slider = contentPane.querySelector(`#fontSizeSlider_${setWinId}`);
+            if (slider && parseInt(slider.value, 10) !== s) {
+              slider.value = s;
+            }
+
+            contentPane.querySelectorAll('.font-preset-btn').forEach(btn => {
+              const bSize = parseInt(btn.dataset.size, 10);
+              btn.className = (bSize === s)
+                ? 'btn btn-primary btn-xs font-preset-btn'
+                : 'btn btn-secondary btn-xs font-preset-btn';
+            });
+
+            // Dynamically scale any open terminals
+            if (window._shellmanTerminals) {
+              window._shellmanTerminals.forEach(t => {
+                try {
+                  t.options.fontSize = Math.max(10, Math.round(14 * (s / 16)));
+                  if (t._fitAddon) t._fitAddon.fit();
+                } catch (_) {}
+              });
+            }
+          };
+
+          const slider = contentPane.querySelector(`#fontSizeSlider_${setWinId}`);
+          if (slider) {
+            slider.oninput = (e) => applyFontSize(e.target.value);
+          }
+
+          contentPane.querySelectorAll('.font-preset-btn').forEach(btn => {
+            btn.onclick = () => applyFontSize(btn.dataset.size);
+          });
+
+          const resetFontBtn = contentPane.querySelector(`#resetFontBtn_${setWinId}`);
+          if (resetFontBtn) {
+            resetFontBtn.onclick = () => applyFontSize(16);
+          }
 
           const applyWall = (url) => {
             const desktopEnv = document.getElementById('desktop');

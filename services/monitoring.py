@@ -1,4 +1,6 @@
 import re
+import time
+import threading
 from typing import Dict, Any, List
 from services.ssh_manager import ssh_manager
 
@@ -7,6 +9,9 @@ class SystemMonitor:
     Parses standard Linux system metrics via raw SSH commands without any remote agent.
     Commands execute within milliseconds with negligible temporary footprint.
     """
+    _metrics_cache: Dict[int, Dict[str, Any]] = {}
+    _cache_lock = threading.Lock()
+    CACHE_TTL = 1.2  # seconds
 
     @staticmethod
     def format_bytes(bytes_num: float) -> str:
@@ -21,12 +26,21 @@ class SystemMonitor:
         return f"{bytes_num:.2f} EB"
 
     @staticmethod
-    def get_quick_metrics(server) -> Dict[str, Any]:
+    def get_quick_metrics(server, force: bool = False) -> Dict[str, Any]:
         """
         Gathers CPU, Memory, Swap, Disk, Uptime, and Load in a single ultra-fast SSH pipeline.
         Uses /proc/stat for instantaneous CPU calculation (~100ms) instead of heavy 'top' scans.
         Caches static OS/Kernel info to eliminate redundant command overhead.
+        Atomic 1.8s TTL cache keeps all client widgets and windows 100% synchronized.
         """
+        server_id = getattr(server, 'id', None)
+        now = time.time()
+        if not force and server_id:
+            with SystemMonitor._cache_lock:
+                cached = SystemMonitor._metrics_cache.get(server_id)
+                if cached and (now - cached.get('timestamp', 0) < SystemMonitor.CACHE_TTL):
+                    return cached['data']
+
         need_os = not getattr(server, 'os_cache', None) or not getattr(server, 'kernel_cache', None)
 
         os_subcmd = ""
@@ -47,6 +61,8 @@ class SystemMonitor:
             "cat /proc/loadavg; "
             "echo '---UPTIME---'; "
             "cat /proc/uptime; "
+            "echo '---TIME---'; "
+            "date +'%s %z %Z'; "
             "echo '---DISK---'; "
             "df -P -B1 -x tmpfs -x devtmpfs -x overlay -x squashfs -x iso9660 2>/dev/null; "
             + os_subcmd
@@ -127,6 +143,24 @@ class SystemMonitor:
             except Exception:
                 uptime_sec = 0
 
+        # Parse Remote Server Time
+        server_time = None
+        time_lines = [l.strip() for l in sections.get('TIME', []) if l.strip()]
+        if time_lines:
+            tparts = time_lines[0].split()
+            if len(tparts) >= 1:
+                try:
+                    s_epoch = int(tparts[0])
+                    s_offset = tparts[1] if len(tparts) > 1 else "+0000"
+                    s_tz = tparts[2] if len(tparts) > 2 else ""
+                    server_time = {
+                        'epoch': s_epoch,
+                        'offset': s_offset,
+                        'timezone': s_tz
+                    }
+                except (ValueError, IndexError):
+                    pass
+
         # Parse Disk & Partition Mounts
         disks = []
         root_disk = None
@@ -189,7 +223,7 @@ class SystemMonitor:
             uname = os_lines[0].strip() if len(os_lines) > 0 else (uname or "Linux")
             pretty_os = os_lines[1].strip() if len(os_lines) > 1 and os_lines[1].strip() else (uname or "Linux")
 
-        return {
+        metrics_result = {
             'cpu': cpu_usage,
             'memory': {
                 'total': mem_total,
@@ -207,6 +241,7 @@ class SystemMonitor:
             },
             'load': load_avg,
             'uptime': uptime_sec,
+            'server_time': server_time,
             'disk': {
                 'total': disk_total_all,
                 'used': disk_used_all,
@@ -218,6 +253,15 @@ class SystemMonitor:
             'os': pretty_os,
             'kernel': uname
         }
+
+        if server_id:
+            with SystemMonitor._cache_lock:
+                SystemMonitor._metrics_cache[server_id] = {
+                    'timestamp': now,
+                    'data': metrics_result
+                }
+
+        return metrics_result
 
     @staticmethod
     def get_system_details(server) -> Dict[str, Any]:
