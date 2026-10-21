@@ -59,6 +59,7 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 | **Inbound Firewall Ports Needed** | Custom open ports (`8080`, `9090`, etc.) | **Standard OpenSSH (Port 22 only)** |
 | **Multi-Node Fleet Control** | Often requires paid multi-server licenses | **Built-in instant node switcher** |
 | **File Transfer Experience** | Basic single-file HTML uploaders | **Recursive folder Drag & Drop via SFTP** |
+| **Web Server & SSL Automation** | Manual CLI certbot or complex vhost edits | **1-click Reverse Proxy Routing, Certbot SSL automation, & safe syntax validation with auto-rollback** |
 | **Custom Automations** | Hardcoded menus or complex plugins | **Extensible Custom Actions with safe POSIX variable injection & 33+ vector SVGs** |
 | **Process & Task Management** | Coarse CPU list or heavy background poller | **Agentless POSIX control (SIGTERM, SIGKILL, SIGSTOP, SIGCONT) with RSS & PSS memory metrics** |
 | **Terminal Capability** | Simulated web console | **Real interactive PTY with xterm.js (vim, htop, tmux)** |
@@ -106,7 +107,7 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 
 ### 1. Multi-Window Desktop Workspace (Window Manager)
 - **True Desktop Experience**: Open multiple applications side-by-side. Move, resize, minimize to dock, maximize, and cascade windows smoothly.
-- **Interactive Application Dock**: Launch and switch between Overview, Terminal, File Manager, Code Workspace, Task Manager, Services, Logs, and Settings.
+- **Interactive Application Dock**: Launch and switch between Overview, Terminal, File Manager, Code Workspace, Task Manager, Nginx & Domains Manager, Services, Logs, and Settings.
 - **Central Node Switcher**: Seamlessly switch active servers with one click.
 - **Privacy IP Masking Toggle**: Sensitive server IP addresses are masked by default (`20.219.2***:22`). Click the inline eye icon SVG to reveal or hide unmasked host endpoints instantly.
 - **Persistent Preferences**: Wallpapers, window geometry, and privacy settings persist in local browser storage.
@@ -168,11 +169,11 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **System & Journalctl Logs**: Stream journal logs in real-time with filtering by service unit and severity level.
 
 ### 8. Nginx Web Server, Reverse Proxy Routing & Certbot SSL
-- **Reverse Proxy Domain Routing**: Easily route public domain names to internal applications and microservices running on local ports (e.g. Node.js, Python, Flask, FastAPI, Docker containers).
-- **Automated Let's Encrypt SSL**: 1-click HTTPS certificate issuance and renewals powered by Certbot and the Certbot Nginx plugin. Automatically handles HTTP-to-HTTPS redirects.
-- **Safe Nginx Configuration Editor**: Inspect and edit `/etc/nginx/nginx.conf` and `sites-available` files directly within a syntax-highlighted editor with tab indentation.
-- **Automated Syntax Validation & Rollback**: Every configuration change is automatically tested with `nginx -t`. If syntax fails, changes are safely rolled back to a backup copy with zero service downtime.
-- **Service Controls**: One-click configuration reload (`nginx -s reload`), restart, and native package installer for Nginx and Certbot.
+- **Reverse Proxy Domain Routing**: Route public domains and subdomains to internal backend services and microservices running on local ports (Node.js, Python/Flask/FastAPI, Next.js, Go, or Docker containers).
+- **Automated Let's Encrypt SSL via Certbot**: 1-click HTTPS certificate issuance and renewals via Certbot and the Certbot Nginx plugin, with automated HTTP-to-HTTPS redirect rule generation.
+- **Virtual Host Manager**: Create, enable, disable, and delete virtual host configurations (`/etc/nginx/sites-available` and `/etc/nginx/sites-enabled`) with automated symlink management.
+- **Safe Configuration Editor with Auto-Rollback**: Inspect and modify `/etc/nginx/nginx.conf` and site configs inside an embedded editor. Every save is pre-flight tested using `nginx -t`. If validation fails, changes are instantly rolled back to the backup copy to prevent service downtime.
+- **Service Controls**: One-click configuration reload (`nginx -s reload`), service restart, syntax testing, and native package installer for Nginx and Certbot across Debian, Ubuntu, RHEL/CentOS, and Arch Linux.
 
 ### 9. Progressive Web App (PWA) Support
 - **Installable Desktop App**: Install ShellMan as a native desktop application in Chrome, Brave, Edge, or Safari with custom window controls overlay.
