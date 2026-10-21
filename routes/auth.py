@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from sqlalchemy.exc import IntegrityError
 from models import db
 from models.user import User
 
@@ -40,7 +41,15 @@ def setup():
         admin.set_password(password)
         admin.last_login = datetime.now(timezone.utc)
         db.session.add(admin)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            # FIX: two concurrent first-run POSTs can both pass count()==0;
+            # the UNIQUE constraint on users.username rejects the second one.
+            # Treat that as "already configured" instead of returning HTTP 500.
+            db.session.rollback()
+            flash('Administrator account is already configured. Please sign in.', 'info')
+            return redirect(url_for('auth.login'))
 
         session['user_id'] = admin.id
         session['username'] = admin.username
@@ -71,7 +80,7 @@ def login():
             session['username'] = user.username
             user.last_login = datetime.now(timezone.utc)
             db.session.commit()
-            
+
             next_page = request.args.get('next')
             if next_page and next_page.startswith('/'):
                 return redirect(next_page)
