@@ -122,8 +122,33 @@ class DesktopWindowManager {
     const winW = Math.min(width, Math.max(minWidth, availableW - 32));
     const winH = Math.min(height, Math.max(minHeight, availableH - 52));
 
-    const defaultX = Math.max(16, Math.min(availableW - winW - 16, 40 + (this.cascadeStep % 6) * 32));
-    const defaultY = Math.max(12, Math.min(availableH - winH - 24, 28 + (this.cascadeStep % 6) * 24));
+    // Open in center of the workspace by default
+    const centerX = Math.max(12, Math.min(availableW - winW - 12, Math.round((availableW - winW) / 2)));
+    const centerY = Math.max(12, Math.min(availableH - winH - 24, Math.round((availableH - winH) / 2)));
+
+    let defaultX = centerX;
+    let defaultY = centerY;
+
+    // If an existing open window already occupies this exact position, apply a slight stagger (+26px) so window titlebars don't completely overlap
+    let attempts = 0;
+    while (attempts < 6) {
+      let collides = false;
+      for (const w of this.windows.values()) {
+        if (!w.isMinimized && w.el) {
+          const curLeft = parseInt(w.el.style.left, 10) || 0;
+          const curTop = parseInt(w.el.style.top, 10) || 0;
+          if (Math.abs(curLeft - defaultX) < 18 && Math.abs(curTop - defaultY) < 18) {
+            collides = true;
+            break;
+          }
+        }
+      }
+      if (!collides) break;
+      defaultX = Math.min(availableW - winW - 12, defaultX + 26);
+      defaultY = Math.min(availableH - winH - 24, defaultY + 26);
+      attempts++;
+    }
+
     const posX = (x !== null) ? Math.max(0, Math.min(x, availableW - winW)) : defaultX;
     const posY = (y !== null) ? Math.max(0, Math.min(y, availableH - winH)) : defaultY;
     this.cascadeStep++;

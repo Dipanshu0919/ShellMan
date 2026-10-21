@@ -40,6 +40,43 @@
   </div>
 
   <div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <span class="card-title">System Font Size & Scale</span>
+      <span id="webFontBadge" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);">
+        16px (100% Default)
+      </span>
+    </div>
+    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+      Adjust typography scale across all panels, tables, and applications.
+    </p>
+
+    <!-- Presets -->
+    <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem;">
+      <button class="btn btn-secondary btn-xs web-font-preset" data-size="13">Small (13px)</button>
+      <button class="btn btn-secondary btn-xs web-font-preset" data-size="14">Compact (14px)</button>
+      <button class="btn btn-primary btn-xs web-font-preset" data-size="16">Default (16px)</button>
+      <button class="btn btn-secondary btn-xs web-font-preset" data-size="18">Medium (18px)</button>
+      <button class="btn btn-secondary btn-xs web-font-preset" data-size="20">Large (20px)</button>
+      <button class="btn btn-secondary btn-xs web-font-preset" data-size="22">Extra Large (22px)</button>
+    </div>
+
+    <!-- Slider -->
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+      <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">12px</span>
+      <input type="range" class="form-range" id="webFontSlider" min="12" max="24" step="1" value="16" style="flex: 1; accent-color: #38bdf8; cursor: pointer;">
+      <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">24px</span>
+      <button class="btn btn-ghost btn-xs" id="webFontResetBtn">Reset</button>
+    </div>
+
+    <!-- Live Preview -->
+    <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 0.75rem 1rem;">
+      <div style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 700; margin-bottom: 0.35rem;">Live Preview</div>
+      <div style="font-size: 0.88rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.25rem;">Preview Sample Text</div>
+      <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">This preview reflects your chosen typography scaling across all ShellMan components.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
     <div class="card-header">
       <span class="card-title">About ShellMan</span>
     </div>
@@ -50,4 +87,50 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function() {
+    const curSize = parseInt(localStorage.getItem('shellman_font_size') || '16', 10);
+    const slider = document.getElementById('webFontSlider');
+    const badge = document.getElementById('webFontBadge');
+    const resetBtn = document.getElementById('webFontResetBtn');
+    const presets = document.querySelectorAll('.web-font-preset');
+
+    function applySize(size) {
+      const s = parseInt(size, 10) || 16;
+      document.documentElement.style.fontSize = s + 'px';
+      document.documentElement.style.setProperty('--app-font-size', s + 'px');
+      document.documentElement.style.setProperty('--app-font-scale', (s / 16).toString());
+      localStorage.setItem('shellman_font_size', s.toString());
+
+      if (badge) {
+        const pct = Math.round((s / 16) * 100);
+        badge.textContent = `${s}px (${pct}%${s === 16 ? ' Default' : ''})`;
+      }
+      if (slider && parseInt(slider.value, 10) !== s) {
+        slider.value = s;
+      }
+      presets.forEach(btn => {
+        const bSize = parseInt(btn.dataset.size, 10);
+        btn.className = (bSize === s)
+          ? 'btn btn-primary btn-xs web-font-preset'
+          : 'btn btn-secondary btn-xs web-font-preset';
+      });
+    }
+
+    if (slider) {
+      slider.value = curSize;
+      slider.oninput = (e) => applySize(e.target.value);
+    }
+    presets.forEach(btn => {
+      btn.onclick = () => applySize(btn.dataset.size);
+    });
+    if (resetBtn) {
+      resetBtn.onclick = () => applySize(16);
+    }
+    applySize(curSize);
+  })();
+</script>
 {% endblock %}

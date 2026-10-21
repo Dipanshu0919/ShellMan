@@ -7,6 +7,7 @@ from config import Config
 from models import db
 from models.user import User
 from models.server import Server
+from models.action import CustomAction
 
 # Initialize Flask-Sock
 sock = Sock()
@@ -32,6 +33,8 @@ def create_app(config_class=Config):
     from routes.network import network_bp
     from routes.settings import settings_bp
     from routes.workspace import workspace_bp
+    from routes.nginx import nginx_bp
+    from routes.actions import actions_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -45,6 +48,8 @@ def create_app(config_class=Config):
     app.register_blueprint(system_bp)
     app.register_blueprint(network_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(nginx_bp)
+    app.register_blueprint(actions_bp)
 
     # Register terminal websocket handler
     register_terminal_sock(sock)
@@ -80,6 +85,12 @@ def create_app(config_class=Config):
         except Exception:
             pass
 
+        # Seed built-in custom actions if table is newly created
+        try:
+            CustomAction.seed_default_actions()
+        except Exception as e:
+            print(f"[ShellMan] Action seed error: {e}")
+
         # Check if initial setup is needed
         if User.query.count() == 0:
             print("[ShellMan] No user accounts found. First-time setup wizard active at /setup")
@@ -111,4 +122,4 @@ app = create_app()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)

@@ -77,16 +77,94 @@ class LinuxCommandService:
 
     @staticmethod
     def list_processes(server) -> List[Dict[str, Any]]:
-        """List running processes."""
-        cmd = "ps -eo pid,user,%cpu,%mem,stat,comm,args --sort=-%cpu --no-headers | head -n 150"
-        _, stdout, _ = ssh_manager.execute(server, cmd, timeout=8)
+        """List running processes with CPU, RAM%, RSS, PSS, and VSZ."""
+        script = """python3 -c "
+import json, os, glob, subprocess
+
+pss_map = {}
+for p in glob.glob('/proc/[0-9]*/smaps_rollup'):
+    try:
+        pid = int(p.split('/')[2])
+        with open(p, 'r') as f:
+            for line in f:
+                if line.startswith('Pss:'):
+                    pss_map[pid] = int(line.split()[1])
+                    break
+    except Exception:
+        pass
+
+out = subprocess.check_output(['ps', '-eo', 'pid,user:32,%cpu,%mem,vsz,rss,stat,comm,args', '--no-headers'], text=True)
+procs = []
+for line in out.splitlines()[:250]:
+    parts = line.strip().split(None, 8)
+    if len(parts) >= 8:
+        try:
+            pid = int(parts[0])
+            user = parts[1]
+            cpu = float(parts[2])
+            mem = float(parts[3])
+            vsz = int(parts[4])
+            rss = int(parts[5])
+            stat = parts[6]
+            comm = parts[7]
+            args = parts[8] if len(parts) > 8 else comm
+            pss = pss_map.get(pid, None)
+            procs.append({
+                'pid': pid, 'user': user, 'cpu': cpu, 'mem': mem,
+                'vsz': vsz, 'rss': rss, 'pss': pss,
+                'stat': stat, 'comm': comm, 'args': args
+            })
+        except Exception:
+            pass
+print(json.dumps(procs))
+" 2>/dev/null || ps -eo pid,user:32,%cpu,%mem,vsz,rss,stat,comm,args --no-headers | head -n 200
+"""
+        _, stdout, _ = ssh_manager.execute(server, script, timeout=10)
+        stdout_str = stdout.strip()
+        if not stdout_str:
+            return []
+
+        # Try parsing JSON first
+        if stdout_str.startswith('[') and stdout_str.endswith(']'):
+            try:
+                import json
+                return json.loads(stdout_str)
+            except Exception:
+                pass
+
+        # Fallback line parsing from ps -eo
         processes = []
-        for line in stdout.splitlines():
+        for line in stdout_str.splitlines():
             line = line.strip()
             if not line:
                 continue
-            parts = line.split(None, 6)
-            if len(parts) >= 6:
+            parts = line.split(None, 8)
+            if len(parts) >= 8:
+                try:
+                    pid = int(parts[0])
+                    user = parts[1]
+                    cpu = float(parts[2])
+                    mem = float(parts[3])
+                    vsz = int(parts[4])
+                    rss = int(parts[5])
+                    stat = parts[6]
+                    comm = parts[7]
+                    args = parts[8] if len(parts) > 8 else comm
+                    processes.append({
+                        'pid': pid,
+                        'user': user,
+                        'cpu': cpu,
+                        'mem': mem,
+                        'vsz': vsz,
+                        'rss': rss,
+                        'pss': None,
+                        'stat': stat,
+                        'comm': comm,
+                        'args': args
+                    })
+                except ValueError:
+                    continue
+            elif len(parts) >= 6:
                 try:
                     pid = int(parts[0])
                     user = parts[1]
@@ -100,6 +178,9 @@ class LinuxCommandService:
                         'user': user,
                         'cpu': cpu,
                         'mem': mem,
+                        'vsz': 0,
+                        'rss': 0,
+                        'pss': None,
                         'stat': stat,
                         'comm': comm,
                         'args': args
@@ -110,11 +191,18 @@ class LinuxCommandService:
 
     @staticmethod
     def kill_process(server, pid: int, signal: str = 'SIGTERM') -> Tuple[bool, str]:
-        """Safely send signals to a PID (SIGTERM or SIGKILL)."""
+        """Safely send signals to a PID (SIGTERM, SIGKILL, SIGSTOP, SIGCONT, SIGHUP)."""
         if not isinstance(pid, int) or pid <= 1:
             return False, "Cannot signal system PID 1 or invalid PID"
 
-        sig_flag = '-9' if signal.upper() in ('SIGKILL', '9', 'KILL') else '-15'
+        sig_map = {
+            'SIGKILL': '-9', '9': '-9', 'KILL': '-9',
+            'SIGTERM': '-15', '15': '-15', 'TERM': '-15',
+            'SIGSTOP': '-19', '19': '-19', 'STOP': '-19',
+            'SIGCONT': '-18', '18': '-18', 'CONT': '-18',
+            'SIGHUP': '-1', '1': '-1', 'HUP': '-1'
+        }
+        sig_flag = sig_map.get(signal.upper(), '-15')
         cmd = f"kill {sig_flag} {pid} 2>&1 || sudo -n kill {sig_flag} {pid} 2>&1"
         code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=5)
         output = (stdout + stderr).strip()

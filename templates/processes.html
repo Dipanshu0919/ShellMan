@@ -9,19 +9,62 @@
     <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
   </div>
 {% else %}
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
     <div>
-      <h2 style="font-size: 1.3rem; font-weight: 700;">Process Manager</h2>
-      <p style="font-size: 0.82rem; color: var(--text-secondary);">
-        Active remote Linux processes sorted by processor utilization.
+      <h2 style="font-size: 1.3rem; font-weight: 700; margin: 0;">Process Manager</h2>
+      <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0.25rem 0 0 0;">
+        Active remote Linux processes with CPU, RAM, RSS, PSS, and interactive process control. Right-click any row to manage.
       </p>
     </div>
-    <div style="display: flex; gap: 0.5rem; align-items: center;">
+    <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; position: relative;">
       <div style="display: flex; align-items: center; position: relative;">
-        <input type="text" id="procSearch" placeholder="Filter PID, user, cmd..." class="form-control" style="width: 220px; padding: 0.3rem 0.6rem 0.3rem 1.8rem; font-size: 0.78rem;" oninput="filterProcs()">
+        <input type="text" id="procSearch" placeholder="Filter PID, user, cmd..." class="form-control" style="width: 180px; padding: 0.3rem 0.6rem 0.3rem 1.8rem; font-size: 0.78rem;" oninput="filterProcs()">
         <svg style="width:12px;height:12px;position:absolute;left:0.6rem;color:var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="loadProcesses()" title="Refresh Processes">
+
+      <!-- Host Telemetry: CPU, RAM, Storage -->
+      <div id="pageSysMetrics" style="display: flex; align-items: center; gap: 0.45rem;">
+        <!-- CPU -->
+        <div style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.55rem; border-radius: 4px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);" title="Host CPU Usage">
+          <span style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700;">CPU:</span>
+          <span id="pageMetricCpuVal" style="color: #34d399; font-weight: 700; font-family: var(--font-mono); font-size: 0.72rem;">--%</span>
+          <div style="width: 32px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+            <div id="pageMetricCpuBar" style="width: 0%; height: 100%; background: #34d399; transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+
+        <!-- RAM -->
+        <div style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.55rem; border-radius: 4px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);" title="Total Host Memory Usage">
+          <span style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700;">RAM:</span>
+          <span id="pageMetricMemVal" style="color: #38bdf8; font-weight: 700; font-family: var(--font-mono); font-size: 0.72rem;">--%</span>
+          <div style="width: 32px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+            <div id="pageMetricMemBar" style="width: 0%; height: 100%; background: #38bdf8; transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+
+        <!-- Storage / Disk -->
+        <div style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.22rem 0.55rem; border-radius: 4px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);" title="Total Root Storage Usage">
+          <span style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700;">Disk:</span>
+          <span id="pageMetricDiskVal" style="color: #a78bfa; font-weight: 700; font-family: var(--font-mono); font-size: 0.72rem;">--%</span>
+          <div style="width: 32px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+            <div id="pageMetricDiskBar" style="width: 0%; height: 100%; background: #a78bfa; transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column Visibility Preferences Button & Popover -->
+      <div style="position: relative;">
+        <button class="btn btn-secondary btn-sm" id="procColsBtn" onclick="toggleColsPopover(event)" title="Show or hide columns">
+          <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"/></svg>
+          <span>Columns &#9662;</span>
+        </button>
+        <div id="procColsPopover" class="proc-cols-popover" style="display: none;">
+          <div class="proc-cols-title">Visible Columns</div>
+          <div id="procColsList" style="display: flex; flex-direction: column; gap: 2px;"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary btn-sm" onclick="loadProcesses(); fetchMetrics();" title="Refresh Processes">
         <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
         Refresh
       </button>
@@ -30,20 +73,13 @@
 
   <div class="card" style="padding: 0; overflow: hidden;">
     <div class="table-responsive">
-      <table class="table">
+      <table class="table" style="margin: 0; width: 100%; font-size: 0.8rem;">
         <thead>
-          <tr>
-            <th style="width: 80px;">PID</th>
-            <th style="width: 100px;">User</th>
-            <th style="width: 80px;">CPU %</th>
-            <th style="width: 80px;">MEM %</th>
-            <th style="width: 70px;">Stat</th>
-            <th>Command Line</th>
-            <th style="text-align: right; width: 140px;">Signals</th>
+          <tr id="processesTableHeadRow" style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;">
           </tr>
         </thead>
         <tbody id="processesTableBody">
-          <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading processes...</td></tr>
+          <tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading processes...</td></tr>
         </tbody>
       </table>
     </div>
@@ -56,13 +92,292 @@
 <script>
   const serverId = {{ selected_server.id }};
   let allProcesses = [];
+  let sortCol = 'cpu';
+  let sortDir = 'desc';
+  let activeCtxMenu = null;
+
+  const ALL_COLS = [
+    { id: 'pid', label: 'PID', width: '75px', default: true },
+    { id: 'user', label: 'User', width: '110px', default: true },
+    { id: 'cpu', label: 'CPU %', width: '75px', default: true },
+    { id: 'mem', label: 'RAM%', width: '80px', title: 'Memory Usage %', default: true },
+    { id: 'rss', label: 'RSS', width: '85px', title: 'Resident Set Size: physical RAM allocated', default: true },
+    { id: 'pss', label: 'PSS', width: '85px', title: 'Proportional Set Size: private memory + proportional share of shared memory', default: true },
+    { id: 'vsz', label: 'VSZ', width: '80px', title: 'Virtual Memory Size', default: false },
+    { id: 'stat', label: 'Status', width: '115px', title: 'Process execution state', default: true },
+    { id: 'comm', label: 'Command Line', width: 'auto', title: 'Process binary and arguments', default: true }
+  ];
+
+  let visibleCols = {};
+  ALL_COLS.forEach(c => visibleCols[c.id] = c.default);
+  try {
+    const saved = localStorage.getItem('shellman_taskmgr_cols_page');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      ALL_COLS.forEach(c => {
+        if (parsed[c.id] !== undefined) visibleCols[c.id] = !!parsed[c.id];
+      });
+    }
+  } catch (_) {}
+
+  const saveColPrefs = () => {
+    try {
+      localStorage.setItem('shellman_taskmgr_cols_page', JSON.stringify(visibleCols));
+    } catch (_) {}
+  };
+
+  const formatKb = (kb) => {
+    if (kb === null || kb === undefined || isNaN(kb)) return '-';
+    if (kb < 1024) return kb + ' KB';
+    if (kb < 1024 * 1024) return (kb / 1024).toFixed(1) + ' MB';
+    return (kb / (1024 * 1024)).toFixed(2) + ' GB';
+  };
+
+  const formatRam = (rssKb, memPct) => {
+    const sizeStr = (rssKb !== null && rssKb !== undefined && !isNaN(rssKb)) ? formatKb(rssKb) : null;
+    const pctStr = (memPct !== null && memPct !== undefined) ? `${memPct}%` : '0%';
+    if (!sizeStr) return pctStr;
+    return `${sizeStr} (${pctStr})`;
+  };
+
+  const parseProcessState = (stat) => {
+    if (!stat) return { label: 'Unknown', color: '#94a3b8', bg: 'rgba(148,163,184,0.14)', desc: 'Unknown state' };
+    const s = String(stat).trim();
+    const primary = s.charAt(0);
+    let label = 'Unknown';
+    let color = '#94a3b8';
+    let bg = 'rgba(148,163,184,0.14)';
+    let baseDesc = '';
+
+    switch (primary) {
+      case 'R':
+        label = 'Running';
+        color = '#34d399';
+        bg = 'rgba(52,211,153,0.14)';
+        baseDesc = 'Running (actively executing instructions on CPU)';
+        break;
+      case 'S':
+        label = 'Active';
+        color = '#34d399';
+        bg = 'rgba(52,211,153,0.14)';
+        baseDesc = 'Active and healthy (listening & waiting for incoming requests / I/O)';
+        break;
+      case 'D':
+        label = 'Disk Wait';
+        color = '#fbbf24';
+        bg = 'rgba(251,191,36,0.14)';
+        baseDesc = 'Uninterruptible sleep (usually waiting for disk I/O)';
+        break;
+      case 'Z':
+        label = 'Zombie';
+        color = '#f87171';
+        bg = 'rgba(248,113,113,0.16)';
+        baseDesc = 'Defunct / Zombie (terminated, waiting for parent to reap)';
+        break;
+      case 'T':
+        label = 'Stopped';
+        color = '#fb923c';
+        bg = 'rgba(251,146,60,0.14)';
+        baseDesc = 'Stopped by job control signal or SIGSTOP';
+        break;
+      case 't':
+        label = 'Traced';
+        color = '#fb923c';
+        bg = 'rgba(251,146,60,0.14)';
+        baseDesc = 'Stopped by debugger during code tracing';
+        break;
+      case 'I':
+        label = 'Idle';
+        color = '#94a3b8';
+        bg = 'rgba(148,163,184,0.12)';
+        baseDesc = 'Idle kernel thread';
+        break;
+      default:
+        label = s;
+        baseDesc = `Status code: ${s}`;
+    }
+
+    const modifiers = [];
+    for (let i = 1; i < s.length; i++) {
+      const ch = s.charAt(i);
+      if (ch === '<') modifiers.push('High priority');
+      else if (ch === 'N') modifiers.push('Low priority');
+      else if (ch === 'L') modifiers.push('Pages locked into memory');
+      else if (ch === 's') modifiers.push('Session leader');
+      else if (ch === 'l') modifiers.push('Multi-threaded');
+      else if (ch === '+') modifiers.push('Foreground process');
+    }
+
+    const fullDesc = `Status: ${label} (${s})\n${baseDesc}` + (modifiers.length ? `\nAttributes: ${modifiers.join(', ')}` : '');
+    return { label, color, bg, desc: fullDesc, raw: s };
+  };
+
+  // Context Menu Management
+  function hideCtxMenu() {
+    if (activeCtxMenu && activeCtxMenu.parentNode) {
+      activeCtxMenu.parentNode.removeChild(activeCtxMenu);
+    }
+    activeCtxMenu = null;
+  }
+
+  function showProcContextMenu(x, y, proc) {
+    hideCtxMenu();
+    const st = parseProcessState(proc.stat);
+    const menu = document.createElement('div');
+    menu.className = 'proc-ctx-menu';
+    menu.innerHTML = `
+      <div class="proc-ctx-header">
+        <div class="proc-ctx-title">
+          <span>PID ${proc.pid} &bull; ${proc.comm}</span>
+          <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.68rem; color:${st.color}; font-weight:600;">
+            <span style="width:6px; height:6px; border-radius:50%; background:${st.color};"></span>${st.label}
+          </span>
+        </div>
+        <div class="proc-ctx-subtitle" title="${proc.args || proc.comm}">${proc.args || proc.comm}</div>
+      </div>
+      <button class="proc-ctx-item" id="ctx_term">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+        <span>Terminate (SIGTERM)</span>
+      </button>
+      <button class="proc-ctx-item danger" id="ctx_kill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>Force Kill (SIGKILL)</span>
+      </button>
+      <button class="proc-ctx-item" id="ctx_stop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+        <span>Pause Process (SIGSTOP)</span>
+      </button>
+      <button class="proc-ctx-item" id="ctx_cont">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        <span>Resume Process (SIGCONT)</span>
+      </button>
+      <div class="proc-ctx-divider"></div>
+      <button class="proc-ctx-item" id="ctx_inspect">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <span>Inspect Details</span>
+      </button>
+      <button class="proc-ctx-item" id="ctx_copy_pid">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span>Copy PID</span>
+      </button>
+      <button class="proc-ctx-item" id="ctx_copy_cmd">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        <span>Copy Command</span>
+      </button>
+    `;
+
+    document.body.appendChild(menu);
+    activeCtxMenu = menu;
+
+    const menuW = 220;
+    const menuH = menu.offsetHeight || 260;
+    const clampedX = Math.min(x, window.innerWidth - menuW - 12);
+    const clampedY = Math.min(y, window.innerHeight - menuH - 12);
+    menu.style.left = `${Math.max(10, clampedX)}px`;
+    menu.style.top = `${Math.max(10, clampedY)}px`;
+
+    menu.querySelector('#ctx_term').onclick = () => { hideCtxMenu(); killProc(proc.pid, 'SIGTERM', proc.comm); };
+    menu.querySelector('#ctx_kill').onclick = () => { hideCtxMenu(); killProc(proc.pid, 'SIGKILL', proc.comm); };
+    menu.querySelector('#ctx_stop').onclick = () => { hideCtxMenu(); killProc(proc.pid, 'SIGSTOP', proc.comm); };
+    menu.querySelector('#ctx_cont').onclick = () => { hideCtxMenu(); killProc(proc.pid, 'SIGCONT', proc.comm); };
+    menu.querySelector('#ctx_inspect').onclick = () => { hideCtxMenu(); inspectProcess(proc); };
+    menu.querySelector('#ctx_copy_pid').onclick = () => {
+      hideCtxMenu();
+      navigator.clipboard.writeText(String(proc.pid));
+      if (window.showToast) window.showToast(`PID ${proc.pid} copied to clipboard`, 'info');
+    };
+    menu.querySelector('#ctx_copy_cmd').onclick = () => {
+      hideCtxMenu();
+      navigator.clipboard.writeText(proc.args || proc.comm);
+      if (window.showToast) window.showToast('Command copied to clipboard', 'info');
+    };
+  }
+
+  document.addEventListener('pointerdown', (e) => {
+    if (activeCtxMenu && !e.target.closest('.proc-ctx-menu')) hideCtxMenu();
+    const colsPopover = document.getElementById('procColsPopover');
+    const colsBtn = document.getElementById('procColsBtn');
+    if (colsPopover && !colsPopover.contains(e.target) && !colsBtn.contains(e.target)) {
+      colsPopover.style.display = 'none';
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hideCtxMenu();
+      const colsPopover = document.getElementById('procColsPopover');
+      if (colsPopover) colsPopover.style.display = 'none';
+    }
+  });
+
+  function toggleColsPopover(e) {
+    e.stopPropagation();
+    const pop = document.getElementById('procColsPopover');
+    const isShown = pop.style.display !== 'none';
+    pop.style.display = isShown ? 'none' : 'flex';
+    if (!isShown) renderColsPopover();
+  }
+
+  function renderColsPopover() {
+    const list = document.getElementById('procColsList');
+    list.innerHTML = ALL_COLS.map(c => `
+      <label class="proc-col-checkbox-label">
+        <input type="checkbox" data-col="${c.id}" ${visibleCols[c.id] ? 'checked' : ''}>
+        <span>${c.label}</span>
+      </label>
+    `).join('');
+
+    list.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+      chk.onchange = () => {
+        visibleCols[chk.dataset.col] = chk.checked;
+        saveColPrefs();
+        renderHeaders();
+        filterProcs();
+      };
+    });
+  }
+
+  function updateSortIndicators() {
+    ALL_COLS.forEach(c => {
+      const el = document.getElementById(`th_icon_${c.id}`);
+      if (el) {
+        if (c.id === sortCol) {
+          el.innerHTML = sortDir === 'asc'
+            ? `<svg style="width:7px; height:7px; margin-left:3px; vertical-align:1px; display:inline-block;" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`
+            : `<svg style="width:7px; height:7px; margin-left:3px; vertical-align:1px; display:inline-block;" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+        } else {
+          el.innerHTML = '';
+        }
+      }
+    });
+  }
+
+  function setSort(col) {
+    if (sortCol === col) {
+      sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+      sortCol = col;
+      sortDir = ['cpu', 'mem', 'rss', 'pss', 'vsz'].includes(col) ? 'desc' : 'asc';
+    }
+    filterProcs();
+  }
+
+  function renderHeaders() {
+    const theadRow = document.getElementById('processesTableHeadRow');
+    theadRow.innerHTML = ALL_COLS.filter(c => visibleCols[c.id]).map(c => `
+      <th style="width:${c.width}; cursor:pointer; user-select:none; padding:0.55rem 0.65rem;" onclick="setSort('${c.id}')" ${c.title ? `title="${c.title}"` : ''}>
+        ${c.label} <span id="th_icon_${c.id}"></span>
+      </th>
+    `).join('');
+    updateSortIndicators();
+  }
 
   async function loadProcesses() {
     try {
       const resp = await fetch(`/api/servers/${serverId}/processes/list`);
       const res = await resp.json();
       if (res.success) {
-        allProcesses = res.processes;
+        allProcesses = res.processes || [];
         filterProcs();
       }
     } catch (e) {
@@ -72,16 +387,27 @@
 
   function filterProcs() {
     const q = document.getElementById('procSearch').value.toLowerCase().trim();
-    if (!q) {
-      renderProcesses(allProcesses);
-      return;
-    }
-    const filtered = allProcesses.filter(p => 
+    let filtered = q ? allProcesses.filter(p => 
       p.pid.toString().includes(q) ||
       p.user.toLowerCase().includes(q) ||
       p.comm.toLowerCase().includes(q) ||
-      p.args.toLowerCase().includes(q)
-    );
+      (p.args && p.args.toLowerCase().includes(q))
+    ) : allProcesses;
+
+    // Sort
+    filtered = [...filtered].sort((a, b) => {
+      let valA = a[sortCol];
+      let valB = b[sortCol];
+      if (['cpu', 'mem', 'rss', 'pss', 'vsz', 'pid'].includes(sortCol)) {
+        valA = (valA === null || valA === undefined) ? -1 : Number(valA);
+        valB = (valB === null || valB === undefined) ? -1 : Number(valB);
+        return sortDir === 'asc' ? valA - valB : valB - valA;
+      }
+      valA = (valA || '').toString().toLowerCase();
+      valB = (valB || '').toString().toLowerCase();
+      return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
+
     renderProcesses(filtered);
   }
 
@@ -92,51 +418,92 @@
       { key: 'Owner / User', val: p.user },
       { key: 'Binary', val: p.comm },
       { key: 'CPU Usage', val: `${p.cpu}%` },
-      { key: 'Memory Usage', val: `${p.mem}%` },
-      { key: 'Process State', val: p.stat },
+      { key: 'RAM Usage', val: formatRam(p.rss, p.mem) },
+      { key: 'Physical RAM (RSS)', val: formatKb(p.rss) },
+      { key: 'Proportional Memory (PSS)', val: p.pss !== null && p.pss !== undefined ? formatKb(p.pss) : 'Unavailable' },
+      { key: 'Virtual Memory (VSZ)', val: formatKb(p.vsz) },
+      { key: 'Process State', val: `${p.stat} (${parseProcessState(p.stat).label})` },
       { key: 'Full Command', val: p.args }
     ]);
     if (window.openContextualInspector) window.openContextualInspector();
   }
 
   function renderProcesses(procs) {
+    updateSortIndicators();
     const tbody = document.getElementById('processesTableBody');
+    const visibleCount = ALL_COLS.filter(c => visibleCols[c.id]).length;
     if (!procs || procs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 3rem; color: var(--text-muted);">No matching processes</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${visibleCount || 1}" style="text-align:center; padding: 3rem; color: var(--text-muted);">No matching processes</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = procs.map(p => `
-      <tr onclick='inspectProcess(${JSON.stringify(p)})' style="cursor: pointer;">
-        <td><code style="color: var(--accent-cyan); font-weight: 600;">${p.pid}</code></td>
-        <td style="color: var(--text-secondary); font-size: 0.78rem;">${p.user}</td>
-        <td><strong style="color: ${p.cpu > 50 ? 'var(--accent-rose)' : (p.cpu > 20 ? 'var(--accent-amber)' : 'inherit')};">${p.cpu}%</strong></td>
-        <td>${p.mem}%</td>
-        <td><code style="font-size: 0.72rem; background: var(--bg-surface-elevated); padding: 1px 4px; border-radius: 2px;">${p.stat}</code></td>
-        <td style="max-width: 480px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.76rem;" title="${p.args}">
-          ${p.args}
-        </td>
-        <td style="text-align: right;" onclick="event.stopPropagation()">
-          <div style="display: inline-flex; gap: 0.25rem;">
-            <button class="btn btn-secondary btn-sm" onclick="killProc(${p.pid}, 'SIGTERM', '${p.comm}')" title="SIGTERM (-15)">
-              Term
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="killProc(${p.pid}, 'SIGKILL', '${p.comm}')" title="SIGKILL (-9)">
-              Kill
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = procs.map(p => {
+      const cpuColor = p.cpu > 50 ? 'var(--accent-rose)' : (p.cpu > 20 ? 'var(--accent-amber)' : 'inherit');
+      const memColor = p.mem > 50 ? 'var(--accent-rose)' : (p.mem > 20 ? 'var(--accent-amber)' : 'inherit');
+      const ramFormatted = formatRam(p.rss, p.mem);
+      const rssDisplay = formatKb(p.rss);
+      const pssDisplay = (p.pss !== null && p.pss !== undefined) ? formatKb(p.pss) : '<span style="color:var(--text-muted);">-</span>';
+      const vszDisplay = formatKb(p.vsz);
+      const st = parseProcessState(p.stat);
+
+      const cells = [];
+      if (visibleCols.pid) cells.push(`<td><code style="color: var(--accent-cyan); font-weight: 600;">${p.pid}</code></td>`);
+      if (visibleCols.user) cells.push(`<td style="color: var(--text-secondary); font-size: 0.78rem; font-weight: 500; max-width: 125px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${p.user}">${p.user}</td>`);
+      if (visibleCols.cpu) cells.push(`<td><strong style="color: ${cpuColor};">${p.cpu}%</strong></td>`);
+      if (visibleCols.mem) cells.push(`<td style="color: ${memColor}; font-weight: 600; font-family: var(--font-mono); font-size: 0.75rem;" title="Physical RSS: ${rssDisplay}">${p.mem}%</td>`);
+      if (visibleCols.rss) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.74rem; color: #38bdf8;" title="Resident Physical Memory (RSS): ${p.rss} KB">${rssDisplay}</td>`);
+      if (visibleCols.pss) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.74rem; color: #a78bfa;" title="Proportional Set Size (PSS): ${p.pss !== null && p.pss !== undefined ? p.pss + ' KB' : 'Unavailable'}">${pssDisplay}</td>`);
+      if (visibleCols.vsz) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);" title="Virtual Memory Size: ${p.vsz} KB">${vszDisplay}</td>`);
+      if (visibleCols.stat) {
+        cells.push(`
+          <td>
+            <span title="${st.desc}" style="display:inline-flex; align-items:center; gap:5px; padding:2px 7px; border-radius:12px; background:${st.bg}; color:${st.color}; font-size:0.71rem; font-weight:500; cursor:help;">
+              <span style="width:6px; height:6px; border-radius:50%; background:${st.color}; flex-shrink:0;"></span>
+              <span>${st.label}</span>
+            </span>
+          </td>
+        `);
+      }
+      if (visibleCols.comm) {
+        cells.push(`
+          <td style="max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.76rem;" title="${p.args || p.comm}">
+            ${p.args || p.comm}
+          </td>
+        `);
+      }
+
+      return `
+        <tr data-pid="${p.pid}" onclick='inspectProcess(${JSON.stringify(p)})' style="cursor: pointer;">
+          ${cells.join('')}
+        </tr>
+      `;
+    }).join('');
+
+    // Context menu trigger
+    tbody.querySelectorAll('tr[data-pid]').forEach(row => {
+      row.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const pid = parseInt(row.dataset.pid, 10);
+        const proc = allProcesses.find(p => p.pid === pid);
+        if (proc) showProcContextMenu(e.clientX, e.clientY, proc);
+      };
+    });
   }
 
   async function killProc(pid, signal, comm) {
-    const isKill = signal === 'SIGKILL';
-    const msg = isKill 
-      ? `FORCE KILL confirmation: Are you sure you want to send SIGKILL (-9) to PID ${pid} (${comm})?`
-      : `Send SIGTERM (-15) to terminate PID ${pid} (${comm})?`;
+    let confirmMsg = `Send ${signal} to PID ${pid} (${comm})?`;
+    if (signal === 'SIGKILL') {
+      confirmMsg = `FORCE KILL: Are you sure you want to terminate PID ${pid} (${comm}) immediately with SIGKILL (-9)?`;
+    } else if (signal === 'SIGTERM') {
+      confirmMsg = `Terminate PID ${pid} (${comm}) gracefully with SIGTERM (-15)?`;
+    } else if (signal === 'SIGSTOP') {
+      confirmMsg = `Pause execution of PID ${pid} (${comm}) with SIGSTOP (-19)?`;
+    } else if (signal === 'SIGCONT') {
+      confirmMsg = `Resume execution of PID ${pid} (${comm}) with SIGCONT (-18)?`;
+    }
 
-    if (!confirm(msg)) return;
+    if (!confirm(confirmMsg)) return;
 
     try {
       const resp = await fetch(`/api/servers/${serverId}/processes/kill`, {
@@ -153,9 +520,63 @@
     }
   }
 
+  async function fetchMetrics() {
+    try {
+      const resp = await fetch(`/api/servers/${serverId}/metrics`);
+      const res = await resp.json();
+      if (res.online && res.metrics) {
+        const m = res.metrics;
+        const cpu = m.cpu !== undefined ? m.cpu : 0;
+        const mem = m.memory ? m.memory.percent : 0;
+        const disk = m.disk ? m.disk.percent : 0;
+
+        const cpuVal = document.getElementById('pageMetricCpuVal');
+        const cpuBar = document.getElementById('pageMetricCpuBar');
+        if (cpuVal) {
+          cpuVal.textContent = `${cpu}%`;
+          cpuVal.style.color = cpu > 80 ? '#ef4444' : (cpu > 50 ? '#f59e0b' : '#34d399');
+        }
+        if (cpuBar) {
+          cpuBar.style.width = `${Math.min(100, Math.max(0, cpu))}%`;
+          cpuBar.style.background = cpu > 80 ? '#ef4444' : (cpu > 50 ? '#f59e0b' : '#34d399');
+        }
+
+        const memVal = document.getElementById('pageMetricMemVal');
+        const memBar = document.getElementById('pageMetricMemBar');
+        if (memVal) {
+          const memDetail = (m.memory && m.memory.used_formatted && m.memory.total_formatted)
+            ? ` (${m.memory.used_formatted} / ${m.memory.total_formatted})` : '';
+          memVal.textContent = `${mem}%${memDetail}`;
+          memVal.style.color = mem > 85 ? '#ef4444' : (mem > 60 ? '#f59e0b' : '#38bdf8');
+        }
+        if (memBar) {
+          memBar.style.width = `${Math.min(100, Math.max(0, mem))}%`;
+          memBar.style.background = mem > 85 ? '#ef4444' : (mem > 60 ? '#f59e0b' : '#38bdf8');
+        }
+
+        const diskVal = document.getElementById('pageMetricDiskVal');
+        const diskBar = document.getElementById('pageMetricDiskBar');
+        if (diskVal) {
+          const diskDetail = (m.disk && m.disk.used_formatted && m.disk.total_formatted)
+            ? ` (${m.disk.used_formatted} / ${m.disk.total_formatted})` : '';
+          diskVal.textContent = `${disk}%${diskDetail}`;
+          diskVal.style.color = disk > 90 ? '#ef4444' : (disk > 75 ? '#f59e0b' : '#a78bfa');
+        }
+        if (diskBar) {
+          diskBar.style.width = `${Math.min(100, Math.max(0, disk))}%`;
+          diskBar.style.background = disk > 90 ? '#ef4444' : (disk > 75 ? '#f59e0b' : '#a78bfa');
+        }
+      }
+    } catch (_) {}
+  }
+
+  renderHeaders();
   loadProcesses();
-  // Sensible interval
-  setInterval(loadProcesses, 8000);
+  fetchMetrics();
+  setInterval(() => {
+    loadProcesses();
+    fetchMetrics();
+  }, 8000);
 </script>
 {% endif %}
 {% endblock %}

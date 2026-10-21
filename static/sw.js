@@ -3,7 +3,7 @@
  * Enables Progressive Web App (PWA) installation, offline fallback, and fast asset caching.
  */
 
-const CACHE_NAME = 'shellman-pwa-v1.2';
+const CACHE_NAME = 'shellman-pwa-v2.4';
 
 // Core assets to pre-cache on install for standalone app shell
 const PRECACHE_ASSETS = [

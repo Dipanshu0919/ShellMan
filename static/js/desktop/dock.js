@@ -48,17 +48,23 @@ const DesktopDock = {
       gradient: 'linear-gradient(135deg, #e11d48, #c026d3)',
       icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><line x1="7.5" y1="7.5" x2="16.5" y2="7.5" stroke="#fcd34d" stroke-width="1.7" stroke-linecap="round"/><line x1="7.5" y1="12" x2="14.5" y2="12" stroke="#38bdf8" stroke-width="1.7" stroke-linecap="round"/><line x1="7.5" y1="16.5" x2="12" y2="16.5" stroke="#34d399" stroke-width="1.7" stroke-linecap="round"/></svg>'
     },
+    // {
+    //   id: 'hardware',
+    //   title: 'Hardware Architecture',
+    //   gradient: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+    //   icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="5" width="14" height="14" rx="2" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><rect x="8.5" y="8.5" width="7" height="7" rx="1" fill="#c084fc"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/></svg>'
+    // },
+    // {
+    //   id: 'network',
+    //   title: 'Network & Sockets',
+    //   gradient: 'linear-gradient(135deg, #0284c7, #3b82f6)',
+    //   icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="9" stroke="#ffffff" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke="#38bdf8" stroke-width="1.5"/></svg>'
+    // },
     {
-      id: 'hardware',
-      title: 'Hardware Architecture',
-      gradient: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="5" width="14" height="14" rx="2" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><rect x="8.5" y="8.5" width="7" height="7" rx="1" fill="#c084fc"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'network',
-      title: 'Network & Sockets',
-      gradient: 'linear-gradient(135deg, #0284c7, #3b82f6)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="9" stroke="#ffffff" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke="#38bdf8" stroke-width="1.5"/></svg>'
+      id: 'nginx',
+      title: 'Nginx & Domains (Proxy & SSL)',
+      gradient: 'linear-gradient(135deg, #059669, #0d9488)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M7 16V8l5 8V8M16 8v8" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     },
     {
       id: 'settings',
@@ -66,12 +72,12 @@ const DesktopDock = {
       gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
       icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="#ffffff" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     },
-    {
-      id: 'servers',
-      title: 'Managed Nodes',
-      gradient: 'linear-gradient(135deg, #e11d48, #be123c)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="6.5" rx="1.5" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><rect x="3" y="14.5" width="18" height="6.5" rx="1.5" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><circle cx="6.5" cy="6.2" r="1" fill="#ffffff"/><circle cx="6.5" cy="17.7" r="1" fill="#ffffff"/><line x1="10" y1="6.2" x2="18" y2="6.2" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="17.7" x2="18" y2="17.7" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/></svg>'
-    }
+    // {
+    //   id: 'servers',
+    //   title: 'Managed Nodes',
+    //   gradient: 'linear-gradient(135deg, #e11d48, #be123c)',
+    //   icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="6.5" rx="1.5" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><rect x="3" y="14.5" width="18" height="6.5" rx="1.5" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><circle cx="6.5" cy="6.2" r="1" fill="#ffffff"/><circle cx="6.5" cy="17.7" r="1" fill="#ffffff"/><line x1="10" y1="6.2" x2="18" y2="6.2" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/><line x1="10" y1="17.7" x2="18" y2="17.7" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/></svg>'
+    // }
   ],
 
   init(dockEl) {

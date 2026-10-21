@@ -23,11 +23,28 @@ document.addEventListener('DOMContentLoaded', () => {
     updateIpMaskUI(true);
   }
 
-  // 4. Live Clock in System Bar & Desktop Widgets
+  // Restore font size preference
+  const savedFontSize = localStorage.getItem('shellman_font_size');
+  if (savedFontSize) {
+    const s = parseInt(savedFontSize, 10);
+    if (!isNaN(s) && s >= 10 && s <= 32) {
+      document.documentElement.style.fontSize = `${s}px`;
+      document.documentElement.style.setProperty('--app-font-size', `${s}px`);
+      document.documentElement.style.setProperty('--app-font-scale', (s / 16).toString());
+    }
+  }
+
+  // 4. Live Clock in System Bar & Desktop Widgets (Synchronized to Remote SSH Host)
   const clockEl = document.getElementById('desktopClock');
   const wgtTime = document.getElementById('wgtTime');
   const wgtSec = document.getElementById('wgtSec');
   const wgtDate = document.getElementById('wgtDate');
+  const wgtTz = document.getElementById('wgtTz');
+
+  // Server time tracking variables
+  let serverTimeOffsetMs = null;
+  let serverTzName = '';
+  let serverTzOffsetMinutes = 0;
 
   // Load custom wallpaper if saved in localStorage
   const savedWallpaper = localStorage.getItem('shellman_wallpaper');
@@ -48,20 +65,49 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const updateClock = () => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    if (clockEl) clockEl.textContent = timeStr;
+    if (serverTimeOffsetMs !== null) {
+      // Synchronized to remote SSH server time
+      const currentServerUtcMs = Date.now() + serverTimeOffsetMs;
+      const serverLocalMs = currentServerUtcMs + (serverTzOffsetMinutes * 60000);
+      const d = new Date(serverLocalMs);
 
-    if (wgtTime) {
-      const hours = String(now.getHours()).padStart(2, '0');
-      const mins = String(now.getMinutes()).padStart(2, '0');
-      const secs = String(now.getSeconds()).padStart(2, '0');
-      wgtTime.textContent = `${hours}:${mins}`;
+      const hours = String(d.getUTCHours()).padStart(2, '0');
+      const mins = String(d.getUTCMinutes()).padStart(2, '0');
+      const secs = String(d.getUTCSeconds()).padStart(2, '0');
+
+      if (clockEl) clockEl.textContent = `${hours}:${mins}:${secs}`;
+      if (wgtTime) wgtTime.textContent = `${hours}:${mins}`;
       if (wgtSec) wgtSec.textContent = secs;
-    }
-    if (wgtDate) {
-      const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-      wgtDate.textContent = now.toLocaleDateString(undefined, options);
+
+      if (wgtDate) {
+        const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        wgtDate.textContent = `${weekdays[d.getUTCDay()]}, ${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+      }
+
+      if (wgtTz) {
+        wgtTz.textContent = serverTzName || 'HOST';
+        wgtTz.style.display = 'inline-block';
+        wgtTz.title = `Synchronized to Remote Host Time (${serverTzName || 'SSH Server'})`;
+      }
+    } else {
+      // Fallback to local device time when no server telemetry is available yet
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      if (clockEl) clockEl.textContent = timeStr;
+
+      if (wgtTime) {
+        const hours = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        const secs = String(now.getSeconds()).padStart(2, '0');
+        wgtTime.textContent = `${hours}:${mins}`;
+        if (wgtSec) wgtSec.textContent = secs;
+      }
+      if (wgtDate) {
+        const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        wgtDate.textContent = now.toLocaleDateString(undefined, options);
+      }
+      if (wgtTz) wgtTz.style.display = 'none';
     }
   };
   updateClock();
@@ -70,10 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5. Desktop Canvas Icons setup
   renderDesktopIcons();
 
-  // 6. Micro-telemetry Polling
+  // 6. Central Telemetry & Desktop Widgets
+  DesktopTelemetry.subscribe(updateDesktopWidgets);
   if (serverId) {
-    pollMicroTelemetry(serverId);
-    setInterval(() => pollMicroTelemetry(serverId), 3000);
+    DesktopTelemetry.start(serverId);
   }
 
   // 7. Check if initial app requested explicitly via query parameter (e.g. ?app=files)
@@ -154,6 +200,12 @@ function renderDesktopIcons() {
       icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="9" stroke="#ffffff" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke="#38bdf8" stroke-width="1.5"/></svg>'
     },
     {
+      id: 'nginx',
+      title: 'Nginx & Domains',
+      gradient: 'linear-gradient(135deg, #059669, #0d9488)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M7 16V8l5 8V8M16 8v8" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
       id: 'settings',
       title: 'Settings',
       gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
@@ -183,87 +235,157 @@ function handleDesktopIconClick(el, appId) {
   DesktopApps.launch(appId);
 }
 
-async function pollMicroTelemetry(serverId) {
-  try {
-    const resp = await fetch(`/api/servers/${serverId}/metrics`);
-    const res = await resp.json();
-    if (res.online && res.metrics) {
-      const cpu = res.metrics.cpu !== undefined ? res.metrics.cpu : 0;
-      const mem = res.metrics.memory ? res.metrics.memory.percent : 0;
-      const disk = res.metrics.disk ? res.metrics.disk.percent : 0;
+// Centralized Telemetry Bus for Synchronized System Metrics
+const DesktopTelemetry = {
+  serverId: null,
+  subscribers: new Set(),
+  lastMetrics: null,
+  isPolling: false,
+  _timer: null,
 
-      // 1. Top bar micro telemetry
-      const cpuBar = document.getElementById('microCpuBar');
-      const cpuVal = document.getElementById('microCpuVal');
-      const memBar = document.getElementById('microMemBar');
-      const memVal = document.getElementById('microMemVal');
-
-      if (cpuBar) cpuBar.style.width = `${cpu}%`;
-      if (cpuVal) cpuVal.textContent = `${cpu}%`;
-      if (memBar) memBar.style.width = `${mem}%`;
-      if (memVal) memVal.textContent = `${mem}%`;
-
-      // 2. Right-side Desktop System Widgets
-      const wgtCpuVal = document.getElementById('wgtCpuVal');
-      const wgtCpuBar = document.getElementById('wgtCpuBar');
-      const wgtCpuLoad = document.getElementById('wgtCpuLoad');
-      if (wgtCpuVal) wgtCpuVal.textContent = `${cpu}%`;
-      if (wgtCpuBar) wgtCpuBar.style.width = `${cpu}%`;
-      if (wgtCpuLoad && res.metrics.load) {
-        wgtCpuLoad.textContent = `Load: ${res.metrics.load.join(', ')}`;
-      }
-
-      const wgtMemVal = document.getElementById('wgtMemVal');
-      const wgtMemBar = document.getElementById('wgtMemBar');
-      const wgtMemDetail = document.getElementById('wgtMemDetail');
-      if (wgtMemVal) wgtMemVal.textContent = `${mem}%`;
-      if (wgtMemBar) wgtMemBar.style.width = `${mem}%`;
-      if (wgtMemDetail && res.metrics.memory) {
-        if (res.metrics.memory.used_formatted && res.metrics.memory.total_formatted) {
-          wgtMemDetail.textContent = `${res.metrics.memory.used_formatted} / ${res.metrics.memory.total_formatted}`;
-        } else {
-          const usedGb = (res.metrics.memory.used / (1024 ** 3)).toFixed(1);
-          const totalGb = (res.metrics.memory.total / (1024 ** 3)).toFixed(1);
-          wgtMemDetail.textContent = `${usedGb} / ${totalGb} GB`;
-        }
-      }
-
-      const wgtDiskVal = document.getElementById('wgtDiskVal');
-      const wgtDiskBar = document.getElementById('wgtDiskBar');
-      const wgtDiskDetail = document.getElementById('wgtDiskDetail');
-      if (wgtDiskVal) wgtDiskVal.textContent = `${disk}%`;
-      if (wgtDiskBar) wgtDiskBar.style.width = `${disk}%`;
-      if (wgtDiskDetail && res.metrics.disk) {
-        if (res.metrics.disk.used_formatted && res.metrics.disk.total_formatted) {
-          wgtDiskDetail.textContent = `${res.metrics.disk.used_formatted} / ${res.metrics.disk.total_formatted} (/)`;
-        } else {
-          const usedGb = (res.metrics.disk.used / (1024 ** 3)).toFixed(1);
-          const totalGb = (res.metrics.disk.total / (1024 ** 3)).toFixed(1);
-          wgtDiskDetail.textContent = `${usedGb} / ${totalGb} GB (/)`;
-        }
-      }
-
-      const wgtUptime = document.getElementById('wgtUptime');
-      if (wgtUptime && res.metrics.uptime !== undefined) {
-        const u = res.metrics.uptime;
-        const days = Math.floor(u / 86400);
-        const hours = Math.floor((u % 86400) / 3600);
-        const mins = Math.floor((u % 3600) / 60);
-        wgtUptime.textContent = days > 0 ? `${days}d ${hours}h` : `${hours}h ${mins}m`;
-      }
-
-      const wgtOs = document.getElementById('wgtOs');
-      if (wgtOs && res.metrics.os) {
-        wgtOs.textContent = res.metrics.os.length > 20 ? res.metrics.os.substring(0, 18) + '..' : res.metrics.os;
-      }
-
-      const topDot = document.getElementById('topServerDot');
-      if (topDot) topDot.className = 'status-dot connected';
-    } else {
-      const topDot = document.getElementById('topServerDot');
-      if (topDot) topDot.className = 'status-dot disconnected';
+  subscribe(cb) {
+    this.subscribers.add(cb);
+    if (this.lastMetrics) {
+      try { cb(this.lastMetrics); } catch (e) { console.error('DesktopTelemetry subscriber error:', e); }
     }
-  } catch (_) {}
+    return () => this.subscribers.delete(cb);
+  },
+
+  broadcast(metrics) {
+    this.lastMetrics = metrics;
+    this.subscribers.forEach(cb => {
+      try { cb(metrics); } catch (e) { console.error('DesktopTelemetry subscriber error:', e); }
+    });
+  },
+
+  async poll(force = false) {
+    if (!this.serverId || (this.isPolling && !force)) return;
+    this.isPolling = true;
+    try {
+      const url = `/api/servers/${this.serverId}/metrics` + (force ? '?force=1' : '');
+      const resp = await fetch(url);
+      const res = await resp.json();
+      if (res.online && res.metrics) {
+        this.broadcast(res.metrics);
+        const topDot = document.getElementById('topServerDot');
+        if (topDot) topDot.className = 'status-dot connected';
+      } else {
+        const topDot = document.getElementById('topServerDot');
+        if (topDot) topDot.className = 'status-dot disconnected';
+      }
+    } catch (_) {}
+    finally {
+      this.isPolling = false;
+    }
+  },
+
+  start(serverId) {
+    this.serverId = serverId;
+    if (!serverId) return;
+    this.poll();
+    if (this._timer) clearInterval(this._timer);
+    this._timer = setInterval(() => this.poll(), 2000);
+  }
+};
+window.DesktopTelemetry = DesktopTelemetry;
+
+function updateDesktopWidgets(metrics) {
+  // Sync remote SSH server time
+  if (metrics.server_time && metrics.server_time.epoch) {
+    const serverEpochMs = metrics.server_time.epoch * 1000;
+    serverTimeOffsetMs = serverEpochMs - Date.now();
+    serverTzName = metrics.server_time.timezone || '';
+
+    const offsetStr = metrics.server_time.offset || '';
+    const sign = offsetStr.startsWith('-') ? -1 : 1;
+    const cleanDigits = offsetStr.replace(/[^0-9]/g, '');
+    if (cleanDigits.length >= 4) {
+      const h = parseInt(cleanDigits.substring(0, 2), 10);
+      const m = parseInt(cleanDigits.substring(2, 4), 10);
+      serverTzOffsetMinutes = sign * (h * 60 + m);
+    } else if (cleanDigits.length >= 2) {
+      serverTzOffsetMinutes = sign * (parseInt(cleanDigits, 10) * 60);
+    } else {
+      serverTzOffsetMinutes = 0;
+    }
+  }
+
+  const cpu = metrics.cpu !== undefined ? metrics.cpu : 0;
+  const mem = metrics.memory ? metrics.memory.percent : 0;
+  const disk = metrics.disk ? metrics.disk.percent : 0;
+
+  // 1. Top bar micro telemetry
+  const cpuBar = document.getElementById('microCpuBar');
+  const cpuVal = document.getElementById('microCpuVal');
+  const memBar = document.getElementById('microMemBar');
+  const memVal = document.getElementById('microMemVal');
+
+  if (cpuBar) cpuBar.style.width = `${cpu}%`;
+  if (cpuVal) cpuVal.textContent = `${cpu}%`;
+  if (memBar) memBar.style.width = `${mem}%`;
+  if (memVal) memVal.textContent = `${mem}%`;
+
+  // 2. Right-side Desktop System Widgets
+  const wgtCpuVal = document.getElementById('wgtCpuVal');
+  const wgtCpuBar = document.getElementById('wgtCpuBar');
+  const wgtCpuLoad = document.getElementById('wgtCpuLoad');
+  if (wgtCpuVal) wgtCpuVal.textContent = `${cpu}%`;
+  if (wgtCpuBar) wgtCpuBar.style.width = `${cpu}%`;
+  if (wgtCpuLoad && metrics.load) {
+    wgtCpuLoad.textContent = `Load: ${metrics.load.join(', ')}`;
+  }
+
+  const wgtMemVal = document.getElementById('wgtMemVal');
+  const wgtMemBar = document.getElementById('wgtMemBar');
+  const wgtMemDetail = document.getElementById('wgtMemDetail');
+  if (wgtMemVal) wgtMemVal.textContent = `${mem}%`;
+  if (wgtMemBar) wgtMemBar.style.width = `${mem}%`;
+  if (wgtMemDetail && metrics.memory) {
+    if (metrics.memory.used_formatted && metrics.memory.total_formatted) {
+      wgtMemDetail.textContent = `${metrics.memory.used_formatted} / ${metrics.memory.total_formatted}`;
+    } else {
+      const usedGb = (metrics.memory.used / (1024 ** 3)).toFixed(1);
+      const totalGb = (metrics.memory.total / (1024 ** 3)).toFixed(1);
+      wgtMemDetail.textContent = `${usedGb} / ${totalGb} GB`;
+    }
+  }
+
+  const wgtDiskVal = document.getElementById('wgtDiskVal');
+  const wgtDiskBar = document.getElementById('wgtDiskBar');
+  const wgtDiskDetail = document.getElementById('wgtDiskDetail');
+  if (wgtDiskVal) wgtDiskVal.textContent = `${disk}%`;
+  if (wgtDiskBar) wgtDiskBar.style.width = `${disk}%`;
+  if (wgtDiskDetail && metrics.disk) {
+    if (metrics.disk.used_formatted && metrics.disk.total_formatted) {
+      wgtDiskDetail.textContent = `${metrics.disk.used_formatted} / ${metrics.disk.total_formatted} (/)`;
+    } else {
+      const usedGb = (metrics.disk.used / (1024 ** 3)).toFixed(1);
+      const totalGb = (metrics.disk.total / (1024 ** 3)).toFixed(1);
+      wgtDiskDetail.textContent = `${usedGb} / ${totalGb} GB (/)`;
+    }
+  }
+
+  const wgtUptime = document.getElementById('wgtUptime');
+  if (wgtUptime && metrics.uptime !== undefined) {
+    const u = metrics.uptime;
+    const days = Math.floor(u / 86400);
+    const hours = Math.floor((u % 86400) / 3600);
+    const mins = Math.floor((u % 3600) / 60);
+    wgtUptime.textContent = days > 0 ? `${days}d ${hours}h` : `${hours}h ${mins}m`;
+  }
+
+  const wgtOs = document.getElementById('wgtOs');
+  if (wgtOs && metrics.os) {
+    wgtOs.textContent = metrics.os.length > 20 ? metrics.os.substring(0, 18) + '..' : metrics.os;
+  }
+}
+
+async function pollMicroTelemetry(serverId) {
+  if (DesktopTelemetry.serverId !== serverId) {
+    DesktopTelemetry.start(serverId);
+  } else {
+    DesktopTelemetry.poll(true);
+  }
 }
 
 function handleDesktopContextMenu(e) {

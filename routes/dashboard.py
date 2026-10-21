@@ -25,8 +25,9 @@ def index():
 @dashboard_bp.route('/api/servers/<int:server_id>/metrics')
 @login_required
 def server_metrics(server_id):
+    force = request.args.get('force', 'false').lower() in ('1', 'true', 'yes')
     server = Server.query.get_or_404(server_id)
-    metrics = SystemMonitor.get_quick_metrics(server)
+    metrics = SystemMonitor.get_quick_metrics(server, force=force)
     
     if 'error' in metrics:
         server.is_online = False

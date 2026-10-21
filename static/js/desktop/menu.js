@@ -189,6 +189,7 @@ class DesktopMenusController {
       { name: 'System Logs', desc: 'Stream journalctl entries', action: () => DesktopApps.launch('logs'), badge: 'App' },
       { name: 'Hardware Specs', desc: 'View CPU architecture & interfaces', action: () => DesktopApps.launch('hardware'), badge: 'App' },
       { name: 'Network & Sockets', desc: 'Inspect listening ports', action: () => DesktopApps.launch('network'), badge: 'App' },
+      { name: 'Nginx & Domains', desc: 'Reverse proxy routing, configuration editor, and Let\'s Encrypt SSL certificates', action: () => DesktopApps.launch('nginx'), badge: 'App' },
       { name: 'System Settings', desc: 'Manage remote servers, admin password, and desktop appearance', action: () => DesktopApps.launch('settings'), badge: 'App' },
       { name: 'Managed Servers', desc: 'Add, edit, test or delete server nodes', action: () => DesktopApps.launch('settings', { tab: 'servers' }), badge: 'App' },
       { name: 'Install ShellMan App (PWA)', desc: 'Download website as standalone desktop operating app', action: () => PwaManager.promptInstall(), badge: 'PWA' },

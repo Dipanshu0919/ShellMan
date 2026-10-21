@@ -22,7 +22,14 @@ class SSHConnectionManager:
                 cls._instance = super(SSHConnectionManager, cls).__new__(cls)
                 cls._instance._clients: Dict[int, Tuple[paramiko.SSHClient, float]] = {}
                 cls._instance._client_lock = threading.Lock()
+                cls._instance._server_locks: Dict[int, threading.Lock] = {}
             return cls._instance
+
+    def _get_server_lock(self, server_id: int) -> threading.Lock:
+        with self._client_lock:
+            if server_id not in self._server_locks:
+                self._server_locks[server_id] = threading.Lock()
+            return self._server_locks[server_id]
 
     def _create_client(self, server) -> paramiko.SSHClient:
         client = paramiko.SSHClient()
@@ -32,9 +39,9 @@ class SSHConnectionManager:
             'hostname': server.host,
             'port': server.port,
             'username': server.username,
-            'timeout': 10,
-            'banner_timeout': 10,
-            'auth_timeout': 10,
+            'timeout': 15,
+            'banner_timeout': 30,
+            'auth_timeout': 30,
             'allow_agent': False,
             'look_for_keys': False,
         }
@@ -67,6 +74,9 @@ class SSHConnectionManager:
             connect_kwargs['password'] = server.password
 
         client.connect(**connect_kwargs)
+        transport = client.get_transport()
+        if transport:
+            transport.set_keepalive(15)
         return client
 
     def get_client(self, server, force_new: bool = False) -> paramiko.SSHClient:
@@ -91,46 +101,80 @@ class SSHConnectionManager:
             self._clients[server.id] = (client, time.time())
             return client
 
-    def execute(self, server, command: str, timeout: int = 15, get_pty: bool = False) -> Tuple[int, str, str]:
-        """
-        Executes a command safely over SSH.
-        Returns: (exit_status, stdout_str, stderr_str)
-        """
-        client = self.get_client(server)
+    def _run_cmd(self, client: paramiko.SSHClient, command: str, timeout: int, get_pty: bool) -> Tuple[int, str, str]:
+        stdin, stdout, stderr = client.exec_command(command, timeout=timeout, get_pty=get_pty)
         try:
-            stdin, stdout, stderr = client.exec_command(command, timeout=timeout, get_pty=get_pty)
             exit_status = stdout.channel.recv_exit_status()
             out_bytes = stdout.read()
             err_bytes = stderr.read()
             out_str = out_bytes.decode('utf-8', errors='replace')
             err_str = err_bytes.decode('utf-8', errors='replace')
             return exit_status, out_str, err_str
-        except Exception as e:
-            # If error might be due to stale connection, retry once with a fresh client
-            logger.warning(f"SSH exec error for server {server.id}, retrying with new connection: {e}")
-            self.disconnect(server.id)
-            client = self.get_client(server, force_new=True)
-            stdin, stdout, stderr = client.exec_command(command, timeout=timeout, get_pty=get_pty)
-            exit_status = stdout.channel.recv_exit_status()
-            out_bytes = stdout.read()
-            err_bytes = stderr.read()
-            return exit_status, out_bytes.decode('utf-8', errors='replace'), err_bytes.decode('utf-8', errors='replace')
+        finally:
+            if stdin:
+                try: stdin.close()
+                except Exception: pass
+            if stdout:
+                try:
+                    if stdout.channel:
+                        stdout.channel.close()
+                    stdout.close()
+                except Exception: pass
+            if stderr:
+                try: stderr.close()
+                except Exception: pass
+
+    def execute(self, server, command: str, timeout: int = 15, get_pty: bool = False) -> Tuple[int, str, str]:
+        """
+        Executes a command safely over SSH with channel lifecycle cleanup and concurrency locking.
+        Returns: (exit_status, stdout_str, stderr_str)
+        """
+        lock = self._get_server_lock(server.id)
+        with lock:
+            try:
+                client = self.get_client(server)
+                try:
+                    return self._run_cmd(client, command, timeout, get_pty)
+                except Exception as e:
+                    # If error might be due to stale connection, retry once with a fresh client
+                    logger.warning(f"SSH exec error for server {server.id}, retrying with new connection: {e}")
+                    self.disconnect(server.id)
+                    time.sleep(0.5)
+                    client = self.get_client(server, force_new=True)
+                    return self._run_cmd(client, command, timeout, get_pty)
+            except Exception as e:
+                logger.error(f"SSH command execution failed completely for server {server.id}: {e}")
+                return -1, "", f"SSH Connection / Execution Error: {str(e)}"
 
     def open_shell(self, server, term: str = 'xterm-256color', width: int = 80, height: int = 24) -> Tuple[paramiko.SSHClient, paramiko.Channel]:
         """
         Opens a dedicated pseudo-terminal channel for interactive sessions.
-        Configures terminal modes according to RFC 4254 to disable IXON (software flow control),
-        preventing Ctrl+S from freezing output transmission.
+        Configures terminal modes according to RFC 4254 Section 8.
         """
         client = self._create_client(server)
         transport = client.get_transport()
+        if transport:
+            transport.set_keepalive(15)
         channel = transport.open_session()
 
-        # Terminal modes according to RFC 4254:
-        # opcode 53 = IXON (enable output flow control). Set to 0 (disabled).
-        # opcode 0 = TTY_OP_END
-        # Format: opcode (1 byte) + uint32 argument (4 bytes) + end opcode (1 byte)
-        modes = bytes([53, 0, 0, 0, 0, 0])
+        # Terminal modes according to RFC 4254 Section 8:
+        # Opcode 53 = ECHO (1 = enable echoing of typed characters)
+        # Opcode 54 = ECHOE (1 = visually erase character on backspace)
+        # Opcode 55 = ECHOK (1 = kill character discards current line)
+        # Opcode 51 = ICANON (1 = canonical line editing)
+        # Opcode 50 = ISIG (1 = enable signals like INTR, QUIT, SUSP)
+        # Opcode 38 = IXON (0 = disable output flow control so Ctrl+S doesn't freeze terminal)
+        # Opcode 0  = TTY_OP_END
+        # Format: opcode (1 byte) + uint32 argument (4 bytes, big-endian) ... + end opcode 0 (1 byte)
+        modes = bytes([
+            53, 0, 0, 0, 1,  # ECHO = 1
+            54, 0, 0, 0, 1,  # ECHOE = 1
+            55, 0, 0, 0, 1,  # ECHOK = 1
+            51, 0, 0, 0, 1,  # ICANON = 1
+            50, 0, 0, 0, 1,  # ISIG = 1
+            38, 0, 0, 0, 0,  # IXON = 0
+            0                 # TTY_OP_END
+        ])
         
         from paramiko.common import cMSG_CHANNEL_REQUEST
         from paramiko.message import Message
@@ -174,14 +218,14 @@ class SSHConnectionManager:
     def test_connection(self, server) -> Tuple[bool, str]:
         try:
             client = self._create_client(server)
-            transport = client.get_transport()
-            if transport and transport.is_active():
-                stdin, stdout, stderr = client.exec_command("uname -s -r -m", timeout=5)
-                sys_info = stdout.read().decode('utf-8', errors='replace').strip()
+            try:
+                transport = client.get_transport()
+                if transport and transport.is_active():
+                    _, sys_info, _ = self._run_cmd(client, "uname -s -r -m", timeout=10, get_pty=False)
+                    return True, f"Success! Remote host reports: {sys_info.strip()}"
+                return False, "Failed to establish active SSH transport"
+            finally:
                 client.close()
-                return True, f"Success! Remote host reports: {sys_info}"
-            client.close()
-            return False, "Failed to establish active SSH transport"
         except socket.timeout:
             return False, "Connection timed out"
         except paramiko.AuthenticationException:
