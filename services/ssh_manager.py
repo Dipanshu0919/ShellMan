@@ -149,7 +149,24 @@ class SSHConnectionManager:
     def open_shell(self, server, term: str = 'xterm-256color', width: int = 80, height: int = 24) -> Tuple[paramiko.SSHClient, paramiko.Channel]:
         """
         Opens a dedicated pseudo-terminal channel for interactive sessions.
-        Configures terminal modes according to RFC 4254 Section 8.
+
+        NOTE: This intentionally creates a DEDICATED SSHClient (via _create_client)
+        rather than using the pooled get_client(). A PTY channel multiplexed on the
+        same transport as exec_command traffic can interfere with concurrent
+        commands, so terminal sessions are isolated. This also means
+        disconnect(server_id) will not close terminal clients — terminal.py owns
+        its client lifecycle and closes it in TerminalSession.close().
+
+        NOTE: Uses a hand-packed SSH_MSG_CHANNEL_REQUEST 'pty-req' message to
+        inject custom terminal modes (IXON=0, so Ctrl+S passes through to the
+        remote shell instead of freezing output). Paramiko's public
+        Channel.get_pty() does NOT accept a `modes` kwarg, so the hand-packed
+        request is the only way to send custom modes without forking Paramiko.
+        The three private internals used here (_event_pending,
+        transport._send_user_message, _wait_for_event) have been stable across
+        Paramiko 2.x / 3.x / 5.x. If you upgrade Paramiko across a major
+        version, re-verify this method still works (run: open a terminal tab,
+        confirm htop/vim/tmux render and arrow keys work).
         """
         client = self._create_client(server)
         transport = client.get_transport()
@@ -157,7 +174,7 @@ class SSHConnectionManager:
             transport.set_keepalive(15)
         channel = transport.open_session()
 
-        # Terminal modes according to RFC 4254 Section 8:
+        # Terminal modes per RFC 4254 Section 8:
         # Opcode 53 = ECHO (1 = enable echoing of typed characters)
         # Opcode 54 = ECHOE (1 = visually erase character on backspace)
         # Opcode 55 = ECHOK (1 = kill character discards current line)
@@ -175,7 +192,7 @@ class SSHConnectionManager:
             38, 0, 0, 0, 0,  # IXON = 0
             0                 # TTY_OP_END
         ])
-        
+
         from paramiko.common import cMSG_CHANNEL_REQUEST
         from paramiko.message import Message
 
@@ -187,8 +204,8 @@ class SSHConnectionManager:
         m.add_string(term)
         m.add_int(width)
         m.add_int(height)
-        m.add_int(0)
-        m.add_int(0)
+        m.add_int(0)   # width_pixels
+        m.add_int(0)   # height_pixels
         m.add_string(modes)
         channel._event_pending()
         transport._send_user_message(m)

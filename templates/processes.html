@@ -96,6 +96,9 @@
   let sortDir = 'desc';
   let activeCtxMenu = null;
 
+  // FIX: store process objects outside the DOM so we never inline JSON into HTML attributes.
+  const procByPid = new Map();
+
   const ALL_COLS = [
     { id: 'pid', label: 'PID', width: '75px', default: true },
     { id: 'user', label: 'User', width: '110px', default: true },
@@ -125,6 +128,20 @@
       localStorage.setItem('shellman_taskmgr_cols_page', JSON.stringify(visibleCols));
     } catch (_) {}
   };
+
+  // Safe HTML-attribute escape helper for title="..." strings
+  const escAttr = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Safe HTML text escape helper for cell bodies
+  const escText = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
   const formatKb = (kb) => {
     if (kb === null || kb === undefined || isNaN(kb)) return '-';
@@ -225,15 +242,16 @@
     const st = parseProcessState(proc.stat);
     const menu = document.createElement('div');
     menu.className = 'proc-ctx-menu';
+    // Use textContent for dynamic parts to avoid HTML injection via process args
     menu.innerHTML = `
       <div class="proc-ctx-header">
         <div class="proc-ctx-title">
-          <span>PID ${proc.pid} &bull; ${proc.comm}</span>
+          <span></span>
           <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.68rem; color:${st.color}; font-weight:600;">
             <span style="width:6px; height:6px; border-radius:50%; background:${st.color};"></span>${st.label}
           </span>
         </div>
-        <div class="proc-ctx-subtitle" title="${proc.args || proc.comm}">${proc.args || proc.comm}</div>
+        <div class="proc-ctx-subtitle"></div>
       </div>
       <button class="proc-ctx-item" id="ctx_term">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
@@ -265,6 +283,12 @@
         <span>Copy Command</span>
       </button>
     `;
+
+    // Safe dynamic text
+    menu.querySelector('.proc-ctx-title > span:first-child').textContent = `PID ${proc.pid} • ${proc.comm}`;
+    const subEl = menu.querySelector('.proc-ctx-subtitle');
+    subEl.textContent = proc.args || proc.comm || '';
+    subEl.title = proc.args || proc.comm || '';
 
     document.body.appendChild(menu);
     activeCtxMenu = menu;
@@ -378,6 +402,8 @@
       const res = await resp.json();
       if (res.success) {
         allProcesses = res.processes || [];
+        procByPid.clear();
+        allProcesses.forEach(p => procByPid.set(p.pid, p));
         filterProcs();
       }
     } catch (e) {
@@ -415,15 +441,15 @@
     if (!window.setInspectorContent) return;
     window.setInspectorContent('Process Inspector', [
       { key: 'PID', val: p.pid },
-      { key: 'Owner / User', val: p.user },
-      { key: 'Binary', val: p.comm },
+      { key: 'Owner / User', val: escText(p.user) },
+      { key: 'Binary', val: escText(p.comm) },
       { key: 'CPU Usage', val: `${p.cpu}%` },
       { key: 'RAM Usage', val: formatRam(p.rss, p.mem) },
       { key: 'Physical RAM (RSS)', val: formatKb(p.rss) },
       { key: 'Proportional Memory (PSS)', val: p.pss !== null && p.pss !== undefined ? formatKb(p.pss) : 'Unavailable' },
       { key: 'Virtual Memory (VSZ)', val: formatKb(p.vsz) },
       { key: 'Process State', val: `${p.stat} (${parseProcessState(p.stat).label})` },
-      { key: 'Full Command', val: p.args }
+      { key: 'Full Command', val: escText(p.args) }
     ]);
     if (window.openContextualInspector) window.openContextualInspector();
   }
@@ -440,7 +466,6 @@
     tbody.innerHTML = procs.map(p => {
       const cpuColor = p.cpu > 50 ? 'var(--accent-rose)' : (p.cpu > 20 ? 'var(--accent-amber)' : 'inherit');
       const memColor = p.mem > 50 ? 'var(--accent-rose)' : (p.mem > 20 ? 'var(--accent-amber)' : 'inherit');
-      const ramFormatted = formatRam(p.rss, p.mem);
       const rssDisplay = formatKb(p.rss);
       const pssDisplay = (p.pss !== null && p.pss !== undefined) ? formatKb(p.pss) : '<span style="color:var(--text-muted);">-</span>';
       const vszDisplay = formatKb(p.vsz);
@@ -448,16 +473,16 @@
 
       const cells = [];
       if (visibleCols.pid) cells.push(`<td><code style="color: var(--accent-cyan); font-weight: 600;">${p.pid}</code></td>`);
-      if (visibleCols.user) cells.push(`<td style="color: var(--text-secondary); font-size: 0.78rem; font-weight: 500; max-width: 125px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${p.user}">${p.user}</td>`);
+      if (visibleCols.user) cells.push(`<td style="color: var(--text-secondary); font-size: 0.78rem; font-weight: 500; max-width: 125px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escAttr(p.user)}">${escText(p.user)}</td>`);
       if (visibleCols.cpu) cells.push(`<td><strong style="color: ${cpuColor};">${p.cpu}%</strong></td>`);
-      if (visibleCols.mem) cells.push(`<td style="color: ${memColor}; font-weight: 600; font-family: var(--font-mono); font-size: 0.75rem;" title="Physical RSS: ${rssDisplay}">${p.mem}%</td>`);
-      if (visibleCols.rss) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.74rem; color: #38bdf8;" title="Resident Physical Memory (RSS): ${p.rss} KB">${rssDisplay}</td>`);
-      if (visibleCols.pss) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.74rem; color: #a78bfa;" title="Proportional Set Size (PSS): ${p.pss !== null && p.pss !== undefined ? p.pss + ' KB' : 'Unavailable'}">${pssDisplay}</td>`);
-      if (visibleCols.vsz) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);" title="Virtual Memory Size: ${p.vsz} KB">${vszDisplay}</td>`);
+      if (visibleCols.mem) cells.push(`<td style="color: ${memColor}; font-weight: 600; font-family: var(--font-mono); font-size: 0.75rem;" title="Physical RSS: ${escAttr(rssDisplay)}">${p.mem}%</td>`);
+      if (visibleCols.rss) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.74rem; color: #38bdf8;" title="Resident Physical Memory (RSS): ${escAttr(p.rss)} KB">${rssDisplay}</td>`);
+      if (visibleCols.pss) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.74rem; color: #a78bfa;" title="Proportional Set Size (PSS): ${escAttr(p.pss !== null && p.pss !== undefined ? p.pss + ' KB' : 'Unavailable')}">${pssDisplay}</td>`);
+      if (visibleCols.vsz) cells.push(`<td style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);" title="Virtual Memory Size: ${escAttr(p.vsz)} KB">${vszDisplay}</td>`);
       if (visibleCols.stat) {
         cells.push(`
           <td>
-            <span title="${st.desc}" style="display:inline-flex; align-items:center; gap:5px; padding:2px 7px; border-radius:12px; background:${st.bg}; color:${st.color}; font-size:0.71rem; font-weight:500; cursor:help;">
+            <span title="${escAttr(st.desc)}" style="display:inline-flex; align-items:center; gap:5px; padding:2px 7px; border-radius:12px; background:${st.bg}; color:${st.color}; font-size:0.71rem; font-weight:500; cursor:help;">
               <span style="width:6px; height:6px; border-radius:50%; background:${st.color}; flex-shrink:0;"></span>
               <span>${st.label}</span>
             </span>
@@ -466,14 +491,15 @@
       }
       if (visibleCols.comm) {
         cells.push(`
-          <td style="max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.76rem;" title="${p.args || p.comm}">
-            ${p.args || p.comm}
+          <td style="max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.76rem;" title="${escAttr(p.args || p.comm)}">
+            ${escText(p.args || p.comm)}
           </td>
         `);
       }
 
+      // FIX: reference process by PID (no inline JSON.stringify -> no quote-break)
       return `
-        <tr data-pid="${p.pid}" onclick='inspectProcess(${JSON.stringify(p)})' style="cursor: pointer;">
+        <tr data-pid="${p.pid}" onclick="inspectProcess(procByPid.get(${p.pid}))" style="cursor: pointer;">
           ${cells.join('')}
         </tr>
       `;
@@ -485,7 +511,7 @@
         e.preventDefault();
         e.stopPropagation();
         const pid = parseInt(row.dataset.pid, 10);
-        const proc = allProcesses.find(p => p.pid === pid);
+        const proc = procByPid.get(pid);
         if (proc) showProcContextMenu(e.clientX, e.clientY, proc);
       };
     });
@@ -524,6 +550,7 @@
     try {
       const resp = await fetch(`/api/servers/${serverId}/metrics`);
       const res = await resp.json();
+      // Note: dashboard.server_metrics returns { online, metrics, server }
       if (res.online && res.metrics) {
         const m = res.metrics;
         const cpu = m.cpu !== undefined ? m.cpu : 0;

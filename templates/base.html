@@ -552,20 +552,22 @@
       try {
         const resp = await fetch(`/api/servers/${currentServerId}/metrics`);
         const data = await resp.json();
-        if (data.online) {
+        // FIX: metrics are nested under data.metrics (matches dashboard.server_metrics payload)
+        if (data.online && data.metrics) {
+          const m = data.metrics;
           const cpuVal = document.getElementById('sysTelCpu');
           const cpuBar = document.getElementById('sysTelCpuBar');
           const memVal = document.getElementById('sysTelMem');
           const memBar = document.getElementById('sysTelMemBar');
           const dot = document.getElementById('sysStatusDot');
 
-          if (cpuVal && data.cpu !== undefined) {
-            cpuVal.textContent = data.cpu + '%';
-            if (cpuBar) cpuBar.style.width = Math.min(100, data.cpu) + '%';
+          if (cpuVal && m.cpu !== undefined) {
+            cpuVal.textContent = m.cpu + '%';
+            if (cpuBar) cpuBar.style.width = Math.min(100, m.cpu) + '%';
           }
-          if (memVal && data.memory && data.memory.percent !== undefined) {
-            memVal.textContent = data.memory.percent + '%';
-            if (memBar) memBar.style.width = Math.min(100, data.memory.percent) + '%';
+          if (memVal && m.memory && m.memory.percent !== undefined) {
+            memVal.textContent = m.memory.percent + '%';
+            if (memBar) memBar.style.width = Math.min(100, m.memory.percent) + '%';
           }
           if (dot) dot.className = 'sys-pulse-dot online';
         }

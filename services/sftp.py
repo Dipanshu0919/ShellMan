@@ -127,7 +127,8 @@ class SFTPService:
     @classmethod
     def read_file(cls, server, file_path: str, max_bytes: int = 5 * 1024 * 1024) -> Tuple[bool, Any]:
         """Reads file content for viewing/editing."""
-        file_path = cls._normalize_path(file_path)
+        # FIX: pass server so '~' resolves against the actual SSH username
+        file_path = cls._normalize_path(file_path, server)
         try:
             _, sftp = ssh_manager.open_sftp(server)
             attr = sftp.stat(file_path)
@@ -157,7 +158,7 @@ class SFTPService:
     @classmethod
     def write_file(cls, server, file_path: str, content: str) -> Tuple[bool, str]:
         """Writes content to a file via SFTP."""
-        file_path = cls._normalize_path(file_path)
+        file_path = cls._normalize_path(file_path, server)
         try:
             _, sftp = ssh_manager.open_sftp(server)
             content_bytes = content.encode('utf-8')
@@ -169,7 +170,7 @@ class SFTPService:
 
     @classmethod
     def create_file(cls, server, file_path: str) -> Tuple[bool, str]:
-        file_path = cls._normalize_path(file_path)
+        file_path = cls._normalize_path(file_path, server)
         try:
             _, sftp = ssh_manager.open_sftp(server)
             with sftp.open(file_path, 'wx') as f:
@@ -180,7 +181,7 @@ class SFTPService:
 
     @classmethod
     def create_dir(cls, server, dir_path: str) -> Tuple[bool, str]:
-        dir_path = cls._normalize_path(dir_path)
+        dir_path = cls._normalize_path(dir_path, server)
         try:
             _, sftp = ssh_manager.open_sftp(server)
             sftp.mkdir(dir_path)
@@ -205,7 +206,7 @@ class SFTPService:
 
     @classmethod
     def delete(cls, server, path: str, is_dir: bool = False) -> Tuple[bool, str]:
-        path = cls._normalize_path(path)
+        path = cls._normalize_path(path, server)
         if path == "/":
             return False, "Refusing to delete root directory"
         try:
@@ -393,17 +394,18 @@ class SFTPService:
 
     @classmethod
     def download_file(cls, server, file_path: str):
-        file_path = cls._normalize_path(file_path)
+        # FIX: pass server so '~' resolves against the actual SSH username
+        file_path = cls._normalize_path(file_path, server)
         _, sftp = ssh_manager.open_sftp(server)
         return sftp.open(file_path, 'rb')
 
     @classmethod
     def search_files(cls, server, base_path: str, query: str) -> Tuple[bool, Any]:
         """Fast remote search using standard Linux find command."""
-        base_path = cls._normalize_path(base_path)
+        base_path = cls._normalize_path(base_path, server)
         if not query or not query.strip():
             return False, "Query cannot be empty"
-        query = query.strip().replace("'", "").replace('"', '').replace(';', '')
+        query = query.strip().replace("'", "").replace('"', "").replace(';', '')
         quoted_path = shlex_quote(base_path)
         cmd = f"find {quoted_path} -maxdepth 4 -iname '*{query}*' 2>/dev/null | head -n 100"
         code, stdout, _ = ssh_manager.execute(server, cmd, timeout=6)

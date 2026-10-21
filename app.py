@@ -12,6 +12,13 @@ from models.action import CustomAction
 # Initialize Flask-Sock
 sock = Sock()
 
+logging.basicConfig(
+    level=os.environ.get('SHELLMAN_LOG_LEVEL', 'INFO').upper(),
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+)
+logger = logging.getLogger('shellman')
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -83,12 +90,14 @@ def create_app(config_class=Config):
                     conn.execute(db.text("ALTER TABLE servers ADD COLUMN last_workspace VARCHAR(512)"))
                     conn.commit()
         except Exception:
-            pass
+            # FIX: don't swallow schema errors silently — log so startup failures are visible
+            logger.exception("Schema auto-migration failed (non-fatal, continuing startup)")
 
         # Seed built-in custom actions if table is newly created
         try:
             CustomAction.seed_default_actions()
         except Exception as e:
+            logger.exception("CustomAction seed error")
             print(f"[ShellMan] Action seed error: {e}")
 
         # Check if initial setup is needed
@@ -121,5 +130,9 @@ def create_app(config_class=Config):
 app = create_app()
 
 if __name__ == '__main__':
+    # FIX: default bind is 127.0.0.1 (localhost only). ShellMan holds SSH
+    # credentials to your servers — binding 0.0.0.0 by default would expose
+    # it to the entire LAN. Set HOST=0.0.0.0 explicitly only on a trusted network.
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    host = os.environ.get('HOST', '127.0.0.1')
+    app.run(host=host, port=port, debug=False)

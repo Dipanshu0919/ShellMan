@@ -2,7 +2,6 @@ import json
 import logging
 import threading
 import time
-import select
 from services.ssh_manager import ssh_manager
 
 logger = logging.getLogger('shellman.terminal')
@@ -61,31 +60,38 @@ class TerminalSession:
             self.thread.start()
         except Exception as e:
             logger.error(f"Failed to open PTY shell: {e}")
-            self.ws.send(json.dumps({'type': 'error', 'data': f"SSH connection failed: {str(e)}\r\n"}))
+            try:
+                self.ws.send(json.dumps({'type': 'error', 'data': f"SSH connection failed: {str(e)}\r\n"}))
+            except Exception:
+                pass
             self.close()
 
     def _read_ssh_loop(self):
-        """Reads raw bytes from Paramiko channel and pushes to WebSocket."""
+        """
+        Reads raw bytes from Paramiko channel and pushes to WebSocket.
+
+        FIX: Paramiko Channels are not reliably selectable via select.select().
+        Use recv_ready() polling with a short sleep instead. This avoids
+        spurious wakeups and CPU spin while preserving low latency (~20ms).
+        """
         try:
             while self.alive and self.channel and not self.channel.closed:
-                # Use select on channel with a 0.05s timeout
-                r, _, _ = select.select([self.channel], [], [], 0.05)
-                if r:
-                    if self.channel.recv_ready():
-                        data = self.channel.recv(4096)
-                        if not data:
-                            break
-                        # Send text or binary chunk
-                        try:
-                            # Forward as JSON payload or raw text
-                            payload = json.dumps({'type': 'data', 'data': data.decode('utf-8', errors='replace')})
-                            self.ws.send(payload)
-                        except Exception as e:
-                            logger.debug(f"WS send error: {e}")
-                            break
-                # Check if remote process exited
-                if self.channel.exit_status_ready() and not self.channel.recv_ready():
-                    break
+                if self.channel.recv_ready():
+                    data = self.channel.recv(4096)
+                    if not data:
+                        break
+                    try:
+                        payload = json.dumps({'type': 'data', 'data': data.decode('utf-8', errors='replace')})
+                        self.ws.send(payload)
+                    except Exception as e:
+                        logger.debug(f"WS send error: {e}")
+                        break
+                elif self.channel.exit_status_ready():
+                    # Drain any final bytes before exiting
+                    if not self.channel.recv_ready():
+                        break
+                else:
+                    time.sleep(0.02)
         except Exception as e:
             logger.debug(f"SSH read loop terminated: {e}")
         finally:
