@@ -11,20 +11,97 @@
 {% else %}
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
     <div>
-      <h2 style="font-size: 1.4rem; font-weight: 700;">Network & Open Ports</h2>
+      <h2 style="font-size: 1.4rem; font-weight: 700;">Live Network & Active Sockets</h2>
       <p style="font-size: 0.85rem; color: var(--text-secondary);">
-        Active listening ports and sockets detected via ss / netstat.
+        Active TCP/UDP connections, DDoS connection grouping, and listening ports on {{ selected_server.name }}.
       </p>
     </div>
-    <button class="btn btn-secondary btn-sm" onclick="loadNetworkInfo()">
-      <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-      Refresh
-    </button>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <select id="autoRefreshSel" class="form-control" style="font-size: 0.78rem; padding: 0.3rem 0.5rem;" onchange="handleAutoRefreshChange()">
+        <option value="0">Auto-refresh: Off</option>
+        <option value="3000">Auto-refresh: 3s</option>
+        <option value="5000" selected>Auto-refresh: 5s</option>
+        <option value="10000">Auto-refresh: 10s</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="loadNetworkInfo()">
+        <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        Refresh
+      </button>
+    </div>
   </div>
 
+  <!-- Telemetry Overview Row -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+    <div class="card" style="padding: 1rem;">
+      <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Total Active Connections</span>
+      <div id="statTotal" style="font-size: 1.6rem; font-weight: 700; margin-top: 0.3rem;">--</div>
+    </div>
+    <div class="card" style="padding: 1rem;">
+      <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Established Sockets</span>
+      <div id="statEstab" style="font-size: 1.6rem; font-weight: 700; color: #34d399; margin-top: 0.3rem;">--</div>
+    </div>
+    <div class="card" style="padding: 1rem;">
+      <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">SYN_RECV (SYN Flood Check)</span>
+      <div id="statSyn" style="font-size: 1.6rem; font-weight: 700; color: #38bdf8; margin-top: 0.3rem;">--</div>
+    </div>
+    <div class="card" style="padding: 1rem;">
+      <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Time Wait / Closed</span>
+      <div id="statWait" style="font-size: 1.6rem; font-weight: 700; color: #94a3b8; margin-top: 0.3rem;">--</div>
+    </div>
+  </div>
+
+  <!-- DDoS Leaderboard / Top Remote IPs -->
+  <div class="card" style="margin-bottom: 1.25rem; padding: 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+      <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.04em;">Top Connecting Remote IPs (DDoS / Activity Leaderboard)</span>
+      <span id="topIpNotice" style="font-size: 0.72rem; color: var(--text-muted);">Click any IP to filter connection list</span>
+    </div>
+    <div id="topIpsContainer" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Loading active IP analytics...</span>
+    </div>
+  </div>
+
+  <!-- Active Connections Table -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="card-title" style="margin: 0;">Active Socket Connections</span>
+        <span class="badge" id="connCountBadge" style="background: rgba(56,189,248,0.15); color: #38bdf8;">0</span>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <input type="text" id="connSearchInp" placeholder="Search IP, port, process..." class="form-control" style="font-size: 0.78rem; padding: 0.3rem 0.6rem; width: 220px;" oninput="renderConnections()">
+        <select id="stateFilterSel" class="form-control" style="font-size: 0.78rem; padding: 0.3rem 0.5rem;" onchange="renderConnections()">
+          <option value="ALL">All States</option>
+          <option value="ESTABLISHED">ESTABLISHED</option>
+          <option value="SYN_RECV">SYN_RECV</option>
+          <option value="TIME_WAIT">TIME_WAIT</option>
+          <option value="CLOSE_WAIT">CLOSE_WAIT</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Proto</th>
+            <th>State</th>
+            <th>Local Address : Port</th>
+            <th>Foreign Remote IP : Port</th>
+            <th>Queue (R/S)</th>
+            <th>Service / Process</th>
+          </tr>
+        </thead>
+        <tbody id="connTableBody">
+          <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading active sockets...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Listening Ports Card -->
   <div class="card">
     <div class="card-header">
-      <span class="card-title">Listening Ports & Sockets</span>
+      <span class="card-title">Listening Server Ports</span>
     </div>
     <div class="table-responsive">
       <table class="table">
@@ -48,23 +125,120 @@
 {% if selected_server %}
 <script>
   const serverId = {{ selected_server.id }};
+  let cachedConnections = [];
+  let activeFilterIp = null;
+  let refreshTimer = null;
+
+  function getStateBadgeStyle(state) {
+    if (state === 'ESTABLISHED') return 'background: rgba(16,185,129,0.15); color: #34d399;';
+    if (state === 'SYN_RECV') return 'background: rgba(239,68,68,0.2); color: #f87171; font-weight:700;';
+    if (state === 'TIME_WAIT') return 'background: rgba(148,163,184,0.15); color: #94a3b8;';
+    if (state === 'CLOSE_WAIT') return 'background: rgba(245,158,11,0.15); color: #fbbf24;';
+    return 'background: rgba(255,255,255,0.06); color: #cbd5e1;';
+  }
+
+  function filterByIp(ip) {
+    const searchInp = document.getElementById('connSearchInp');
+    if (searchInp) {
+      searchInp.value = ip;
+      renderConnections();
+    }
+  }
+
+  function renderConnections() {
+    const tbody = document.getElementById('connTableBody');
+    const searchVal = (document.getElementById('connSearchInp')?.value || '').toLowerCase().trim();
+    const stateVal = document.getElementById('stateFilterSel')?.value || 'ALL';
+
+    const filtered = cachedConnections.filter(c => {
+      if (stateVal !== 'ALL' && c.state !== stateVal) return false;
+      if (searchVal) {
+        const fullStr = `${c.proto} ${c.state} ${c.local_addr} ${c.remote_addr} ${c.remote_ip} ${c.process}`.toLowerCase();
+        if (!fullStr.includes(searchVal)) return false;
+      }
+      return true;
+    });
+
+    const countBadge = document.getElementById('connCountBadge');
+    if (countBadge) countBadge.textContent = filtered.length;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No matching active connections</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(c => `
+      <tr>
+        <td><span class="badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; font-size:0.7rem;">${c.proto}</span></td>
+        <td><span class="badge" style="${getStateBadgeStyle(c.state)}; font-size:0.7rem;">${c.state}</span></td>
+        <td><code style="font-size:0.76rem;">${c.local_addr}</code></td>
+        <td>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <code style="font-size:0.76rem; color:#38bdf8;">${c.remote_addr}</code>
+            <button class="btn btn-ghost btn-xs" style="padding:0 4px; font-size:0.68rem;" title="Copy IP" onclick="navigator.clipboard.writeText('${c.remote_ip}')">&copy;</button>
+          </div>
+        </td>
+        <td style="font-size:0.74rem; font-family:monospace; color:var(--text-muted);">${c.recv_q} / ${c.send_q}</td>
+        <td><span style="font-size:0.75rem; font-family:monospace; color:#e2e8f0;">${c.process}</span></td>
+      </tr>
+    `).join('');
+  }
 
   async function loadNetworkInfo() {
     try {
       const resp = await fetch(`/api/servers/${serverId}/network/info`);
       const res = await resp.json();
-      if (res.success) {
-        const tbody = document.getElementById('portsTableBody');
-        if (res.data.ports && res.data.ports.length > 0) {
-          tbody.innerHTML = res.data.ports.map(p => `
+      if (!res.success) return;
+
+      const data = res.data;
+      cachedConnections = data.connections || [];
+
+      // Update counters
+      const totalEl = document.getElementById('statTotal');
+      const estabEl = document.getElementById('statEstab');
+      const synEl = document.getElementById('statSyn');
+      const waitEl = document.getElementById('statWait');
+
+      if (totalEl) totalEl.textContent = data.total_connections || 0;
+      if (estabEl) estabEl.textContent = (data.state_counts && data.state_counts['ESTABLISHED']) || 0;
+      if (synEl) {
+        const synCount = (data.state_counts && data.state_counts['SYN_RECV']) || 0;
+        synEl.textContent = synCount;
+        synEl.style.color = synCount > 10 ? '#ef4444' : '#38bdf8';
+      }
+      if (waitEl) waitEl.textContent = (data.state_counts && data.state_counts['TIME_WAIT']) || 0;
+
+      // Render DDoS Leaderboard
+      const topContainer = document.getElementById('topIpsContainer');
+      if (topContainer) {
+        const topIps = data.top_remote_ips || [];
+        if (topIps.length === 0) {
+          topContainer.innerHTML = `<span style="font-size:0.75rem; color:var(--text-muted);">No external connections detected.</span>`;
+        } else {
+          topContainer.innerHTML = topIps.map(item => `
+            <button class="btn btn-secondary btn-xs" style="display:flex; align-items:center; gap:0.4rem; padding:0.25rem 0.55rem; font-size:0.74rem;" onclick="filterByIp('${item.ip}')">
+              <span style="color:#f8fafc; font-family:monospace;">${item.ip}</span>
+              <span class="badge" style="background:${item.count > 10 ? '#ef4444' : 'rgba(56,189,248,0.2)'}; color:${item.count > 10 ? '#fff' : '#38bdf8'}; font-weight:700;">${item.count}</span>
+            </button>
+          `).join('');
+        }
+      }
+
+      renderConnections();
+
+      // Render Listening Ports
+      const portsTbody = document.getElementById('portsTableBody');
+      if (portsTbody && data.ports) {
+        if (data.ports.length === 0) {
+          portsTbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 2rem;">No listening ports found</td></tr>`;
+        } else {
+          portsTbody.innerHTML = data.ports.map(p => `
             <tr>
-              <td><span class="badge" style="background-color: var(--bg-tertiary);">${p.proto.toUpperCase()}</span></td>
-              <td><code>${p.local_addr}</code></td>
-              <td><code>${p.process}</code></td>
+              <td><span class="badge" style="background: rgba(255,255,255,0.06); font-size:0.7rem;">${p.proto.toUpperCase()}</span></td>
+              <td><code style="font-size:0.76rem;">${p.local_addr}</code></td>
+              <td><span style="font-size:0.75rem; font-family:monospace;">${p.process}</span></td>
             </tr>
           `).join('');
-        } else {
-          tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No listening ports found</td></tr>`;
         }
       }
     } catch (e) {
@@ -72,7 +246,16 @@
     }
   }
 
+  function handleAutoRefreshChange() {
+    const ms = parseInt(document.getElementById('autoRefreshSel').value, 10);
+    if (refreshTimer) clearInterval(refreshTimer);
+    if (ms > 0) {
+      refreshTimer = setInterval(loadNetworkInfo, ms);
+    }
+  }
+
   loadNetworkInfo();
+  handleAutoRefreshChange();
 </script>
 {% endif %}
 {% endblock %}

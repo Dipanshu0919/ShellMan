@@ -54,17 +54,23 @@ const DesktopDock = {
     //   gradient: 'linear-gradient(135deg, #7c3aed, #9333ea)',
     //   icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="5" width="14" height="14" rx="2" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><rect x="8.5" y="8.5" width="7" height="7" rx="1" fill="#c084fc"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/></svg>'
     // },
-    // {
-    //   id: 'network',
-    //   title: 'Network & Sockets',
-    //   gradient: 'linear-gradient(135deg, #0284c7, #3b82f6)',
-    //   icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="9" stroke="#ffffff" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke="#38bdf8" stroke-width="1.5"/></svg>'
-    // },
+    {
+      id: 'network',
+      title: 'Network & Sockets',
+      gradient: 'linear-gradient(135deg, #0284c7, #3b82f6)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="9" stroke="#ffffff" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke="#38bdf8" stroke-width="1.5"/></svg>'
+    },
     {
       id: 'nginx',
-      title: 'Nginx & Domains (Proxy & SSL)',
+      title: 'Nginx Virtual Hosts',
       gradient: 'linear-gradient(135deg, #059669, #0d9488)',
       icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M7 16V8l5 8V8M16 8v8" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
+      id: 'domains',
+      title: 'Cloudflare Domains & DNS',
+      gradient: 'linear-gradient(135deg, #d97706, #f59e0b)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="1.8"/><line x1="2" y1="12" x2="22" y2="12" stroke="#ffffff" stroke-width="1.8"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#ffffff" stroke-width="1.8"/></svg>'
     },
     {
       id: 'sync',

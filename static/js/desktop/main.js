@@ -201,9 +201,15 @@ function renderDesktopIcons() {
     },
     {
       id: 'nginx',
-      title: 'Nginx & Domains',
+      title: 'Nginx Hosts',
       gradient: 'linear-gradient(135deg, #059669, #0d9488)',
       icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M7 16V8l5 8V8M16 8v8" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
+      id: 'domains',
+      title: 'Cloudflare',
+      gradient: 'linear-gradient(135deg, #d97706, #f59e0b)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="1.8"/><line x1="2" y1="12" x2="22" y2="12" stroke="#ffffff" stroke-width="1.8"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#ffffff" stroke-width="1.8"/></svg>'
     },
     {
       id: 'sync',

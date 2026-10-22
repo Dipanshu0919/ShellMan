@@ -877,7 +877,7 @@ class DesktopModalManager {
           <div style="display:flex; align-items:center; gap:0.5rem; min-width:0;">
             ${iconSvg}
             <span style="font-weight:700; font-size:0.88rem; color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cfg.title}</span>
-            ${cfg.exitCode !== null ? `<span style="font-size:0.68rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; font-family:monospace; ${cfg.isSuccess ? 'background:rgba(16,185,129,0.15); color:#34d399;' : 'background:rgba(239,68,68,0.15); color:#f87171;'}">EXIT ${cfg.exitCode}</span>` : ''}
+            ${isOutput && cfg.exitCode !== null && cfg.exitCode !== undefined ? `<span style="font-size:0.68rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; font-family:monospace; ${cfg.isSuccess ? 'background:rgba(16,185,129,0.15); color:#34d399;' : 'background:rgba(239,68,68,0.15); color:#f87171;'}">EXIT ${cfg.exitCode}</span>` : ''}
           </div>
           <button class="btn btn-secondary btn-xs" id="dmCloseBtn" style="padding:0.15rem 0.45rem; line-height:1;">&times;</button>
         </div>

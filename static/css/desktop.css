@@ -1002,22 +1002,33 @@ html, body {
   flex-direction: column;
   background: #090d16;
   min-height: 0;
+  margin-right: 3px;
+  margin-bottom: 3px;
 }
 
-/* 8 Resize Handles */
+.desktop-window.maximized .window-body {
+  margin-right: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* 8 Resize Handles - Edge perimeter only so they never intercept scrollbars */
 .win-resize-handle {
   position: absolute;
   z-index: 100;
 }
 
-.handle-n { top: 0; left: 6px; right: 6px; height: 5px; cursor: n-resize; }
-.handle-s { bottom: 0; left: 6px; right: 6px; height: 5px; cursor: s-resize; }
-.handle-e { top: 6px; bottom: 6px; right: 0; width: 5px; cursor: e-resize; }
-.handle-w { top: 6px; bottom: 6px; left: 0; width: 5px; cursor: w-resize; }
-.handle-ne { top: 0; right: 0; width: 10px; height: 10px; cursor: ne-resize; }
-.handle-nw { top: 0; left: 0; width: 10px; height: 10px; cursor: nw-resize; }
-.handle-se { bottom: 0; right: 0; width: 10px; height: 10px; cursor: se-resize; }
-.handle-sw { bottom: 0; left: 0; width: 10px; height: 10px; cursor: sw-resize; }
+.desktop-window.maximized .win-resize-handle {
+  display: none !important;
+}
+
+.handle-n { top: 0; left: 8px; right: 8px; height: 3px; cursor: n-resize; }
+.handle-s { bottom: 0; left: 8px; right: 8px; height: 3px; cursor: s-resize; }
+.handle-e { top: 8px; bottom: 8px; right: 0; width: 3px; cursor: e-resize; }
+.handle-w { top: 8px; bottom: 8px; left: 0; width: 3px; cursor: w-resize; }
+.handle-ne { top: 0; right: 0; width: 8px; height: 8px; cursor: ne-resize; }
+.handle-nw { top: 0; left: 0; width: 8px; height: 8px; cursor: nw-resize; }
+.handle-se { bottom: 0; right: 0; width: 8px; height: 8px; cursor: se-resize; }
+.handle-sw { bottom: 0; left: 0; width: 8px; height: 8px; cursor: sw-resize; }
 
 /* Global Dragging State */
 body.window-dragging {
