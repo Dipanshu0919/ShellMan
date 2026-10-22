@@ -8,6 +8,7 @@ from models import db
 from models.user import User
 from models.server import Server
 from models.action import CustomAction
+from models.git_deployment import GitDeployment
 
 # Initialize Flask-Sock
 sock = Sock()
@@ -42,6 +43,9 @@ def create_app(config_class=Config):
     from routes.workspace import workspace_bp
     from routes.nginx import nginx_bp
     from routes.actions import actions_bp
+    from routes.sync import sync_bp
+    from routes.cron import cron_bp
+    from routes.git import git_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -57,6 +61,9 @@ def create_app(config_class=Config):
     app.register_blueprint(settings_bp)
     app.register_blueprint(nginx_bp)
     app.register_blueprint(actions_bp)
+    app.register_blueprint(sync_bp)
+    app.register_blueprint(cron_bp)
+    app.register_blueprint(git_bp)
 
     # Register terminal websocket handler
     register_terminal_sock(sock)
@@ -88,6 +95,18 @@ def create_app(config_class=Config):
                 cols = [r[1] for r in res]
                 if 'last_workspace' not in cols and len(cols) > 0:
                     conn.execute(db.text("ALTER TABLE servers ADD COLUMN last_workspace VARCHAR(512)"))
+                    conn.commit()
+
+                # User 2FA columns migration
+                u_res = conn.execute(db.text("PRAGMA table_info(users)")).fetchall()
+                u_cols = [r[1] for r in u_res]
+                if len(u_cols) > 0:
+                    if 'totp_secret' not in u_cols:
+                        conn.execute(db.text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64)"))
+                    if 'totp_enabled' not in u_cols:
+                        conn.execute(db.text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT 0 NOT NULL"))
+                    if 'backup_codes' not in u_cols:
+                        conn.execute(db.text("ALTER TABLE users ADD COLUMN backup_codes TEXT"))
                     conn.commit()
         except Exception:
             # FIX: don't swallow schema errors silently — log so startup failures are visible

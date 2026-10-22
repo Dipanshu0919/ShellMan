@@ -67,6 +67,24 @@ const DesktopDock = {
       icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M7 16V8l5 8V8M16 8v8" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     },
     {
+      id: 'sync',
+      title: 'File Sync (Rsync)',
+      gradient: 'linear-gradient(135deg, #0284c7, #0369a1)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
+      id: 'cron',
+      title: 'Cron Scheduler',
+      gradient: 'linear-gradient(135deg, #d97706, #f59e0b)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><polyline points="12 6 12 12 16 14" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg>'
+    },
+    {
+      id: 'git',
+      title: 'Git Deployment',
+      gradient: 'linear-gradient(135deg, #e11d48, #f43f5e)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="18" cy="18" r="3" stroke="#ffffff" stroke-width="1.8"/><circle cx="6" cy="6" r="3" stroke="#ffffff" stroke-width="1.8"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12" stroke="#ffffff" stroke-width="1.8"/></svg>'
+    },
+    {
       id: 'settings',
       title: 'System Settings',
       gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1)',

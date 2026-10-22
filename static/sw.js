@@ -3,7 +3,7 @@
  * Enables Progressive Web App (PWA) installation, offline fallback, and fast asset caching.
  */
 
-const CACHE_NAME = 'shellman-pwa-v2.5';
+const CACHE_NAME = 'shellman-pwa-v3.6';
 
 // Core assets to pre-cache on install for standalone app shell
 const PRECACHE_ASSETS = [
@@ -15,7 +15,8 @@ const PRECACHE_ASSETS = [
   '/static/icons/icon-maskable-512.png',
   '/static/css/style.css',
   '/static/css/desktop.css',
-  '/static/css/workspace.css'
+  '/static/css/workspace.css',
+  '/static/js/modal.js'
 ];
 
 self.addEventListener('install', (event) => {

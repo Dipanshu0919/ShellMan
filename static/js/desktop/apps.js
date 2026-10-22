@@ -57,6 +57,13 @@ class DesktopAppsController {
         return this.launchNetwork(params);
       case 'nginx':
         return this.launchNginx(params);
+      case 'sync':
+      case 'rsync':
+        return this.launchSync(params);
+      case 'cron':
+        return this.launchCron(params);
+      case 'git':
+        return this.launchGit(params);
       case 'servers':
         return this.launchSettings({ tab: 'servers' });
       case 'settings':
@@ -64,6 +71,255 @@ class DesktopAppsController {
       default:
         console.warn('Unknown app id:', appId);
     }
+  }
+
+  // =========================================================================
+  // REUSABLE SFTP & LOCAL DIRECTORY PICKER DIALOG
+  // =========================================================================
+  showDirectoryPicker({ serverId, initialPath, title, isLocal = false, onSelect }) {
+    const sId = serverId || this.serverId;
+    let currentPath = initialPath || (isLocal ? '~/' : '/');
+    let selectedPath = currentPath;
+    const defaultTitle = isLocal ? 'Select Local Machine Directory' : 'Select Server Directory';
+    const dialogTitle = title || defaultTitle;
+    const defaultPlaces = isLocal 
+      ? ['~/', '~/Projects', '~/Documents', '~/Downloads', '~/Desktop', '/tmp', '/']
+      : ['/', '/home', '/var', '/var/www', '/etc', '/opt', '/tmp'];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'desktop-modal-backdrop';
+    overlay.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100000; padding: 1rem; font-family: var(--font-sans); color: var(--text-primary);
+    `;
+
+    overlay.innerHTML = `
+      <div style="width: 100%; max-width: 640px; height: 520px; background: var(--bg-surface, #111827); border: 1px solid var(--border-color, #1f2937); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); display: flex; flex-direction: column; overflow: hidden;">
+        <!-- Header -->
+        <div style="height: 42px; padding: 0 1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02);">
+          <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.88rem; color: #f8fafc;">
+            ${isLocal
+              ? '<svg style="width: 16px; height: 16px; color: #38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
+              : '<svg style="width: 16px; height: 16px; color: #38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>'
+            }
+            <span>${dialogTitle}</span>
+            <span style="font-size: 0.68rem; padding: 0.12rem 0.45rem; border-radius: 3px; font-weight:600; background: ${isLocal ? 'rgba(56,189,248,0.15); color:#38bdf8;' : 'rgba(52,211,153,0.15); color:#34d399;'}">${isLocal ? 'Local Machine' : 'Remote Server'}</span>
+          </div>
+          <button class="btn btn-secondary btn-xs" id="dpCloseBtn" style="padding: 0.15rem 0.45rem;">&times;</button>
+        </div>
+
+        <!-- Navigation Bar -->
+        <div style="padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.45rem;">
+          <button class="btn btn-secondary btn-xs" id="dpUpBtn" title="Go to Parent Folder" style="display: flex; align-items: center; gap: 3px; padding: 0.25rem 0.55rem;">
+            <svg style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"></path></svg>
+            Up
+          </button>
+          <div style="flex: 1; display: flex; align-items: center; background: var(--bg-canvas, #090d16); border: 1px solid var(--border-color, #1f2937); border-radius: 6px; padding: 0.15rem 0.5rem;">
+            <svg style="width: 13px; height: 13px; color: #94a3b8; margin-right: 0.4rem; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <input type="text" id="dpPathInput" value="${currentPath}" style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-mono); font-size: 0.78rem; color: #f8fafc;">
+          </div>
+          <button class="btn btn-secondary btn-xs" id="dpGoBtn" style="padding: 0.25rem 0.6rem;">Go</button>
+          <button class="btn btn-secondary btn-xs" id="dpNewFolderBtn" title="Create Folder Here" style="display: flex; align-items: center; gap: 3px; padding: 0.25rem 0.55rem;">
+            <svg style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            New Folder
+          </button>
+        </div>
+
+        <!-- Quick location presets -->
+        <div style="padding: 0.35rem 0.85rem; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; background: rgba(255,255,255,0.015);">
+          <span style="font-size: 0.68rem; color: var(--text-muted); margin-right: 0.2rem;">Places:</span>
+          ${defaultPlaces.map(p => `
+            <button class="btn btn-secondary btn-xs dp-preset-btn" data-path="${p}" style="font-size: 0.68rem; padding: 0.12rem 0.45rem;">${p}</button>
+          `).join('')}
+        </div>
+
+        <!-- Directory List View -->
+        <div id="dpItemsList" style="flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 2px;">
+          <div style="text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.8rem;">
+            Loading directories...
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 0.65rem 1rem; border-top: 1px solid var(--border-subtle); background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+          <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--text-muted);">
+            Selected Directory: <strong id="dpSelectedPathText" style="color: #38bdf8; font-family: var(--font-mono);">${selectedPath}</strong>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" id="dpCancelBtn">Cancel</button>
+            <button class="btn btn-primary btn-sm" id="dpConfirmBtn" style="font-weight: 600;">Choose Directory</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    let parentPath = isLocal ? null : '/';
+    const listEl = overlay.querySelector('#dpItemsList');
+    const pathInp = overlay.querySelector('#dpPathInput');
+    const selText = overlay.querySelector('#dpSelectedPathText');
+    const closeBtn = overlay.querySelector('#dpCloseBtn');
+    const cancelBtn = overlay.querySelector('#dpCancelBtn');
+    const confirmBtn = overlay.querySelector('#dpConfirmBtn');
+    const upBtn = overlay.querySelector('#dpUpBtn');
+    const goBtn = overlay.querySelector('#dpGoBtn');
+    const newFolderBtn = overlay.querySelector('#dpNewFolderBtn');
+
+    const closePicker = () => {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    };
+
+    closeBtn.onclick = closePicker;
+    cancelBtn.onclick = closePicker;
+
+    confirmBtn.onclick = () => {
+      if (typeof onSelect === 'function') {
+        onSelect(selectedPath);
+      }
+      closePicker();
+    };
+
+    const loadDirectory = async (dirPath) => {
+      dirPath = (dirPath || (isLocal ? '~/' : '/')).trim();
+      if (!dirPath) dirPath = isLocal ? '~/' : '/';
+      currentPath = dirPath;
+      selectedPath = dirPath;
+      pathInp.value = currentPath;
+      selText.textContent = selectedPath;
+
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.8rem;">
+          <span class="spinner-border spinner-border-sm" style="width: 12px; height: 12px; margin-right: 6px;"></span>
+          Listing folders in <code style="color: #38bdf8;">${currentPath}</code>...
+        </div>
+      `;
+
+      try {
+        const fetchUrl = isLocal
+          ? `/api/sync/local-dirs?path=${encodeURIComponent(currentPath)}`
+          : `/api/servers/${sId}/files/list?path=${encodeURIComponent(currentPath)}`;
+        const resp = await fetch(fetchUrl);
+        const res = await resp.json();
+        if (!res.success) {
+          listEl.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #f87171; font-size: 0.8rem;">
+              Failed to load directory: ${res.error || 'Access denied'}
+            </div>
+          `;
+          return;
+        }
+
+        currentPath = res.data.current_path || dirPath;
+        parentPath = res.data.parent_path;
+        selectedPath = currentPath;
+        pathInp.value = currentPath;
+        selText.textContent = selectedPath;
+
+        const allItems = res.data.items || [];
+        const dirItems = allItems.filter(item => item.is_dir && item.name !== '.' && item.name !== '..');
+
+        if (dirItems.length === 0) {
+          listEl.innerHTML = `
+            <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.78rem;">
+              <svg style="width: 28px; height: 28px; color: #475569; margin: 0 auto 0.5rem; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              No subdirectories inside this folder.<br>
+              Click <strong>"Choose Directory"</strong> below to select <code style="color: #38bdf8;">${currentPath}</code>.
+            </div>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = dirItems.map(item => `
+          <div class="dp-folder-row" data-path="${item.path}" style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-size: 0.82rem; user-select: none;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0;">
+              <svg style="width: 16px; height: 16px; color: #38bdf8; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 21a3 3 0 0 0 3-3v-4.5a3 3 0 0 0-3-3h-1.5V9a3 3 0 0 0-3-3h-3.38a3 3 0 0 1-2.12-.88l-.7-.7A3 3 0 0 0 6.68 3.5H4.5A3 3 0 0 0 1.5 6.5v11.5a3 3 0 0 0 3 3h15z"/></svg>
+              <span style="font-weight: 500; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}</span>
+            </div>
+            <span style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono);">${item.permissions || 'directory'}</span>
+          </div>
+        `).join('');
+
+        const rows = listEl.querySelectorAll('.dp-folder-row');
+        rows.forEach(row => {
+          row.onmouseenter = () => { if (!row.classList.contains('active')) row.style.background = 'rgba(255,255,255,0.05)'; };
+          row.onmouseleave = () => { if (!row.classList.contains('active')) row.style.background = 'transparent'; };
+
+          row.onclick = () => {
+            rows.forEach(r => {
+              r.classList.remove('active');
+              r.style.background = 'transparent';
+            });
+            row.classList.add('active');
+            row.style.background = 'rgba(2, 132, 199, 0.25)';
+            selectedPath = row.dataset.path;
+            selText.textContent = selectedPath;
+          };
+
+          row.ondblclick = () => {
+            loadDirectory(row.dataset.path);
+          };
+        });
+
+      } catch (err) {
+        listEl.innerHTML = `<div style="text-align: center; padding: 2rem; color: #f87171; font-size: 0.8rem;">Network error: ${err}</div>`;
+      }
+    };
+
+    upBtn.onclick = () => {
+      if (parentPath && parentPath !== currentPath) {
+        loadDirectory(parentPath);
+      }
+    };
+
+    goBtn.onclick = () => {
+      loadDirectory(pathInp.value);
+    };
+
+    pathInp.onkeydown = (e) => {
+      if (e.key === 'Enter') loadDirectory(pathInp.value);
+    };
+
+    overlay.querySelectorAll('.dp-preset-btn').forEach(b => {
+      b.onclick = () => loadDirectory(b.dataset.path);
+    });
+
+    newFolderBtn.onclick = async () => {
+      const folderName = await DesktopModal.prompt({
+        title: 'Create Folder',
+        message: `Create a new folder inside "${currentPath}":`,
+        placeholder: 'folder-name'
+      });
+      if (!folderName || !folderName.trim()) return;
+      const cleanName = folderName.trim().replace(/^\/+|\/+$/g, '');
+      const newPath = (currentPath.endsWith('/') ? currentPath : currentPath + '/') + cleanName;
+      try {
+        const createUrl = isLocal
+          ? `/api/sync/local-dirs/create`
+          : `/api/servers/${sId}/files/create`;
+        const createBody = isLocal
+          ? { path: newPath }
+          : { path: newPath, type: 'dir' };
+
+        const cResp = await fetch(createUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(createBody)
+        });
+        const cRes = await cResp.json();
+        if (cRes.success) {
+          loadDirectory(newPath);
+        } else {
+          DesktopModal.alert({ title: 'Folder Creation Failed', message: cRes.error || cRes.message || 'Error creating folder.', type: 'danger' });
+        }
+      } catch (e) {
+        DesktopModal.alert({ title: 'Network Error', message: String(e), type: 'danger' });
+      }
+    };
+
+    loadDirectory(currentPath);
   }
 
   // =========================================================================
@@ -1050,7 +1306,13 @@ class DesktopAppsController {
             const delBtn = backdrop.querySelector(`#bDelete_${bModalId}`);
             if (delBtn) {
               delBtn.onclick = async () => {
-                if (!confirm(`Are you sure you want to permanently delete custom action "${actionToEdit.name}"?`)) return;
+                const ok = await DesktopModal.confirm({
+                  title: 'Delete Custom Action',
+                  message: `Are you sure you want to permanently delete custom action "${actionToEdit.name}"?`,
+                  confirmText: 'Delete Action',
+                  isDanger: true
+                });
+                if (!ok) return;
                 try {
                   const resp = await fetch(`/api/actions/${actionToEdit.id}`, { method: 'DELETE' });
                   const res = await resp.json();
@@ -1058,10 +1320,10 @@ class DesktopAppsController {
                     closeModal();
                     updatePropertiesPane();
                   } else {
-                    alert(res.error || 'Failed to delete action');
+                    DesktopModal.alert({ title: 'Delete Failed', message: res.error || 'Failed to delete action', type: 'danger' });
                   }
                 } catch (e) {
-                  alert(e.message);
+                  DesktopModal.alert({ title: 'Delete Error', message: String(e.message || e), type: 'danger' });
                 }
               };
             }
@@ -1862,7 +2124,7 @@ class DesktopAppsController {
             const res = await resp.json();
             if (!res.success) {
               if (path !== '/') return loadDir('/', false);
-              alert('SFTP Error: ' + res.error);
+              DesktopModal.alert({ title: 'SFTP Error', message: res.error || 'Failed to list directory contents.', type: 'danger' });
               return;
             }
             currentPath = res.data.current_path;
@@ -3024,10 +3286,10 @@ class DesktopAppsController {
               if (window.showToast) window.showToast(`Extracted ${archiveName}`, 'success');
               loadDir(currentPath, false);
             } else {
-              alert('Extraction failed: ' + res.error);
+              DesktopModal.alert({ title: 'Extraction Failed', message: res.error || 'Failed to extract archive.', type: 'danger' });
             }
           } catch (e) {
-            alert('Extraction error: ' + e);
+            DesktopModal.alert({ title: 'Extraction Error', message: String(e), type: 'danger' });
           }
         };
 
@@ -3046,10 +3308,10 @@ class DesktopAppsController {
               window.location.href = `/api/servers/${this.serverId}/files/download?path=${encodeURIComponent(fullArchivePath)}`;
               loadDir(currentPath, false);
             } else {
-              alert('Download archive creation failed: ' + res.error);
+              DesktopModal.alert({ title: 'Archive Error', message: res.error || 'Failed to create download archive.', type: 'danger' });
             }
           } catch (e) {
-            alert('Download archive error: ' + e);
+            DesktopModal.alert({ title: 'Archive Error', message: String(e), type: 'danger' });
           }
         };
 
@@ -3442,16 +3704,16 @@ class DesktopAppsController {
             } else {
               try {
                 const res = JSON.parse(xhr.responseText);
-                alert('Upload error: ' + (res.error || xhr.statusText));
+                DesktopModal.alert({ title: 'Upload Failed', message: res.error || xhr.statusText || 'File upload failed.', type: 'danger' });
               } catch (_) {
-                alert('Upload failed: ' + xhr.statusText);
+                DesktopModal.alert({ title: 'Upload Failed', message: xhr.statusText || 'File upload failed with status ' + xhr.status, type: 'danger' });
               }
             }
           };
 
           xhr.onerror = () => {
             uploadBox.style.display = 'none';
-            alert('Upload network error');
+            DesktopModal.alert({ title: 'Network Error', message: 'A network error occurred while uploading files.', type: 'danger' });
           };
 
           xhr.send(formData);
@@ -3897,7 +4159,7 @@ class DesktopAppsController {
             const resp = await fetch(`/api/servers/${this.serverId}/files/read?path=${encodeURIComponent(fpath)}`);
             const res = await resp.json();
             if (!res.success) {
-              alert('Could not open file: ' + res.error);
+              DesktopModal.alert({ title: 'Open File Failed', message: res.error || 'Could not open file.', type: 'danger' });
               stFilePath.textContent = 'Error opening file';
               return;
             }
@@ -3938,7 +4200,7 @@ class DesktopAppsController {
 
             renderTabs();
           } catch (e) {
-            alert('File open error: ' + e);
+            DesktopModal.alert({ title: 'Open Error', message: String(e), type: 'danger' });
           }
         };
 
@@ -3946,10 +4208,16 @@ class DesktopAppsController {
         winObj._openFile = openFile;
 
         // Close File Tab
-        const closeFile = (fpath) => {
+        const closeFile = async (fpath) => {
           const tab = openTabs.get(fpath);
           if (tab && tab.dirty) {
-            if (!confirm(`"${fpath.split('/').pop()}" has unsaved changes. Close anyway?`)) return;
+            const ok = await DesktopModal.confirm({
+              title: 'Unsaved Changes',
+              message: `"${fpath.split('/').pop()}" has unsaved changes. Close anyway?`,
+              confirmText: 'Close Without Saving',
+              isDanger: true
+            });
+            if (!ok) return;
           }
           if (tab && tab.model) {
             tab.model.dispose();
@@ -4012,12 +4280,12 @@ class DesktopAppsController {
               renderTabs();
               if (window.showToast) window.showToast(`Saved ${activePath.split('/').pop()}`, 'success');
             } else {
-              alert('Save failed: ' + res.error);
+              DesktopModal.alert({ title: 'Save Failed', message: res.error || 'Could not save file.', type: 'danger' });
             }
           } catch (e) {
             saveBtn.disabled = false;
             saveBtn.textContent = 'Save';
-            alert('Save error: ' + e);
+            DesktopModal.alert({ title: 'Save Error', message: String(e), type: 'danger' });
           }
         };
 
@@ -4122,7 +4390,11 @@ class DesktopAppsController {
 
         // Tree new file / folder buttons
         bodyEl.querySelector(`#treeNewFile_${codeId}`).onclick = async () => {
-          const name = prompt('Enter new file name:');
+          const name = await DesktopModal.prompt({
+            title: 'New File',
+            message: 'Enter name for the new file:',
+            placeholder: 'untitled.txt'
+          });
           if (!name) return;
           const fullPath = (currentWorkspaceRoot === '/' ? '' : currentWorkspaceRoot) + '/' + name.trim();
           const resp = await fetch(`/api/servers/${this.serverId}/files/create`, {
@@ -4135,12 +4407,16 @@ class DesktopAppsController {
             loadTree(currentWorkspaceRoot);
             openFile(fullPath);
           } else {
-            alert('Could not create file: ' + res.error);
+            DesktopModal.alert({ title: 'Creation Failed', message: res.error || 'Could not create file.', type: 'danger' });
           }
         };
 
         bodyEl.querySelector(`#treeNewDir_${codeId}`).onclick = async () => {
-          const name = prompt('Enter new folder name:');
+          const name = await DesktopModal.prompt({
+            title: 'New Folder',
+            message: 'Enter name for the new directory:',
+            placeholder: 'new-directory'
+          });
           if (!name) return;
           const fullPath = (currentWorkspaceRoot === '/' ? '' : currentWorkspaceRoot) + '/' + name.trim();
           const resp = await fetch(`/api/servers/${this.serverId}/files/create`, {
@@ -4152,7 +4428,7 @@ class DesktopAppsController {
           if (res.success) {
             loadTree(currentWorkspaceRoot);
           } else {
-            alert('Could not create directory: ' + res.error);
+            DesktopModal.alert({ title: 'Creation Failed', message: res.error || 'Could not create directory.', type: 'danger' });
           }
         };
 
@@ -5156,7 +5432,13 @@ class DesktopAppsController {
       confirmMsg = `Resume execution of PID ${pid} (${comm}) with SIGCONT (-18)?`;
     }
 
-    if (!confirm(confirmMsg)) return false;
+    const ok = await DesktopModal.confirm({
+      title: 'Process Signal',
+      message: confirmMsg,
+      confirmText: 'Send Signal',
+      isDanger: signal === 'SIGKILL'
+    });
+    if (!ok) return false;
     try {
       const resp = await fetch(`/api/servers/${serverId}/processes/kill`, {
         method: 'POST',
@@ -5167,11 +5449,11 @@ class DesktopAppsController {
       if (window.showToast) {
         window.showToast(res.message, res.success ? 'success' : 'error');
       } else {
-        alert(res.message);
+        DesktopModal.alert({ title: 'Process Signal', message: res.message, type: res.success ? 'success' : 'danger' });
       }
       return res.success;
     } catch (e) {
-      alert('Error signalling process: ' + e);
+      DesktopModal.alert({ title: 'Signal Error', message: 'Error signalling process: ' + e, type: 'danger' });
       return false;
     }
   }
@@ -5262,7 +5544,13 @@ class DesktopAppsController {
   }
 
   async svcAction(serverId, name, action) {
-    if (!confirm(`Apply ${action} to service ${name}?`)) return;
+    const ok = await DesktopModal.confirm({
+      title: 'Service Control',
+      message: `Apply ${action.toUpperCase()} to service "${name}"?`,
+      confirmText: action.toUpperCase(),
+      isDanger: action === 'stop'
+    });
+    if (!ok) return;
     try {
       const resp = await fetch(`/api/servers/${serverId}/services/action`, {
         method: 'POST',
@@ -5272,76 +5560,275 @@ class DesktopAppsController {
       const res = await resp.json();
       if (window.showToast) window.showToast(res.message, res.success ? 'success' : 'error');
     } catch (e) {
-      alert('Error: ' + e);
+      DesktopModal.alert({ title: 'Service Error', message: String(e), type: 'danger' });
     }
   }
 
   // =========================================================================
-  // 7. LOGS APPLICATION (journalctl)
+  // 7. LOGS APPLICATION (journalctl) with Regex Syntax Highlighter
   // =========================================================================
   launchLogs(params = {}) {
     const service = params.service || '';
+    const logWinId = 'logs_' + Date.now();
+
     return WindowManager.createWindow({
       appId: 'logs',
       multiInstance: false,
       title: `System Logs - ${this.serverName}`,
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
-      width: 860,
-      height: 520,
-      minWidth: 460,
-      minHeight: 280,
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
+      width: 920,
+      height: 560,
+      minWidth: 500,
+      minHeight: 300,
       contentHtml: `
         <div style="height:100%; display:flex; flex-direction:column; background:#090d16;">
-          <div style="height:36px; background:#0f172a; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; padding:0 0.65rem;">
-            <div style="display:flex; align-items:center; gap:0.4rem;">
-              <input type="text" id="logUnitInput" placeholder="Unit (e.g. ssh, nginx)" class="form-control" style="width:160px; padding:0.2rem 0.5rem; font-size:0.75rem;" value="${service}">
-              <select id="logLinesSelect" class="form-control" style="width:90px; padding:0.2rem 0.4rem; font-size:0.72rem;">
+          <div style="background:#0f172a; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; padding:0.4rem 0.75rem; flex-wrap:wrap; gap:0.45rem;">
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+              <input type="text" id="logUnitInput_${logWinId}" placeholder="Unit (e.g. nginx, sshd)" class="form-control" style="width:140px; padding:0.25rem 0.5rem; font-size:0.75rem;" value="${service}">
+              <select id="logLinesSelect_${logWinId}" class="form-control" style="width:90px; padding:0.25rem 0.4rem; font-size:0.72rem;">
                 <option value="100">100 lines</option>
                 <option value="250" selected>250 lines</option>
                 <option value="500">500 lines</option>
+                <option value="1000">1000 lines</option>
               </select>
-              <button class="btn btn-primary btn-sm" id="logFetchBtn">Fetch</button>
+              <button class="btn btn-primary btn-sm" id="logFetchBtn_${logWinId}">Fetch</button>
+              
+              <div style="width:1px; height:18px; background:rgba(255,255,255,0.1); margin:0 2px;"></div>
+
+              <input type="text" id="logSearchInput_${logWinId}" placeholder="Filter in logs..." class="form-control" style="width:145px; padding:0.25rem 0.5rem; font-size:0.75rem;">
+
+              <div style="display:flex; align-items:center; gap:3px;">
+                <button class="btn btn-secondary btn-xs active log-lvl-btn" data-lvl="all" id="lvlAll_${logWinId}" style="padding:2px 7px; font-size:0.7rem;">All <span id="cntAll_${logWinId}">0</span></button>
+                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="error" id="lvlErr_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:#f87171;">Errors <span id="cntErr_${logWinId}">0</span></button>
+                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="warn" id="lvlWarn_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:#fbbf24;">Warn <span id="cntWarn_${logWinId}">0</span></button>
+                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="info" id="lvlInfo_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:#38bdf8;">Info <span id="cntInfo_${logWinId}">0</span></button>
+              </div>
             </div>
-            <div style="display:flex; align-items:center; gap:0.3rem;">
-              <button class="btn btn-ghost btn-sm" id="logCopyBtn">Copy</button>
-              <button class="btn btn-ghost btn-sm" id="logClearBtn">Clear</button>
+
+            <div style="display:flex; align-items:center; gap:0.35rem;">
+              <button class="btn btn-secondary btn-xs" id="logLiveBtn_${logWinId}" style="padding:2px 8px; font-size:0.7rem; display:inline-flex; align-items:center; gap:5px;" title="Periodically poll for real-time journal updates">
+                <span id="logLiveDot_${logWinId}" style="width:6px; height:6px; border-radius:50%; background:#10b981; display:none; box-shadow:0 0 8px #10b981;"></span>
+                <span id="logLiveLabel_${logWinId}">Live View: OFF</span>
+              </button>
+              <button class="btn btn-secondary btn-xs" id="logAutoScrollBtn_${logWinId}" style="padding:2px 8px; font-size:0.7rem;">Scroll: ON</button>
+              <button class="btn btn-ghost btn-xs" id="logCopyBtn_${logWinId}">Copy</button>
+              <button class="btn btn-ghost btn-xs" id="logClearBtn_${logWinId}">Clear</button>
             </div>
           </div>
-          <pre id="logPre" style="flex:1; margin:0; padding:0.85rem 1rem; overflow-y:auto; font-family:var(--font-mono); font-size:0.78rem; color:#f8fafc; line-height:1.4; white-space:pre-wrap; word-break:break-all;"></pre>
+
+          <div id="logViewerContainer_${logWinId}" style="flex:1; overflow-y:auto; overflow-x:auto; padding:0.35rem 0; font-family:var(--font-mono); background:#090d16;">
+            <div style="text-align:center; padding:2.5rem; color:var(--text-muted); font-size:0.8rem;">Ready to fetch journal logs...</div>
+          </div>
+
+          <div style="height:22px; background:#0c1220; border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem; font-size:0.68rem; color:#64748b; font-family:var(--font-mono);">
+            <span id="logStatusText_${logWinId}">Ready</span>
+            <span id="logStatsText_${logWinId}">0 lines</span>
+          </div>
         </div>
       `,
-      onInit: (bodyEl) => {
-        const pre = bodyEl.querySelector('#logPre');
-        const unitInput = bodyEl.querySelector('#logUnitInput');
-        const linesSelect = bodyEl.querySelector('#logLinesSelect');
+      onInit: (bodyEl, winObj) => {
+        const viewer = bodyEl.querySelector(`#logViewerContainer_${logWinId}`);
+        const unitInput = bodyEl.querySelector(`#logUnitInput_${logWinId}`);
+        const linesSelect = bodyEl.querySelector(`#logLinesSelect_${logWinId}`);
+        const searchInput = bodyEl.querySelector(`#logSearchInput_${logWinId}`);
+        const autoScrollBtn = bodyEl.querySelector(`#logAutoScrollBtn_${logWinId}`);
+        const liveBtn = bodyEl.querySelector(`#logLiveBtn_${logWinId}`);
+        const liveDot = bodyEl.querySelector(`#logLiveDot_${logWinId}`);
+        const liveLabel = bodyEl.querySelector(`#logLiveLabel_${logWinId}`);
+        const statusText = bodyEl.querySelector(`#logStatusText_${logWinId}`);
+        const statsText = bodyEl.querySelector(`#logStatsText_${logWinId}`);
+        const cntAll = bodyEl.querySelector(`#cntAll_${logWinId}`);
+        const cntErr = bodyEl.querySelector(`#cntErr_${logWinId}`);
+        const cntWarn = bodyEl.querySelector(`#cntWarn_${logWinId}`);
+        const cntInfo = bodyEl.querySelector(`#cntInfo_${logWinId}`);
 
-        const fetchLogs = async () => {
-          pre.textContent = 'Streaming journal logs...';
+        let rawLogLines = [];
+        let autoScroll = true;
+        let isLive = false;
+        let liveTimer = null;
+        let activeLevel = 'all';
+
+        const escapeHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        const highlightLogLine = (line, query) => {
+          let escaped = escapeHtml(line);
+
+          // 1. IP Addresses (e.g. 192.168.1.1, 10.0.0.1:8080)
+          escaped = escaped.replace(/\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::[0-9]{1,5})?\b/g, m => `<span class="log-token-ip">${m}</span>`);
+
+          // 2. HTTP Status Codes
+          escaped = escaped.replace(/\b(200|201|204)\b/g, m => `<span class="log-token-http-ok">${m}</span>`);
+          escaped = escaped.replace(/\b(301|302|304)\b/g, m => `<span class="log-token-info">${m}</span>`);
+          escaped = escaped.replace(/\b(400|401|403|404|405)\b/g, m => `<span class="log-token-http-warn">${m}</span>`);
+          escaped = escaped.replace(/\b(500|502|503|504)\b/g, m => `<span class="log-token-http-err">${m}</span>`);
+
+          // 3. Error Tokens
+          escaped = escaped.replace(/\b(ERROR|FATAL|CRITICAL|FAIL|FAILED|FAILURE|ERR|EXCEPTION|PANIC)\b/gi, m => `<span class="log-token-error">${m}</span>`);
+
+          // 4. Warning Tokens
+          escaped = escaped.replace(/\b(WARN|WARNING)\b/gi, m => `<span class="log-token-warn">${m}</span>`);
+
+          // 5. Info / Notice Tokens
+          escaped = escaped.replace(/\b(INFO|NOTICE|SUCCESS)\b/gi, m => `<span class="log-token-info">${m}</span>`);
+
+          // 6. Debug Tokens
+          escaped = escaped.replace(/\b(DEBUG|TRACE)\b/gi, m => `<span class="log-token-debug">${m}</span>`);
+
+          // 7. Search filter highlight if query is set
+          if (query && query.trim()) {
+            const qEsc = escapeHtml(query.trim());
+            const regex = new RegExp(`(${qEsc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            escaped = escaped.replace(regex, `<span class="log-highlight-match">$1</span>`);
+          }
+
+          return escaped;
+        };
+
+        const renderLogs = () => {
+          const q = (searchInput.value || '').trim().toLowerCase();
+
+          let errCount = 0;
+          let warnCount = 0;
+          let infoCount = 0;
+
+          const errRegex = /\b(ERROR|FATAL|CRITICAL|FAIL|FAILED|FAILURE|ERR|EXCEPTION|PANIC|500|502|503|504)\b/i;
+          const warnRegex = /\b(WARN|WARNING|400|401|403|404)\b/i;
+          const infoRegex = /\b(INFO|NOTICE|SUCCESS)\b/i;
+
+          const filtered = [];
+
+          rawLogLines.forEach((line, idx) => {
+            const hasErr = errRegex.test(line);
+            const hasWarn = warnRegex.test(line);
+            const hasInfo = infoRegex.test(line);
+
+            if (hasErr) errCount++;
+            if (hasWarn) warnCount++;
+            if (hasInfo) infoCount++;
+
+            // Level filter match
+            if (activeLevel === 'error' && !hasErr) return;
+            if (activeLevel === 'warn' && !hasWarn) return;
+            if (activeLevel === 'info' && !hasInfo) return;
+
+            // Query filter match
+            if (q && !line.toLowerCase().includes(q)) return;
+
+            filtered.push({ line, num: idx + 1 });
+          });
+
+          cntAll.textContent = rawLogLines.length;
+          cntErr.textContent = errCount;
+          cntWarn.textContent = warnCount;
+          cntInfo.textContent = infoCount;
+
+          if (filtered.length === 0) {
+            viewer.innerHTML = `<div style="text-align:center; padding:2.5rem; color:var(--text-muted); font-size:0.8rem;">No matching log entries found</div>`;
+            statsText.textContent = `0 of ${rawLogLines.length} lines`;
+            return;
+          }
+
+          const html = filtered.map(item => `
+            <div class="log-line">
+              <span class="log-line-num">${item.num}</span>
+              <span class="log-line-content">${highlightLogLine(item.line, searchInput.value)}</span>
+            </div>
+          `).join('');
+
+          viewer.innerHTML = html;
+          statsText.textContent = `Showing ${filtered.length} of ${rawLogLines.length} lines`;
+
+          if (autoScroll) {
+            viewer.scrollTop = viewer.scrollHeight;
+          }
+        };
+
+        const fetchLogs = async (silent = false) => {
+          if (!silent) {
+            statusText.textContent = 'Streaming journal logs...';
+            viewer.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--text-muted); font-size:0.8rem;">Fetching journalctl logs...</div>`;
+          }
           try {
             const u = unitInput.value.trim();
             const lines = linesSelect.value;
             const resp = await fetch(`/api/servers/${this.serverId}/logs/fetch?service=${encodeURIComponent(u)}&lines=${lines}`);
             const res = await resp.json();
             if (res.success) {
-              pre.textContent = res.logs || 'No entries.';
-              pre.scrollTop = pre.scrollHeight;
-            } else {
-              pre.textContent = 'Error: ' + res.error;
+              const text = res.logs || '';
+              rawLogLines = text.split('\n').filter(l => l.length > 0);
+              statusText.textContent = `${isLive ? 'Live Streaming' : 'Synchronized'} at ${new Date().toLocaleTimeString()}`;
+              renderLogs();
+            } else if (!silent) {
+              viewer.innerHTML = `<div style="text-align:center; padding:2rem; color:#f87171; font-size:0.8rem;">Error: ${escapeHtml(res.error)}</div>`;
+              statusText.textContent = 'Fetch failed';
             }
           } catch (e) {
-            pre.textContent = 'Fetch error: ' + e;
+            if (!silent) {
+              viewer.innerHTML = `<div style="text-align:center; padding:2rem; color:#f87171; font-size:0.8rem;">Network error: ${escapeHtml(e.message)}</div>`;
+              statusText.textContent = 'Network error';
+            }
           }
         };
 
-        bodyEl.querySelector('#logFetchBtn').onclick = fetchLogs;
-        bodyEl.querySelector('#logClearBtn').onclick = () => { pre.textContent = ''; };
-        bodyEl.querySelector('#logCopyBtn').onclick = () => {
-          navigator.clipboard.writeText(pre.textContent).then(() => {
-            if (window.showToast) window.showToast('Logs copied to clipboard', 'success');
+        // Level button switching
+        bodyEl.querySelectorAll('.log-lvl-btn').forEach(btn => {
+          btn.onclick = () => {
+            bodyEl.querySelectorAll('.log-lvl-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeLevel = btn.dataset.lvl;
+            renderLogs();
+          };
+        });
+
+        // Search filtering
+        searchInput.oninput = () => renderLogs();
+
+        // Live View toggle
+        if (liveBtn) {
+          liveBtn.onclick = () => {
+            isLive = !isLive;
+            if (isLive) {
+              liveBtn.className = 'btn btn-primary btn-xs';
+              liveDot.style.display = 'inline-block';
+              liveLabel.textContent = 'Live View: ON';
+              fetchLogs(true);
+              liveTimer = setInterval(() => { fetchLogs(true); }, 2500);
+            } else {
+              if (liveTimer) clearInterval(liveTimer);
+              liveBtn.className = 'btn btn-secondary btn-xs';
+              liveDot.style.display = 'none';
+              liveLabel.textContent = 'Live View: OFF';
+              statusText.textContent = `Paused at ${new Date().toLocaleTimeString()}`;
+            }
+          };
+        }
+
+        // Auto-scroll toggle
+        autoScrollBtn.onclick = () => {
+          autoScroll = !autoScroll;
+          autoScrollBtn.textContent = `Scroll: ${autoScroll ? 'ON' : 'OFF'}`;
+          autoScrollBtn.className = autoScroll ? 'btn btn-secondary btn-xs' : 'btn btn-ghost btn-xs';
+          if (autoScroll) viewer.scrollTop = viewer.scrollHeight;
+        };
+
+        bodyEl.querySelector(`#logFetchBtn_${logWinId}`).onclick = () => fetchLogs(false);
+        bodyEl.querySelector(`#logClearBtn_${logWinId}`).onclick = () => {
+          rawLogLines = [];
+          renderLogs();
+        };
+        bodyEl.querySelector(`#logCopyBtn_${logWinId}`).onclick = () => {
+          navigator.clipboard.writeText(rawLogLines.join('\n')).then(() => {
+            if (window.showToast) window.showToast('Raw logs copied to clipboard', 'success');
           });
         };
 
-        fetchLogs();
+        if (winObj) {
+          winObj.onClose = () => {
+            if (liveTimer) clearInterval(liveTimer);
+          };
+        }
+
+        fetchLogs(false);
       }
     });
   }
@@ -5834,7 +6321,7 @@ class DesktopAppsController {
                   if (window.showToast) window.showToast(res.message || 'Failed to toggle site', 'error');
                 }
               } catch (e) {
-                alert('Error toggling site: ' + e);
+                DesktopModal.alert({ title: 'Nginx Error', message: 'Error toggling site: ' + e, type: 'danger' });
               } finally {
                 btn.disabled = false;
               }
@@ -5859,9 +6346,13 @@ class DesktopAppsController {
             btn.onclick = async () => {
               const filename = btn.dataset.file;
               const domain = btn.dataset.domain;
-              if (!confirm(`Are you sure you want to permanently delete the site configuration '${filename}' (${domain})?\n\nThis will remove the configuration and its enabled symlink.`)) {
-                return;
-              }
+              const ok = await DesktopModal.confirm({
+                title: 'Delete Virtual Host',
+                message: `Are you sure you want to permanently delete the site configuration '${filename}' (${domain})?\n\nThis will remove the configuration and its enabled symlink.`,
+                confirmText: 'Delete Site',
+                isDanger: true
+              });
+              if (!ok) return;
               btn.disabled = true;
               try {
                 const resp = await fetch(`/api/servers/${this.serverId}/nginx/site/delete`, {
@@ -5878,7 +6369,7 @@ class DesktopAppsController {
                   if (window.showToast) window.showToast(res.message || 'Failed to delete site', 'error');
                 }
               } catch (e) {
-                alert('Error deleting site: ' + e);
+                DesktopModal.alert({ title: 'Nginx Error', message: 'Error deleting site: ' + e, type: 'danger' });
               } finally {
                 btn.disabled = false;
               }
@@ -6009,7 +6500,7 @@ class DesktopAppsController {
                 outputText.textContent = res.message || 'Syntax check failed';
               }
             } catch (e) {
-              alert('Test error: ' + e);
+              DesktopModal.alert({ title: 'Syntax Test Error', message: String(e), type: 'danger' });
             } finally {
               testBtn.disabled = false;
               testBtn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Test Syntax (nginx -t)`;
@@ -6041,7 +6532,7 @@ class DesktopAppsController {
                 if (window.showToast) window.showToast('Syntax error! Rolled back to safe backup.', 'error');
               }
             } catch (e) {
-              alert('Error saving configuration: ' + e);
+              DesktopModal.alert({ title: 'Save Config Error', message: String(e), type: 'danger' });
             } finally {
               saveBtn.disabled = false;
               saveBtn.innerHTML = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Save &amp; Reload Nginx`;
@@ -6122,7 +6613,12 @@ class DesktopAppsController {
           const renewAllBtn = contentPane.querySelector(`#renewAllSslBtn_${ngxWinId}`);
           if (renewAllBtn) {
             renewAllBtn.onclick = async () => {
-              const forceRenew = confirm("Force renewal for all certificates now?\n\n- Press OK for Force Renewal (--force-renewal: contacts Let's Encrypt to re-issue new 90-day certificates immediately).\n- Press Cancel to only renew certificates due for renewal (< 30 days left).");
+              const forceRenew = await DesktopModal.confirm({
+                title: 'Certbot SSL Renewal',
+                message: "Force renewal for all certificates now?\n\n- Click 'Force Renew' to contact Let's Encrypt and re-issue new 90-day certificates immediately.\n- Click 'Due Only' to only renew certificates due for renewal (< 30 days left).",
+                confirmText: 'Force Renew',
+                cancelText: 'Due Only'
+              });
               renewAllBtn.disabled = true;
               renewAllBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;margin-right:4px;"></span>Renewing...`;
               try {
@@ -6221,7 +6717,11 @@ class DesktopAppsController {
           tbody.querySelectorAll('.renew-cert-row-btn').forEach(btn => {
             btn.onclick = async () => {
               const certName = btn.dataset.certname || btn.dataset.domain;
-              const forceRenew = confirm(`Renew certificate '${certName}' immediately via Let's Encrypt?\n\nThis will execute on your server:\nsudo certbot renew --cert-name ${certName} --force-renewal`);
+              const forceRenew = await DesktopModal.confirm({
+                title: 'Renew Certificate',
+                message: `Renew certificate '${certName}' immediately via Let's Encrypt?\n\nThis will execute:\nsudo certbot renew --cert-name ${certName} --force-renewal`,
+                confirmText: 'Renew Certificate'
+              });
               if (!forceRenew) return;
 
               btn.disabled = true;
@@ -6387,22 +6887,26 @@ class DesktopAppsController {
             const email = modalBackdrop.querySelector(`#mSslEmail_${ngxWinId}`).value.trim();
 
             if (!domain) {
-              alert('Please enter a valid domain name.');
+              if (window.showToast) window.showToast('Please enter a valid domain name.', 'warning');
+              else DesktopModal.alert({ title: 'Validation Error', message: 'Please enter a valid domain name.', type: 'warning' });
               return;
             }
 
             if (routeType === 'proxy' && !portOrUrl) {
-              alert('Please enter a proxy port or URL (e.g. 3000 or 127.0.0.1:3000).');
+              if (window.showToast) window.showToast('Please enter a proxy port or URL (e.g. 3000 or 127.0.0.1:3000).', 'warning');
+              else DesktopModal.alert({ title: 'Validation Error', message: 'Please enter a proxy port or URL (e.g. 3000 or 127.0.0.1:3000).', type: 'warning' });
               return;
             }
 
             if (routeType === 'static' && !rootPath) {
-              alert('Please enter a static web root path (e.g. /var/www/my-domain).');
+              if (window.showToast) window.showToast('Please enter a static web root path (e.g. /var/www/my-domain).', 'warning');
+              else DesktopModal.alert({ title: 'Validation Error', message: 'Please enter a static web root path (e.g. /var/www/my-domain).', type: 'warning' });
               return;
             }
 
             if (enableSsl && !email) {
-              alert('Please provide an email address for Let\'s Encrypt SSL registration.');
+              if (window.showToast) window.showToast('Please provide an email address for Let\'s Encrypt SSL registration.', 'warning');
+              else DesktopModal.alert({ title: 'Validation Error', message: 'Please provide an email address for Let\'s Encrypt SSL registration.', type: 'warning' });
               return;
             }
 
@@ -6504,7 +7008,8 @@ class DesktopAppsController {
             const email = modalBackdrop.querySelector(`#mIssueEmail_${ngxWinId}`).value.trim();
 
             if (!domain || !email) {
-              alert('Both domain name and email address are required.');
+              if (window.showToast) window.showToast('Both domain name and email address are required.', 'warning');
+              else DesktopModal.alert({ title: 'Validation Error', message: 'Both domain name and email address are required.', type: 'warning' });
               return;
             }
 
@@ -6549,7 +7054,12 @@ class DesktopAppsController {
 
         // 10. Software Installer Helper
         const installSoftware = async (pkg) => {
-          if (!confirm(`Install ${pkg} via server's native package manager now?`)) return;
+          const ok = await DesktopModal.confirm({
+            title: 'Install Software Package',
+            message: `Install ${pkg} via server's native package manager now?`,
+            confirmText: 'Install Package'
+          });
+          if (!ok) return;
           if (window.showToast) window.showToast(`Installing ${pkg} in background... Please wait.`, 'info');
           try {
             const resp = await fetch(`/api/servers/${this.serverId}/nginx/install`, {
@@ -6568,7 +7078,7 @@ class DesktopAppsController {
               if (window.showToast) window.showToast(`Installation failed: ${res.message}`, 'error');
             }
           } catch (e) {
-            alert('Install error: ' + e);
+            DesktopModal.alert({ title: 'Install Error', message: String(e), type: 'danger' });
           }
         };
 
@@ -6625,7 +7135,13 @@ class DesktopAppsController {
         const restartBtn = bodyEl.querySelector(`#restartNginxBtn_${ngxWinId}`);
         if (restartBtn) {
           restartBtn.onclick = async () => {
-            if (!confirm('Restart Nginx service now? Active web connections may momentarily disconnect.')) return;
+            const ok = await DesktopModal.confirm({
+              title: 'Restart Nginx Service',
+              message: 'Restart Nginx service now? Active web connections may momentarily disconnect.',
+              confirmText: 'Restart Nginx',
+              isDanger: true
+            });
+            if (!ok) return;
             restartBtn.disabled = true;
             try {
               const res = await safeFetchJson(`/api/servers/${this.serverId}/nginx/action`, {
@@ -6671,6 +7187,1466 @@ class DesktopAppsController {
     });
   }
 
+  // =========================================================================
+  // 11. AGENTLESS FILE SYNC (Rsync over SSH)
+  // =========================================================================
+  launchSync(params = {}) {
+    const existing = WindowManager.getWindowByAppId('sync');
+    if (existing) {
+      if (existing.isMinimized) WindowManager.restoreWindow(existing.id);
+      WindowManager.focusWindow(existing.id);
+      return existing;
+    }
+
+    const syncWinId = 'sync_' + Date.now();
+    const defaultServerSrc = params.src || '/var/www/';
+    const defaultServerDst = params.dst || '/var/backups/www/';
+    const defaultLocalPath = params.local_path || '~/';
+    const defaultRemotePath = params.remote_path || '/var/www/';
+
+    return WindowManager.createWindow({
+      appId: 'sync',
+      multiInstance: false,
+      title: `Agentless File Sync (Rsync) - ${this.serverName}`,
+      icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      width: 980,
+      height: 640,
+      minWidth: 720,
+      minHeight: 460,
+      contentHtml: `
+        <div style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-sans); position:relative; overflow:hidden;">
+          <!-- Top Utility Toolbar -->
+          <div style="height:38px; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); padding:0 0.75rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:0.35rem;">
+              <button type="button" class="btn btn-secondary btn-xs sync-mode-tab active" id="tabLocalRemote_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; font-weight:600; font-size:0.75rem; border-color:#38bdf8; color:#38bdf8; background:rgba(2,132,199,0.15);">
+                <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/><circle cx="12" cy="12" r="3"/></svg>
+                Local &harr; Remote Sync
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs sync-mode-tab" id="tabServerServer_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; font-weight:600; font-size:0.75rem;">
+                <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                Server Backup &amp; Mirror
+              </button>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="font-size:0.72rem; color:var(--text-muted);">Host: <code style="color:#cbd5e1; font-family:var(--font-mono);">${this.serverHost}</code></span>
+              <button class="btn btn-secondary btn-xs" id="btnClearLog_${syncWinId}" style="padding:0.2rem 0.5rem; font-size:0.72rem;">Clear Output</button>
+            </div>
+          </div>
+
+          <!-- Body: Two-column layout -->
+          <div style="flex:1; display:flex; overflow:hidden;">
+            <!-- Left Config Pane -->
+            <div style="width:420px; min-width:360px; border-right:1px solid var(--border-subtle); padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.85rem; background:rgba(0,0,0,0.15);">
+              
+              <!-- MODE 1: LOCAL <-> REMOTE CONTAINER -->
+              <div id="paneLocalRemote_${syncWinId}" style="display:flex; flex-direction:column; gap:0.85rem;">
+                <!-- Direction Toggle -->
+                <div>
+                  <label style="display:block; font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:0.35rem; letter-spacing:0.04em;">Transfer Direction</label>
+                  <div style="display:flex; gap:0.4rem;">
+                    <button type="button" class="btn btn-secondary btn-xs sync-dir-btn active" id="btnDirPush_${syncWinId}" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.4rem 0.5rem; font-size:0.74rem; font-weight:600; border-color:#38bdf8; color:#38bdf8; background:rgba(2,132,199,0.15);">
+                      <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                      Push: Local &rarr; Server
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-xs sync-dir-btn" id="btnDirPull_${syncWinId}" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.4rem 0.5rem; font-size:0.74rem; font-weight:600;">
+                      <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                      Pull: Server &rarr; Local
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Local Directory Input -->
+                <div>
+                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
+                    <span style="display:flex; align-items:center; gap:0.35rem;">
+                      <svg style="width:13px;height:13px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                      <span id="lblLocal_${syncWinId}">Local Machine Directory (Source)</span>
+                    </span>
+                  </label>
+                  <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
+                    <input type="text" id="rsyncLocalPath_${syncWinId}" value="${defaultLocalPath}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="~/myproject/ or /home/user/code/">
+                    <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseLocal_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Local Machine Folders">
+                      <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      Browse...
+                    </button>
+                  </div>
+                  <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                    <span style="font-size:0.68rem; color:var(--text-muted); align-self:center; margin-right:2px;">Quick:</span>
+                    <button type="button" class="btn btn-secondary btn-xs preset-local" data-val="~/">${'~/'}</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-local" data-val="~/Projects/">~/Projects/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-local" data-val="~/Documents/">~/Documents/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-local" data-val="/tmp/sync/">/tmp/sync/</button>
+                  </div>
+                </div>
+
+                <!-- Remote Directory Input with Browse Button -->
+                <div>
+                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
+                    <span style="display:flex; align-items:center; gap:0.35rem;">
+                      <svg style="width:13px;height:13px;color:#34d399;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                      <span id="lblRemote_${syncWinId}">Remote Server Directory (Destination)</span>
+                    </span>
+                  </label>
+                  <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
+                    <input type="text" id="rsyncRemotePath_${syncWinId}" value="${defaultRemotePath}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/var/www/ or /opt/app/">
+                    <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseRemote_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Server Folders">
+                      <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      Browse...
+                    </button>
+                  </div>
+                  <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                    <span style="font-size:0.68rem; color:var(--text-muted); align-self:center; margin-right:2px;">Quick:</span>
+                    <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/var/www/">/var/www/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/opt/">/opt/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/home/">/home/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/etc/">/etc/</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- MODE 2: SERVER BACKUP & MIRROR CONTAINER -->
+              <div id="paneServerServer_${syncWinId}" style="display:none; flex-direction:column; gap:0.85rem;">
+                <!-- Server Source Directory -->
+                <div>
+                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
+                    <span style="display:flex; align-items:center; gap:0.35rem;">
+                      <svg style="width:13px;height:13px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      Source Directory on Server
+                    </span>
+                  </label>
+                  <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
+                    <input type="text" id="rsyncServerSrc_${syncWinId}" value="${defaultServerSrc}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/var/www/">
+                    <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseServerSrc_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Server Folders">
+                      <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      Browse...
+                    </button>
+                  </div>
+                  <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                    <span style="font-size:0.68rem; color:var(--text-muted); align-self:center; margin-right:2px;">Quick:</span>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/var/www/">/var/www/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/home/">/home/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/opt/">/opt/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/etc/nginx/">/etc/nginx/</button>
+                  </div>
+                </div>
+
+                <!-- Server Direction Divider -->
+                <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin:0.1rem 0;">
+                  <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+                  <div style="padding:0.2rem 0.6rem; border-radius:12px; background:rgba(2,132,199,0.1); border:1px solid rgba(2,132,199,0.25); color:#38bdf8; display:flex; align-items:center; gap:0.35rem; font-weight:600; font-size:0.7rem;">
+                    <span>Replicates to Target</span>
+                    <svg style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </div>
+                  <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+                </div>
+
+                <!-- Server Destination Directory -->
+                <div>
+                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
+                    <span style="display:flex; align-items:center; gap:0.35rem;">
+                      <svg style="width:13px;height:13px;color:#34d399;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      Destination Directory on Server
+                    </span>
+                  </label>
+                  <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
+                    <input type="text" id="rsyncServerDst_${syncWinId}" value="${defaultServerDst}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/var/backups/www/">
+                    <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseServerDst_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Server Folders">
+                      <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      Browse...
+                    </button>
+                  </div>
+                  <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                    <span style="font-size:0.68rem; color:var(--text-muted); align-self:center; margin-right:2px;">Quick:</span>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-dst" data-val="/var/backups/">/var/backups/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-dst" data-val="/opt/replica/">/opt/replica/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-dst" data-val="/tmp/sync-preview/">/tmp/sync-preview/</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Options -->
+              <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+                <div style="font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.45rem;">Transfer Options</div>
+                <div style="display:flex; flex-direction:column; gap:0.45rem; font-size:0.75rem;">
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" id="chkArchive_${syncWinId}" checked>
+                    <span>Archive mode (<code style="color:#38bdf8;">-a</code>: preserve permissions &amp; dates)</span>
+                  </label>
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" id="chkCompress_${syncWinId}" checked>
+                    <span>Compression (<code style="color:#38bdf8;">-z</code>: gzip transfer stream)</span>
+                  </label>
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" id="chkDelete_${syncWinId}">
+                    <span style="color:#fca5a5;">Mirror Delete (<code style="color:#f87171;">--delete</code>: remove target files not in source)</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Excludes -->
+              <div>
+                <label style="display:block; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">Ignore / Exclude Patterns</label>
+                <input type="text" id="rsyncExclude_${syncWinId}" value=".git, node_modules, __pycache__, *.tmp, .DS_Store" class="form-control" style="width:100%; font-size:0.75rem; padding:0.35rem 0.5rem;">
+              </div>
+
+              <!-- Action buttons -->
+              <div style="display:flex; gap:0.5rem; margin-top:auto; padding-top:0.5rem;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btnDryRun_${syncWinId}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.4rem;" title="Test and preview without changing files">
+                  <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  Preview Changes
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnExecSync_${syncWinId}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.4rem; font-weight:600;">
+                  <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                  Sync Now
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Output Pane -->
+            <div style="flex:1; display:flex; flex-direction:column; background:#0b111c; overflow:hidden;">
+              <div style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border-subtle); padding:0.45rem 0.9rem; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:0.6rem;">
+                  <span style="font-size:0.74rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">Sync Output</span>
+                  <span id="syncStatusBadge_${syncWinId}" style="font-size:0.68rem; padding:0.12rem 0.45rem; border-radius:3px; background:rgba(255,255,255,0.05); color:#94a3b8; font-family:var(--font-mono);">IDLE</span>
+                </div>
+              </div>
+
+              <!-- Terminal log display -->
+              <div id="syncLogArea_${syncWinId}" style="flex:1; padding:0.85rem; font-family:monospace; font-size:0.8rem; line-height:1.45; overflow-y:auto; color:#cbd5e1; white-space:pre-wrap; word-break:break-all;">
+Ready. Choose your sync mode and folders on the left, then click "Preview Changes" to inspect differences or "Sync Now" to start transferring.
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      onInit: (bodyEl) => {
+        let currentMode = 'local_remote'; // 'local_remote' | 'server_server'
+        let currentDirection = 'push';    // 'push' | 'pull'
+
+        // Mode tabs
+        const tabLR = bodyEl.querySelector(`#tabLocalRemote_${syncWinId}`);
+        const tabSS = bodyEl.querySelector(`#tabServerServer_${syncWinId}`);
+        const paneLR = bodyEl.querySelector(`#paneLocalRemote_${syncWinId}`);
+        const paneSS = bodyEl.querySelector(`#paneServerServer_${syncWinId}`);
+
+        // Mode 1 inputs
+        const btnPush = bodyEl.querySelector(`#btnDirPush_${syncWinId}`);
+        const btnPull = bodyEl.querySelector(`#btnDirPull_${syncWinId}`);
+        const localPathInp = bodyEl.querySelector(`#rsyncLocalPath_${syncWinId}`);
+        const btnBrowseLocal = bodyEl.querySelector(`#btnBrowseLocal_${syncWinId}`);
+        const remotePathInp = bodyEl.querySelector(`#rsyncRemotePath_${syncWinId}`);
+        const btnBrowseRemote = bodyEl.querySelector(`#btnBrowseRemote_${syncWinId}`);
+        const lblLocal = bodyEl.querySelector(`#lblLocal_${syncWinId}`);
+        const lblRemote = bodyEl.querySelector(`#lblRemote_${syncWinId}`);
+
+        // Mode 2 inputs
+        const serverSrcInp = bodyEl.querySelector(`#rsyncServerSrc_${syncWinId}`);
+        const serverDstInp = bodyEl.querySelector(`#rsyncServerDst_${syncWinId}`);
+        const btnBrowseServerSrc = bodyEl.querySelector(`#btnBrowseServerSrc_${syncWinId}`);
+        const btnBrowseServerDst = bodyEl.querySelector(`#btnBrowseServerDst_${syncWinId}`);
+
+        // Common options
+        const chkArch = bodyEl.querySelector(`#chkArchive_${syncWinId}`);
+        const chkComp = bodyEl.querySelector(`#chkCompress_${syncWinId}`);
+        const chkDel = bodyEl.querySelector(`#chkDelete_${syncWinId}`);
+        const exclInp = bodyEl.querySelector(`#rsyncExclude_${syncWinId}`);
+
+        // Buttons & Output
+        const dryBtn = bodyEl.querySelector(`#btnDryRun_${syncWinId}`);
+        const execBtn = bodyEl.querySelector(`#btnExecSync_${syncWinId}`);
+        const logArea = bodyEl.querySelector(`#syncLogArea_${syncWinId}`);
+        const badge = bodyEl.querySelector(`#syncStatusBadge_${syncWinId}`);
+        const clearBtn = bodyEl.querySelector(`#btnClearLog_${syncWinId}`);
+
+        // Switch Mode handler
+        const switchMode = (mode) => {
+          currentMode = mode;
+          if (mode === 'local_remote') {
+            tabLR.classList.add('active');
+            tabLR.style.borderColor = '#38bdf8';
+            tabLR.style.color = '#38bdf8';
+            tabLR.style.background = 'rgba(2,132,199,0.15)';
+
+            tabSS.classList.remove('active');
+            tabSS.style.borderColor = 'var(--border-color)';
+            tabSS.style.color = 'var(--text-secondary)';
+            tabSS.style.background = 'transparent';
+
+            paneLR.style.display = 'flex';
+            paneSS.style.display = 'none';
+          } else {
+            tabSS.classList.add('active');
+            tabSS.style.borderColor = '#38bdf8';
+            tabSS.style.color = '#38bdf8';
+            tabSS.style.background = 'rgba(2,132,199,0.15)';
+
+            tabLR.classList.remove('active');
+            tabLR.style.borderColor = 'var(--border-color)';
+            tabLR.style.color = 'var(--text-secondary)';
+            tabLR.style.background = 'transparent';
+
+            paneSS.style.display = 'flex';
+            paneLR.style.display = 'none';
+          }
+        };
+
+        tabLR.onclick = () => switchMode('local_remote');
+        tabSS.onclick = () => switchMode('server_server');
+
+        // Switch Direction handler (Mode 1)
+        const setDirection = (dir) => {
+          currentDirection = dir;
+          if (dir === 'push') {
+            btnPush.classList.add('active');
+            btnPush.style.borderColor = '#38bdf8';
+            btnPush.style.color = '#38bdf8';
+            btnPush.style.background = 'rgba(2,132,199,0.15)';
+
+            btnPull.classList.remove('active');
+            btnPull.style.borderColor = 'var(--border-color)';
+            btnPull.style.color = 'var(--text-secondary)';
+            btnPull.style.background = 'transparent';
+
+            lblLocal.textContent = 'Local Machine Directory (Source)';
+            lblRemote.textContent = 'Remote Server Directory (Destination)';
+          } else {
+            btnPull.classList.add('active');
+            btnPull.style.borderColor = '#38bdf8';
+            btnPull.style.color = '#38bdf8';
+            btnPull.style.background = 'rgba(2,132,199,0.15)';
+
+            btnPush.classList.remove('active');
+            btnPush.style.borderColor = 'var(--border-color)';
+            btnPush.style.color = 'var(--text-secondary)';
+            btnPush.style.background = 'transparent';
+
+            lblLocal.textContent = 'Local Machine Directory (Destination)';
+            lblRemote.textContent = 'Remote Server Directory (Source)';
+          }
+        };
+
+        btnPush.onclick = () => setDirection('push');
+        btnPull.onclick = () => setDirection('pull');
+
+        // Browse Directory Pickers
+        if (btnBrowseLocal) {
+          btnBrowseLocal.onclick = () => {
+            this.showDirectoryPicker({
+              isLocal: true,
+              initialPath: localPathInp.value.trim() || '~/',
+              title: `Select Local Machine Directory (${currentDirection === 'push' ? 'Source' : 'Destination'})`,
+              onSelect: (selectedPath) => {
+                localPathInp.value = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
+              }
+            });
+          };
+        }
+
+        if (btnBrowseRemote) {
+          btnBrowseRemote.onclick = () => {
+            this.showDirectoryPicker({
+              serverId: this.serverId,
+              initialPath: remotePathInp.value.trim() || '/',
+              title: `Select Remote Server Directory (${currentDirection === 'push' ? 'Destination' : 'Source'})`,
+              onSelect: (selectedPath) => {
+                remotePathInp.value = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
+              }
+            });
+          };
+        }
+
+        if (btnBrowseServerSrc) {
+          btnBrowseServerSrc.onclick = () => {
+            this.showDirectoryPicker({
+              serverId: this.serverId,
+              initialPath: serverSrcInp.value.trim() || '/',
+              title: 'Select Source Directory on Server',
+              onSelect: (selectedPath) => {
+                serverSrcInp.value = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
+              }
+            });
+          };
+        }
+
+        if (btnBrowseServerDst) {
+          btnBrowseServerDst.onclick = () => {
+            this.showDirectoryPicker({
+              serverId: this.serverId,
+              initialPath: serverDstInp.value.trim() || '/',
+              title: 'Select Destination Directory on Server',
+              onSelect: (selectedPath) => {
+                serverDstInp.value = selectedPath.endsWith('/') ? selectedPath : selectedPath + '/';
+              }
+            });
+          };
+        }
+
+        // Quick Presets
+        bodyEl.querySelectorAll('.preset-local').forEach(b => {
+          b.onclick = () => { localPathInp.value = b.dataset.val; };
+        });
+        bodyEl.querySelectorAll('.preset-remote').forEach(b => {
+          b.onclick = () => { remotePathInp.value = b.dataset.val; };
+        });
+        bodyEl.querySelectorAll('.preset-server-src').forEach(b => {
+          b.onclick = () => { serverSrcInp.value = b.dataset.val; };
+        });
+        bodyEl.querySelectorAll('.preset-server-dst').forEach(b => {
+          b.onclick = () => { serverDstInp.value = b.dataset.val; };
+        });
+
+        // Clear output
+        clearBtn.onclick = () => {
+          logArea.textContent = 'Cleared.';
+          badge.textContent = 'IDLE';
+          badge.style.background = 'rgba(255,255,255,0.05)';
+          badge.style.color = '#94a3b8';
+        };
+
+        // Construct request payload
+        const buildPayload = () => {
+          const excludes = exclInp.value.split(',').map(s => s.trim()).filter(Boolean);
+          const options = {
+            archive: chkArch.checked,
+            compress: chkComp.checked,
+            delete: chkDel.checked
+          };
+
+          if (currentMode === 'local_remote') {
+            return {
+              sync_mode: 'local_remote',
+              direction: currentDirection,
+              local_path: localPathInp.value.trim(),
+              remote_path: remotePathInp.value.trim(),
+              options,
+              excludes
+            };
+          } else {
+            return {
+              sync_mode: 'server_server',
+              src_path: serverSrcInp.value.trim(),
+              dst_path: serverDstInp.value.trim(),
+              options,
+              excludes
+            };
+          }
+        };
+
+        // Dry Run Preview
+        dryBtn.onclick = async () => {
+          const payload = buildPayload();
+          if (payload.sync_mode === 'local_remote') {
+            if (!payload.local_path || !payload.remote_path) {
+              if (window.showToast) window.showToast('Both Local and Remote Server paths are required.', 'warning');
+              else DesktopModal.alert({ title: 'Paths Required', message: 'Both Local Directory and Remote Server Directory paths are required.', type: 'warning' });
+              return;
+            }
+          } else {
+            if (!payload.src_path || !payload.dst_path) {
+              if (window.showToast) window.showToast('Both Source and Destination paths on server are required.', 'warning');
+              else DesktopModal.alert({ title: 'Paths Required', message: 'Both Source and Destination Directory paths on server are required.', type: 'warning' });
+              return;
+            }
+          }
+
+          dryBtn.disabled = true;
+          dryBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Previewing...`;
+          badge.textContent = 'ANALYZING';
+          badge.style.background = 'rgba(2,132,199,0.15)';
+          badge.style.color = '#38bdf8';
+
+          const targetDesc = payload.sync_mode === 'local_remote'
+            ? (payload.direction === 'push' ? `[Local: ${payload.local_path}] -> [Remote: ${payload.remote_path}]` : `[Remote: ${payload.remote_path}] -> [Local: ${payload.local_path}]`)
+            : `[Server: ${payload.src_path}] -> [Server: ${payload.dst_path}]`;
+
+          logArea.textContent = `[Rsync Preview] Analyzing ${targetDesc}...\n`;
+
+          try {
+            const resp = await fetch(`/api/servers/${this.serverId}/sync/preview`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const res = await resp.json();
+            if (res.success) {
+              badge.textContent = 'PREVIEW OK';
+              badge.style.background = 'rgba(16,185,129,0.15)';
+              badge.style.color = '#34d399';
+
+              let summary = `\nMode: ${payload.sync_mode === 'local_remote' ? `Local <-> Remote (${payload.direction.toUpperCase()})` : 'Server Backup & Mirror'}\n`;
+              summary += `Command: ${res.command}\n`;
+              summary += `\nFiles to Synchronize (${res.total_files_count}):\n`;
+              if (res.files && res.files.length > 0) {
+                summary += res.files.map(f => `  + ${f}`).join('\n') + '\n';
+                if (res.total_files_count > res.files.length) {
+                  summary += `  ... and ${res.total_files_count - res.files.length} more files.\n`;
+                }
+              } else {
+                summary += `  (No modified or missing files. Directories are already in sync)\n`;
+              }
+              summary += `\nTransfer Statistics:\n`;
+              for (const [k, v] of Object.entries(res.stats || {})) {
+                summary += `  ${k.replace(/_/g, ' ')}: ${v}\n`;
+              }
+              logArea.textContent = summary;
+              if (window.showToast) window.showToast(`Preview dry run completed: ${res.total_files_count} files evaluated`, 'info');
+            } else {
+              badge.textContent = 'ERROR';
+              badge.style.background = 'rgba(239,68,68,0.15)';
+              badge.style.color = '#f87171';
+              logArea.textContent = `[Rsync Error]\n${res.error || res.raw_output || 'Unknown error occurred during preview.'}`;
+            }
+          } catch (e) {
+            badge.textContent = 'FAILED';
+            badge.style.background = 'rgba(239,68,68,0.15)';
+            badge.style.color = '#f87171';
+            logArea.textContent = `Network error during preview: ${e}`;
+          } finally {
+            dryBtn.disabled = false;
+            dryBtn.innerHTML = `
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Preview Changes
+            `;
+          }
+        };
+
+        // Execute Live Sync
+        execBtn.onclick = async () => {
+          const payload = buildPayload();
+          if (payload.sync_mode === 'local_remote') {
+            if (!payload.local_path || !payload.remote_path) {
+              if (window.showToast) window.showToast('Both Local and Remote Server paths are required.', 'warning');
+              else DesktopModal.alert({ title: 'Paths Required', message: 'Both Local Directory and Remote Server Directory paths are required.', type: 'warning' });
+              return;
+            }
+          } else {
+            if (!payload.src_path || !payload.dst_path) {
+              if (window.showToast) window.showToast('Both Source and Destination paths on server are required.', 'warning');
+              else DesktopModal.alert({ title: 'Paths Required', message: 'Both Source and Destination Directory paths on server are required.', type: 'warning' });
+              return;
+            }
+          }
+
+          const desc = payload.sync_mode === 'local_remote'
+            ? (payload.direction === 'push' ? `Local "${payload.local_path}" -> Server "${payload.remote_path}"` : `Server "${payload.remote_path}" -> Local "${payload.local_path}"`)
+            : `Server "${payload.src_path}" -> Server "${payload.dst_path}"`;
+
+          const warnDelete = payload.options.delete ? '\n\nWARNING: Mirror Delete (--delete) is enabled. Extraneous destination files will be permanently erased.' : '';
+
+          const ok = await DesktopModal.confirm({
+            title: 'Execute Live Rsync Transfer',
+            message: `Are you sure you want to execute live sync?\n\n${desc}${warnDelete}`,
+            confirmText: 'Execute Sync',
+            isDanger: payload.options.delete
+          });
+          if (!ok) {
+            return;
+          }
+
+          execBtn.disabled = true;
+          execBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Transferring...`;
+          badge.textContent = 'SYNCING';
+          badge.style.background = 'rgba(245,158,11,0.15)';
+          badge.style.color = '#fbbf24';
+          logArea.textContent = `[Live Rsync Transfer Started]\n${desc}\nExecuting rsync...\n`;
+
+          try {
+            const resp = await fetch(`/api/servers/${this.serverId}/sync/execute`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const res = await resp.json();
+            if (res.success) {
+              badge.textContent = 'SUCCESS';
+              badge.style.background = 'rgba(16,185,129,0.15)';
+              badge.style.color = '#34d399';
+              logArea.textContent = `[Live Sync Completed Successfully]\nCommand: ${res.command}\n\n${res.raw_output}`;
+              if (window.showToast) window.showToast('Rsync transfer completed successfully!', 'success');
+            } else {
+              badge.textContent = 'FAILED';
+              badge.style.background = 'rgba(239,68,68,0.15)';
+              badge.style.color = '#f87171';
+              logArea.textContent = `[Live Sync Failed - Exit Code ${res.exit_code}]\n\n${res.raw_output || res.error || 'Transfer failed.'}`;
+            }
+          } catch (e) {
+            badge.textContent = 'FAILED';
+            badge.style.background = 'rgba(239,68,68,0.15)';
+            badge.style.color = '#f87171';
+            logArea.textContent = `Network error during live sync: ${e}`;
+          } finally {
+            execBtn.disabled = false;
+            execBtn.innerHTML = `
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+              Sync Now
+            `;
+          }
+        };
+      }
+    });
+  }
+
+  // =========================================================================
+  // 12. CRON JOB MANAGER (Scheduler)
+  // =========================================================================
+  launchCron(params = {}) {
+    const existing = WindowManager.getWindowByAppId('cron');
+    if (existing) {
+      if (existing.isMinimized) WindowManager.restoreWindow(existing.id);
+      WindowManager.focusWindow(existing.id);
+      return existing;
+    }
+
+    const cronWinId = 'cron_' + Date.now();
+    let jobsList = [];
+    let editingJob = null;
+
+    return WindowManager.createWindow({
+      appId: 'cron',
+      multiInstance: false,
+      title: `Cron Job Manager (Scheduler) - ${this.serverName}`,
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2"/><polyline points="12 6 12 12 16 14" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/></svg>',
+      width: 980,
+      height: 600,
+      minWidth: 720,
+      minHeight: 440,
+      contentHtml: `
+        <div style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-sans); position:relative; overflow:hidden;">
+          <!-- Top Bar -->
+          <div style="height:38px; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); padding:0 0.75rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="text" id="cronSearchInp_${cronWinId}" placeholder="Filter cron jobs..." class="form-control" style="width:190px; padding:0.25rem 0.5rem; font-size:0.75rem;">
+              <span id="cronJobCount_${cronWinId}" class="badge badge-warning" style="font-size:0.7rem; padding:0.18rem 0.45rem;">0 Jobs</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <button class="btn btn-primary btn-xs" id="btnAddJob_${cronWinId}" style="display:inline-flex; align-items:center; gap:0.3rem;">
+                <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                New Cron Job
+              </button>
+              <button class="btn btn-secondary btn-xs" id="btnRefreshCron_${cronWinId}" style="display:inline-flex; align-items:center; gap:0.3rem;">
+                <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                Reload
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Content -->
+          <div style="flex:1; overflow-y:auto; padding:1rem;" id="cronContentArea_${cronWinId}">
+            <div style="text-align:center; padding:3rem; color:var(--text-muted);">Loading scheduled crontab jobs...</div>
+          </div>
+
+          <!-- Modal for Add/Edit -->
+          <div id="cronModal_${cronWinId}" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(3px); z-index:100; align-items:center; justify-content:center; padding:1.5rem;">
+            <div style="width:100%; max-width:540px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden;">
+              <div style="padding:0.85rem 1.25rem; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+                <span id="cronModalTitle_${cronWinId}" style="font-weight:700; font-size:0.9rem; color:#f8fafc;">Add Scheduled Job</span>
+                <button class="btn btn-secondary btn-xs" id="btnCancelModal_${cronWinId}">&times;</button>
+              </div>
+              <div style="padding:1.25rem; display:flex; flex-direction:column; gap:0.9rem;">
+                <div>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Schedule Preset</label>
+                  <select id="cronPresetSel_${cronWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.4rem; background:var(--bg-secondary); color:#f8fafc;">
+                    <option value="custom">Custom Cron Expression</option>
+                    <option value="* * * * *">Every Minute (* * * * *)</option>
+                    <option value="*/5 * * * *">Every 5 Minutes (*/5 * * * *)</option>
+                    <option value="*/15 * * * *">Every 15 Minutes (*/15 * * * *)</option>
+                    <option value="0 * * * *">Hourly at Minute 0 (0 * * * *)</option>
+                    <option value="0 0 * * *">Daily at Midnight (0 0 * * *)</option>
+                    <option value="0 12 * * *">Daily at Noon (0 12 * * *)</option>
+                    <option value="0 0 * * 0">Weekly on Sunday at 00:00 (0 0 * * 0)</option>
+                    <option value="0 0 1 * *">Monthly on 1st at 00:00 (0 0 1 * *)</option>
+                    <option value="@reboot">On System Reboot (@reboot)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Cron Schedule Expression</label>
+                  <input type="text" id="cronExprInp_${cronWinId}" value="0 0 * * *" class="form-control" style="width:100%; font-family:monospace; font-size:0.9rem; padding:0.4rem 0.6rem;" placeholder="* * * * *">
+                  <div id="cronHumanDesc_${cronWinId}" style="font-size:0.72rem; color:#38bdf8; margin-top:0.3rem;">Daily at midnight (00:00)</div>
+                </div>
+
+                <div>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Command to Execute</label>
+                  <textarea id="cronCmdInp_${cronWinId}" rows="3" class="form-control" style="width:100%; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/usr/bin/python3 /opt/scripts/backup.py >> /var/log/backup.log 2>&1"></textarea>
+                  <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.25rem;">Always use absolute paths to system binaries and redirect logs when needed.</div>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <input type="checkbox" id="cronEnabledInp_${cronWinId}" checked>
+                  <label for="cronEnabledInp_${cronWinId}" style="font-size:0.78rem; color:#cbd5e1; cursor:pointer;">Job is enabled &amp; active</label>
+                </div>
+              </div>
+              <div style="padding:0.75rem 1.25rem; border-top:1px solid var(--border-subtle); background:rgba(0,0,0,0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button class="btn btn-secondary btn-sm" id="btnModalClose_${cronWinId}">Cancel</button>
+                <button class="btn btn-primary btn-sm" id="btnModalSave_${cronWinId}">Save Scheduled Job</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      onInit: (bodyEl) => {
+        const contentArea = bodyEl.querySelector(`#cronContentArea_${cronWinId}`);
+        const countBadge = bodyEl.querySelector(`#cronJobCount_${cronWinId}`);
+        const modal = bodyEl.querySelector(`#cronModal_${cronWinId}`);
+        const modalTitle = bodyEl.querySelector(`#cronModalTitle_${cronWinId}`);
+        const presetSel = bodyEl.querySelector(`#cronPresetSel_${cronWinId}`);
+        const exprInp = bodyEl.querySelector(`#cronExprInp_${cronWinId}`);
+        const humanDesc = bodyEl.querySelector(`#cronHumanDesc_${cronWinId}`);
+        const cmdInp = bodyEl.querySelector(`#cronCmdInp_${cronWinId}`);
+        const enabledInp = bodyEl.querySelector(`#cronEnabledInp_${cronWinId}`);
+        const addBtn = bodyEl.querySelector(`#btnAddJob_${cronWinId}`);
+        const refreshBtn = bodyEl.querySelector(`#btnRefreshCron_${cronWinId}`);
+        const cancelBtn = bodyEl.querySelector(`#btnCancelModal_${cronWinId}`);
+        const closeBtn = bodyEl.querySelector(`#btnModalClose_${cronWinId}`);
+        const saveBtn = bodyEl.querySelector(`#btnModalSave_${cronWinId}`);
+
+        const loadJobs = async () => {
+          contentArea.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-muted);"><span class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span> Loading crontab...</div>`;
+          try {
+            const resp = await fetch(`/api/servers/${this.serverId}/cron/list`);
+            const res = await resp.json();
+            if (res.success) {
+              jobsList = res.jobs || [];
+              countBadge.textContent = `${jobsList.length} JOBS`;
+              renderJobsTable();
+            } else {
+              contentArea.innerHTML = `<div class="alert alert-danger" style="margin:1rem;">Failed to load crontab: ${res.error || 'Unknown error'}</div>`;
+            }
+          } catch (e) {
+            contentArea.innerHTML = `<div class="alert alert-danger" style="margin:1rem;">Network error loading crontab: ${e}</div>`;
+          }
+        };
+
+        const renderJobsTable = (filterQuery = '') => {
+          const filtered = filterQuery
+            ? jobsList.filter(j => j.command.toLowerCase().includes(filterQuery) || j.schedule.toLowerCase().includes(filterQuery) || (j.human && j.human.toLowerCase().includes(filterQuery)))
+            : jobsList;
+
+          if (jobsList.length === 0) {
+            contentArea.innerHTML = `
+              <div style="text-align:center; padding:4rem 1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px;">
+                <svg style="width:36px;height:36px;color:var(--text-muted);margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <div style="font-weight:700; font-size:0.95rem; color:#f8fafc; margin-bottom:0.35rem;">No Scheduled Cron Jobs</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">This server user currently has no active crontab entries configured.</div>
+                <button class="btn btn-primary btn-sm" id="btnEmptyAdd_${cronWinId}">Create First Cron Job</button>
+              </div>
+            `;
+            const emptyAdd = contentArea.querySelector(`#btnEmptyAdd_${cronWinId}`);
+            if (emptyAdd) emptyAdd.onclick = () => openModal(null);
+            return;
+          }
+
+          if (filtered.length === 0) {
+            contentArea.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-muted); font-size:0.82rem;">No cron jobs match "${filterQuery}".</div>`;
+            return;
+          }
+
+          contentArea.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:0.65rem;">
+              ${filtered.map(j => `
+                <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; opacity:${j.is_enabled ? '1' : '0.6'};">
+                  <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                      <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); padding:0.15rem 0.5rem; border-radius:4px; color:#38bdf8; font-family:monospace; font-weight:700;">${j.schedule}</code>
+                      <span style="font-size:0.75rem; font-weight:600; color:#cbd5e1;">${j.human}</span>
+                      <span style="font-size:0.65rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; ${j.is_enabled ? 'background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(148,163,184,0.15); color:#94a3b8; border:1px solid rgba(148,163,184,0.3);'}">
+                        ${j.is_enabled ? 'ACTIVE' : 'DISABLED'}
+                      </span>
+                    </div>
+                    <div style="font-family:monospace; font-size:0.78rem; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${j.command}">
+                      ${j.command}
+                    </div>
+                  </div>
+
+                  <!-- Actions -->
+                  <div style="display:flex; align-items:center; gap:0.4rem; flex-shrink:0;">
+                    <button class="btn btn-secondary btn-xs btn-run-now" data-cmd="${encodeURIComponent(j.command)}" title="Run command immediately over SSH">
+                      <svg style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                      Run Now
+                    </button>
+                    <button class="btn btn-secondary btn-xs btn-toggle" data-id="${j.id}" title="${j.is_enabled ? 'Disable' : 'Enable'}">
+                      ${j.is_enabled ? 'Disable' : 'Enable'}
+                    </button>
+                    <button class="btn btn-secondary btn-xs btn-edit" data-id="${j.id}">
+                      Edit
+                    </button>
+                    <button class="btn btn-danger btn-xs btn-del" data-id="${j.id}">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+
+          // Button handlers
+          contentArea.querySelectorAll('.btn-run-now').forEach(b => {
+            b.onclick = async () => {
+              const cmd = decodeURIComponent(b.dataset.cmd);
+              b.disabled = true;
+              b.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></span>`;
+              try {
+                const resp = await fetch(`/api/servers/${this.serverId}/cron/run-now`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ command: cmd })
+                });
+                const res = await resp.json();
+                DesktopModal.showOutput({
+                  title: res.exit_code === 0 ? 'Cron Job Executed' : 'Cron Job Execution Failed',
+                  subtitle: `Command: ${cmd}`,
+                  output: res.output || '(No command output)',
+                  exitCode: res.exit_code,
+                  isSuccess: res.exit_code === 0
+                });
+              } catch (e) {
+                if (window.showToast) window.showToast('Execution error: ' + e, 'danger');
+                else DesktopModal.alert({ title: 'Execution Error', message: String(e), type: 'danger' });
+              } finally {
+                b.disabled = false;
+                b.innerHTML = `
+                  <svg style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  Run Now
+                `;
+              }
+            };
+          });
+
+          contentArea.querySelectorAll('.btn-toggle').forEach(b => {
+            b.onclick = async () => {
+              const id = b.dataset.id;
+              try {
+                await fetch(`/api/servers/${this.serverId}/cron/toggle`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id })
+                });
+                loadJobs();
+              } catch (e) {
+                if (window.showToast) window.showToast('Toggle error: ' + e, 'danger');
+              }
+            };
+          });
+
+          contentArea.querySelectorAll('.btn-edit').forEach(b => {
+            b.onclick = () => {
+              const id = parseInt(b.dataset.id, 10);
+              const job = jobsList.find(j => j.id === id);
+              if (job) openModal(job);
+            };
+          });
+
+          contentArea.querySelectorAll('.btn-del').forEach(b => {
+            b.onclick = async () => {
+              const ok = await DesktopModal.confirm({
+                title: 'Delete Scheduled Job',
+                message: 'Are you sure you want to delete this scheduled cron job?',
+                confirmText: 'Delete',
+                isDanger: true
+              });
+              if (ok) {
+                const id = b.dataset.id;
+                try {
+                  await fetch(`/api/servers/${this.serverId}/cron/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                  });
+                  if (window.showToast) window.showToast('Cron job deleted', 'info');
+                  loadJobs();
+                } catch (e) {
+                  DesktopModal.alert({ title: 'Delete Error', message: String(e), type: 'danger' });
+                }
+              }
+            };
+          });
+        };
+
+        const openModal = (job) => {
+          editingJob = job;
+          modal.style.display = 'flex';
+          if (job) {
+            modalTitle.textContent = 'Edit Scheduled Job';
+            exprInp.value = job.schedule;
+            cmdInp.value = job.command;
+            enabledInp.checked = job.is_enabled;
+            humanDesc.textContent = job.human;
+          } else {
+            modalTitle.textContent = 'Add Scheduled Job';
+            exprInp.value = '0 0 * * *';
+            cmdInp.value = '';
+            enabledInp.checked = true;
+            presetSel.value = '0 0 * * *';
+            humanDesc.textContent = 'Daily at midnight (00:00)';
+          }
+        };
+
+        const closeModal = () => {
+          modal.style.display = 'none';
+          editingJob = null;
+        };
+
+        presetSel.onchange = (e) => {
+          if (e.target.value !== 'custom') {
+            exprInp.value = e.target.value;
+            humanDesc.textContent = presetSel.options[presetSel.selectedIndex].text;
+          }
+        };
+
+        exprInp.oninput = (e) => {
+          humanDesc.textContent = `Schedule: ${e.target.value}`;
+        };
+
+        addBtn.onclick = () => openModal(null);
+        refreshBtn.onclick = () => loadJobs();
+        cancelBtn.onclick = closeModal;
+        closeBtn.onclick = closeModal;
+
+        const searchInp = bodyEl.querySelector(`#cronSearchInp_${cronWinId}`);
+        if (searchInp) {
+          searchInp.oninput = (e) => {
+            renderJobsTable(e.target.value.toLowerCase().trim());
+          };
+        }
+
+        saveBtn.onclick = async () => {
+          const schedule = exprInp.value.trim();
+          const command = cmdInp.value.trim();
+          if (!schedule || !command) {
+            if (window.showToast) window.showToast('Schedule and command are required.', 'warning');
+            else DesktopModal.alert({ title: 'Validation Error', message: 'Schedule and command are required.', type: 'warning' });
+            return;
+          }
+
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Saving...`;
+
+          try {
+            const resp = await fetch(`/api/servers/${this.serverId}/cron/save`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: editingJob ? editingJob.id : null,
+                schedule,
+                command,
+                is_enabled: enabledInp.checked
+              })
+            });
+            const res = await resp.json();
+            if (res.success) {
+              if (window.showToast) window.showToast('Cron schedule saved successfully!', 'success');
+              closeModal();
+              loadJobs();
+            } else {
+              DesktopModal.alert({ title: 'Save Failed', message: res.error || 'Unknown error saving cron job.', type: 'danger' });
+            }
+          } catch (e) {
+            DesktopModal.alert({ title: 'Save Error', message: String(e), type: 'danger' });
+          } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Scheduled Job';
+          }
+        };
+
+        loadJobs();
+      }
+    });
+  }
+
+  // =========================================================================
+  // 13. GIT DEPLOYMENT MANAGER
+  // =========================================================================
+  launchGit(params = {}) {
+    const existing = WindowManager.getWindowByAppId('git');
+    if (existing) {
+      if (existing.isMinimized) WindowManager.restoreWindow(existing.id);
+      WindowManager.focusWindow(existing.id);
+      return existing;
+    }
+
+    const gitWinId = 'git_' + Date.now();
+    let deploymentsList = [];
+    let editingDep = null;
+
+    return WindowManager.createWindow({
+      appId: 'git',
+      multiInstance: false,
+      title: `Git Deployment Manager - ${this.serverName}`,
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="18" cy="18" r="3" stroke="#f43f5e" stroke-width="2"/><circle cx="6" cy="6" r="3" stroke="#f43f5e" stroke-width="2"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12" stroke="#f43f5e" stroke-width="2"/></svg>',
+      width: 980,
+      height: 620,
+      minWidth: 720,
+      minHeight: 460,
+      contentHtml: `
+        <div style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-sans); position:relative; overflow:hidden;">
+          <!-- Top Bar -->
+          <div style="height:38px; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); padding:0 0.75rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="text" id="gitSearchInp_${gitWinId}" placeholder="Filter repositories..." class="form-control" style="width:180px; padding:0.25rem 0.5rem; font-size:0.75rem;">
+              <span id="gitDepCount_${gitWinId}" class="badge badge-warning" style="font-size:0.7rem; padding:0.18rem 0.45rem;">0 Repos</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.4rem;">
+              <button class="btn btn-primary btn-xs" id="btnLinkRepo_${gitWinId}" style="display:inline-flex; align-items:center; gap:0.3rem;">
+                <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Link Repository
+              </button>
+              <button class="btn btn-secondary btn-xs" id="btnRefreshGit_${gitWinId}" style="display:inline-flex; align-items:center; gap:0.3rem;">
+                <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Content -->
+          <div style="flex:1; overflow-y:auto; padding:1rem;" id="gitContentArea_${gitWinId}">
+            <div style="text-align:center; padding:3rem; color:var(--text-muted);">Loading linked repositories...</div>
+          </div>
+
+          <!-- Modal for Link/Edit Repo -->
+          <div id="gitModal_${gitWinId}" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(3px); z-index:100; align-items:center; justify-content:center; padding:1.5rem;">
+            <div style="width:100%; max-width:540px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden;">
+              <div style="padding:0.85rem 1.25rem; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+                <span id="gitModalTitle_${gitWinId}" style="font-weight:700; font-size:0.9rem; color:#f8fafc;">Link Git Repository</span>
+                <button class="btn btn-secondary btn-xs" id="btnCancelGitModal_${gitWinId}">&times;</button>
+              </div>
+              <div style="padding:1.25rem; display:flex; flex-direction:column; gap:0.85rem;">
+                <div>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Project Identifier</label>
+                  <input type="text" id="gitNameInp_${gitWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="e.g. Production Web Service">
+                </div>
+
+                <div>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Repository Clone URL</label>
+                  <input type="text" id="gitRepoInp_${gitWinId}" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="width:100%; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="https://github.com/owner/repository.git">
+                </div>
+
+                <div style="display:grid; grid-template-columns:2fr 1fr; gap:0.75rem;">
+                  <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Target Server Directory</label>
+                    <div style="display:flex; gap:0.4rem;">
+                      <input type="text" id="gitPathInp_${gitWinId}" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="flex:1; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/var/www/my-app">
+                      <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseGitPath_${gitWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Server Folders">
+                        <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        Browse...
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Branch</label>
+                    <input type="text" id="gitBranchInp_${gitWinId}" value="main" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="width:100%; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="main">
+                  </div>
+                </div>
+
+                <div>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Post-Deployment Command (Optional)</label>
+                  <input type="text" id="gitPostCmdInp_${gitWinId}" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="width:100%; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="npm install && npm run build">
+                  <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.25rem;">Executed automatically in target directory after git pull completes successfully.</div>
+                </div>
+
+                <div id="gitCloneOptBox_${gitWinId}" style="display:flex; align-items:center; gap:0.5rem; background:rgba(255,255,255,0.02); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
+                  <input type="checkbox" id="gitCloneNowInp_${gitWinId}">
+                  <label for="gitCloneNowInp_${gitWinId}" style="font-size:0.75rem; color:#cbd5e1; cursor:pointer;">
+                    Clone repository immediately into target folder if not already cloned
+                  </label>
+                </div>
+              </div>
+              <div style="padding:0.75rem 1.25rem; border-top:1px solid var(--border-subtle); background:rgba(0,0,0,0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button class="btn btn-secondary btn-sm" id="btnGitModalClose_${gitWinId}">Cancel</button>
+                <button class="btn btn-primary btn-sm" id="btnGitModalSave_${gitWinId}">Save Repository Link</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
+      onInit: (bodyEl) => {
+        const contentArea = bodyEl.querySelector(`#gitContentArea_${gitWinId}`);
+        const countBadge = bodyEl.querySelector(`#gitDepCount_${gitWinId}`);
+        const modal = bodyEl.querySelector(`#gitModal_${gitWinId}`);
+        const modalTitle = bodyEl.querySelector(`#gitModalTitle_${gitWinId}`);
+        const nameInp = bodyEl.querySelector(`#gitNameInp_${gitWinId}`);
+        const repoInp = bodyEl.querySelector(`#gitRepoInp_${gitWinId}`);
+        const pathInp = bodyEl.querySelector(`#gitPathInp_${gitWinId}`);
+        const branchInp = bodyEl.querySelector(`#gitBranchInp_${gitWinId}`);
+        const postCmdInp = bodyEl.querySelector(`#gitPostCmdInp_${gitWinId}`);
+        const cloneNowInp = bodyEl.querySelector(`#gitCloneNowInp_${gitWinId}`);
+        const cloneOptBox = bodyEl.querySelector(`#gitCloneOptBox_${gitWinId}`);
+        const linkBtn = bodyEl.querySelector(`#btnLinkRepo_${gitWinId}`);
+        const refreshBtn = bodyEl.querySelector(`#btnRefreshGit_${gitWinId}`);
+        const cancelBtn = bodyEl.querySelector(`#btnCancelGitModal_${gitWinId}`);
+        const closeBtn = bodyEl.querySelector(`#btnGitModalClose_${gitWinId}`);
+        const saveBtn = bodyEl.querySelector(`#btnGitModalSave_${gitWinId}`);
+
+        const loadDeployments = async () => {
+          contentArea.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-muted);"><span class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span> Loading repositories...</div>`;
+          try {
+            const resp = await fetch(`/api/servers/${this.serverId}/git/list`);
+            const res = await resp.json();
+            if (res.success) {
+              deploymentsList = res.deployments || [];
+              countBadge.textContent = `${deploymentsList.length} REPOS`;
+              renderDeploymentsList();
+            } else {
+              contentArea.innerHTML = `<div class="alert alert-danger" style="margin:1rem;">Failed to load git repositories: ${res.error || 'Unknown error'}</div>`;
+            }
+          } catch (e) {
+            contentArea.innerHTML = `<div class="alert alert-danger" style="margin:1rem;">Network error loading git repos: ${e}</div>`;
+          }
+        };
+
+        const renderDeploymentsList = (filterQuery = '') => {
+          const filtered = filterQuery
+            ? deploymentsList.filter(d => d.name.toLowerCase().includes(filterQuery) || d.target_path.toLowerCase().includes(filterQuery) || d.repo_url.toLowerCase().includes(filterQuery) || d.branch.toLowerCase().includes(filterQuery))
+            : deploymentsList;
+
+          if (deploymentsList.length === 0) {
+            contentArea.innerHTML = `
+              <div style="text-align:center; padding:4rem 1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px;">
+                <svg style="width:36px;height:36px;color:var(--text-muted);margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12"></path></svg>
+                <div style="font-weight:700; font-size:0.95rem; color:#f8fafc; margin-bottom:0.35rem;">No Git Deployments Configured</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">Link a GitHub or GitLab repository to automate code deployments on this server.</div>
+                <button class="btn btn-primary btn-sm" id="btnEmptyLink_${gitWinId}">Link Your First Repository</button>
+              </div>
+            `;
+            const emptyLink = contentArea.querySelector(`#btnEmptyLink_${gitWinId}`);
+            if (emptyLink) emptyLink.onclick = () => openModal(null);
+            return;
+          }
+
+          if (filtered.length === 0) {
+            contentArea.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--text-muted); font-size:0.82rem;">No repositories match "${filterQuery}".</div>`;
+            return;
+          }
+
+          contentArea.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:0.9rem;">
+              ${filtered.map(d => `
+                <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:1rem; display:flex; flex-direction:column; gap:0.75rem;">
+                  <!-- Header row -->
+                  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                      <span style="font-weight:700; font-size:0.95rem; color:#f8fafc;">${d.name}</span>
+                      <span style="font-size:0.68rem; background:rgba(244,63,94,0.12); color:#fb7185; border:1px solid rgba(244,63,94,0.3); padding:0.1rem 0.45rem; border-radius:4px; font-weight:700; font-family:monospace;">${d.branch}</span>
+                      <span style="font-size:0.65rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; ${d.last_status === 'success' ? 'background:rgba(16,185,129,0.15); color:#34d399;' : d.last_status === 'failed' ? 'background:rgba(239,68,68,0.15); color:#f87171;' : 'background:rgba(148,163,184,0.15); color:#94a3b8;'}">
+                        ${(d.last_status || 'PENDING').toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                      <button class="btn btn-primary btn-xs btn-pull-latest" data-id="${d.id}" style="display:inline-flex; align-items:center; gap:0.3rem;">
+                        <svg style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Pull Latest
+                      </button>
+                      <button class="btn btn-secondary btn-xs btn-inspect-repo" data-path="${encodeURIComponent(d.target_path)}">
+                        Inspect
+                      </button>
+                      <button class="btn btn-secondary btn-xs btn-edit-dep" data-id="${d.id}">
+                        Edit
+                      </button>
+                      <button class="btn btn-danger btn-xs btn-del-dep" data-id="${d.id}">
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Details row -->
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.75rem; color:#94a3b8; background:rgba(0,0,0,0.2); padding:0.6rem 0.8rem; border-radius:6px;">
+                    <div>Directory: <code style="color:#cbd5e1; font-family:monospace;">${d.target_path}</code></div>
+                    <div>Repository: <code style="color:#cbd5e1; font-family:monospace;">${d.repo_url}</code></div>
+                    ${d.post_deploy_cmd ? `<div style="grid-column:1 / -1;">Post-Deploy: <code style="color:#38bdf8; font-family:monospace;">${d.post_deploy_cmd}</code></div>` : ''}
+                    ${d.last_deployed_at ? `<div style="grid-column:1 / -1; font-size:0.7rem; color:var(--text-muted);">Last Deployed: ${d.last_deployed_at}</div>` : ''}
+                  </div>
+
+                  <!-- Webhook URL Box -->
+                  <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); border-radius:6px; padding:0.4rem 0.75rem;">
+                    <div style="display:flex; align-items:center; gap:0.4rem; min-width:0; flex:1;">
+                      <span style="font-size:0.7rem; font-weight:700; color:#38bdf8;">WEBHOOK:</span>
+                      <code style="font-size:0.72rem; color:#cbd5e1; font-family:monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${window.location.origin}${d.webhook_url}</code>
+                    </div>
+                    <button class="btn btn-secondary btn-xs btn-copy-hook" data-url="${window.location.origin}${d.webhook_url}" style="font-size:0.7rem; padding:0.15rem 0.45rem;">
+                      Copy URL
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+
+          // Pull Latest handler
+          contentArea.querySelectorAll('.btn-pull-latest').forEach(b => {
+            b.onclick = async () => {
+              const id = b.dataset.id;
+              b.disabled = true;
+              b.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></span> Pulling...`;
+              try {
+                const resp = await fetch(`/api/servers/${this.serverId}/git/pull`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                  if (window.showToast) window.showToast('Git deployment pulled successfully!', 'success');
+                  if (res.log && res.log.trim()) {
+                    DesktopModal.showOutput({
+                      title: 'Git Deployment Pulled',
+                      subtitle: `Target: ${b.closest('div').parentElement.querySelector('code')?.textContent || ''}`,
+                      output: res.log,
+                      exitCode: 0,
+                      isSuccess: true
+                    });
+                  }
+                } else {
+                  DesktopModal.showOutput({
+                    title: 'Git Deployment Failed',
+                    subtitle: `Exit Code ${res.exit_code}`,
+                    output: res.log || res.error || 'Pull failed.',
+                    exitCode: res.exit_code,
+                    isSuccess: false
+                  });
+                }
+                loadDeployments();
+              } catch (e) {
+                if (window.showToast) window.showToast('Pull error: ' + e, 'danger');
+                else DesktopModal.alert({ title: 'Pull Error', message: String(e), type: 'danger' });
+              } finally {
+                b.disabled = false;
+                b.innerHTML = `
+                  <svg style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Pull Latest
+                `;
+              }
+            };
+          });
+
+          // Inspect repo handler
+          contentArea.querySelectorAll('.btn-inspect-repo').forEach(b => {
+            b.onclick = async () => {
+              const target_path = decodeURIComponent(b.dataset.path);
+              b.disabled = true;
+              b.textContent = 'Inspecting...';
+              try {
+                const resp = await fetch(`/api/servers/${this.serverId}/git/inspect`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ target_path })
+                });
+                const res = await resp.json();
+                if (res.success && res.is_git_repo) {
+                  const c = res.last_commit || {};
+                  const info = [
+                    `Target Path:   ${target_path}`,
+                    `Remote URL:    ${res.remote_url || 'N/A'}`,
+                    `Active Branch: ${res.branch}`,
+                    `Clean Tree:    ${res.is_clean ? 'Yes (Clean)' : 'No (Uncommitted Changes)'}`,
+                    '',
+                    'Latest Commit:',
+                    `  Hash:    ${c.hash || 'N/A'}`,
+                    `  Author:  ${c.author || 'N/A'}`,
+                    `  Date:    ${c.relative_time || 'N/A'}`,
+                    `  Message: ${c.message || 'N/A'}`,
+                    '',
+                    'Branch Status:',
+                    res.status_summary || 'Working tree clean. Nothing to commit.'
+                  ].join('\n');
+
+                  DesktopModal.showOutput({
+                    title: 'Git Repository Status',
+                    subtitle: target_path,
+                    output: info,
+                    isSuccess: true
+                  });
+                } else {
+                  DesktopModal.alert({
+                    title: 'Git Repository Notice',
+                    message: res.message || `Directory "${target_path}" is not an initialized Git repository.`,
+                    type: 'info'
+                  });
+                }
+              } catch (e) {
+                if (window.showToast) window.showToast('Inspect error: ' + e, 'danger');
+                else DesktopModal.alert({ title: 'Inspect Error', message: String(e), type: 'danger' });
+              } finally {
+                b.disabled = false;
+                b.textContent = 'Inspect';
+              }
+            };
+          });
+
+          // Copy webhook URL
+          contentArea.querySelectorAll('.btn-copy-hook').forEach(b => {
+            b.onclick = () => {
+              navigator.clipboard.writeText(b.dataset.url);
+              if (window.showToast) window.showToast('Webhook URL copied to clipboard', 'info');
+            };
+          });
+
+          // Edit handler
+          contentArea.querySelectorAll('.btn-edit-dep').forEach(b => {
+            b.onclick = () => {
+              const id = parseInt(b.dataset.id, 10);
+              const dep = deploymentsList.find(d => d.id === id);
+              if (dep) openModal(dep);
+            };
+          });
+
+          // Delete handler
+          contentArea.querySelectorAll('.btn-del-dep').forEach(b => {
+            b.onclick = async () => {
+              const ok = await DesktopModal.confirm({
+                title: 'Remove Git Deployment',
+                message: 'Are you sure you want to remove this Git deployment project?',
+                confirmText: 'Remove',
+                isDanger: true
+              });
+              if (ok) {
+                const id = b.dataset.id;
+                try {
+                  await fetch(`/api/servers/${this.serverId}/git/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                  });
+                  if (window.showToast) window.showToast('Git deployment removed', 'info');
+                  loadDeployments();
+                } catch (e) {
+                  DesktopModal.alert({ title: 'Delete Error', message: String(e), type: 'danger' });
+                }
+              }
+            };
+          });
+        };
+
+        const openModal = (dep) => {
+          editingDep = dep;
+          modal.style.display = 'flex';
+          if (dep) {
+            modalTitle.textContent = 'Edit Deployment Configuration';
+            nameInp.value = dep.name;
+            repoInp.value = dep.repo_url;
+            pathInp.value = dep.target_path;
+            branchInp.value = dep.branch;
+            postCmdInp.value = dep.post_deploy_cmd;
+            cloneOptBox.style.display = 'none';
+          } else {
+            modalTitle.textContent = 'Link New Git Repository';
+            nameInp.value = '';
+            repoInp.value = '';
+            pathInp.value = '/var/www/';
+            branchInp.value = 'main';
+            postCmdInp.value = '';
+            cloneNowInp.checked = true;
+            cloneOptBox.style.display = 'flex';
+          }
+        };
+
+        const closeModal = () => {
+          modal.style.display = 'none';
+          editingDep = null;
+        };
+
+        linkBtn.onclick = () => openModal(null);
+        refreshBtn.onclick = () => loadDeployments();
+        cancelBtn.onclick = closeModal;
+        closeBtn.onclick = closeModal;
+
+        const btnBrowseGit = modal.querySelector(`#btnBrowseGitPath_${gitWinId}`);
+        if (btnBrowseGit) {
+          btnBrowseGit.onclick = () => {
+            this.showDirectoryPicker({
+              serverId: this.serverId,
+              initialPath: pathInp.value.trim() || '/var/www/',
+              title: 'Select Deployment Target Folder',
+              onSelect: (selectedPath) => {
+                pathInp.value = selectedPath;
+              }
+            });
+          };
+        }
+
+        const gitSearchInp = bodyEl.querySelector(`#gitSearchInp_${gitWinId}`);
+        if (gitSearchInp) {
+          gitSearchInp.oninput = (e) => {
+            renderDeploymentsList(e.target.value.toLowerCase().trim());
+          };
+        }
+
+        saveBtn.onclick = async () => {
+          const name = nameInp.value.trim();
+          let repo_url = repoInp.value.trim();
+          if (repo_url && !repo_url.includes('://') && !repo_url.startsWith('git@')) {
+            repo_url = 'https://' + repo_url;
+            repoInp.value = repo_url;
+          }
+          const target_path = pathInp.value.trim();
+          const branch = branchInp.value.trim();
+          const post_deploy_cmd = postCmdInp.value.trim();
+          const shouldClone = cloneNowInp.checked && !editingDep;
+
+          if (!name || !repo_url || !target_path) {
+            if (window.showToast) window.showToast('Project name, repository URL, and target directory are required.', 'warning');
+            else DesktopModal.alert({ title: 'Validation Error', message: 'Project name, repository URL, and target directory are required.', type: 'warning' });
+            return;
+          }
+
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Saving...`;
+
+          try {
+            // Optional clone first if checked
+            if (shouldClone) {
+              const cResp = await fetch(`/api/servers/${this.serverId}/git/clone`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ repo_url, target_path, branch })
+              });
+              const cRes = await cResp.json();
+              if (!cRes.success) {
+                DesktopModal.showOutput({
+                  title: 'Git Clone Failed',
+                  subtitle: target_path,
+                  output: cRes.log || cRes.error || 'Clone failed.',
+                  exitCode: cRes.exit_code,
+                  isSuccess: false
+                });
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Repository Link';
+                return;
+              }
+            }
+
+            const resp = await fetch(`/api/servers/${this.serverId}/git/save`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: editingDep ? editingDep.id : null,
+                name,
+                repo_url,
+                target_path,
+                branch,
+                post_deploy_cmd
+              })
+            });
+            const res = await resp.json();
+            if (res.success) {
+              if (window.showToast) window.showToast('Git deployment linked successfully!', 'success');
+              closeModal();
+              loadDeployments();
+            } else {
+              DesktopModal.alert({ title: 'Save Failed', message: res.error || 'Unknown error saving deployment.', type: 'danger' });
+            }
+          } catch (e) {
+            DesktopModal.alert({ title: 'Save Error', message: String(e), type: 'danger' });
+          } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Repository Link';
+          }
+        };
+
+        loadDeployments();
+      }
+    });
+  }
+
   launchSettings(params = {}) {
     const existing = WindowManager.getWindowByAppId('settings');
     if (existing) {
@@ -6711,6 +8687,14 @@ class DesktopAppsController {
             <div class="settings-nav-item" data-tab="appearance" id="tabNav_appearance_${setWinId}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 10 10 0 0 0 0-20"></path></svg>
               <span>Appearance</span>
+            </div>
+            <div class="settings-nav-item" data-tab="alerts" id="tabNav_alerts_${setWinId}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <span>Health Alerts</span>
+            </div>
+            <div class="settings-nav-item" data-tab="backup" id="tabNav_backup_${setWinId}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Backup & Export</span>
             </div>
             <div class="settings-nav-item" data-tab="pwa" id="tabNav_pwa_${setWinId}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -6844,13 +8828,13 @@ class DesktopAppsController {
                 const res = await resp.json();
                 if (res.success) {
                   if (window.showToast) window.showToast(`SSH Connection to node successful!`, 'success');
-                  else alert('SSH Connection Successful!');
+                  else DesktopModal.alert({ title: 'SSH Connection', message: 'SSH Connection Successful!', type: 'success' });
                 } else {
                   if (window.showToast) window.showToast(`SSH Connection failed: ${res.message || 'Unknown error'}`, 'danger');
-                  else alert(`Connection Failed: ${res.message}`);
+                  else DesktopModal.alert({ title: 'Connection Failed', message: res.message || 'Unknown error', type: 'danger' });
                 }
               } catch (e) {
-                alert(`Test error: ${e}`);
+                DesktopModal.alert({ title: 'Test Error', message: String(e), type: 'danger' });
               } finally {
                 btn.disabled = false;
                 btn.textContent = 'Test SSH';
@@ -6863,7 +8847,13 @@ class DesktopAppsController {
             btn.onclick = async () => {
               const id = parseInt(btn.dataset.id);
               const name = btn.dataset.name;
-              if (confirm(`Are you sure you want to delete server node "${name}"? This action cannot be undone.`)) {
+              const ok = await DesktopModal.confirm({
+                title: 'Delete Server Node',
+                message: `Are you sure you want to delete server node "${name}"? This action cannot be undone.`,
+                confirmText: 'Delete Server',
+                isDanger: true
+              });
+              if (ok) {
                 try {
                   const resp = await fetch(`/api/servers/${id}/delete`, { method: 'POST' });
                   const res = await resp.json();
@@ -6875,10 +8865,10 @@ class DesktopAppsController {
                       renderServersTab();
                     }
                   } else {
-                    alert(`Failed to delete: ${res.error || 'Server error'}`);
+                    DesktopModal.alert({ title: 'Delete Failed', message: res.error || 'Server error', type: 'danger' });
                   }
                 } catch (e) {
-                  alert(`Delete error: ${e}`);
+                  DesktopModal.alert({ title: 'Delete Error', message: String(e), type: 'danger' });
                 }
               }
             };
@@ -7167,6 +9157,26 @@ class DesktopAppsController {
                 </div>
               </div>
 
+              <!-- Two-Factor Authentication Card -->
+              <div class="settings-card" style="margin-top:1.25rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.35rem;">
+                  <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
+                    <svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Two-Factor Authentication (TOTP)
+                  </div>
+                  <span id="totpBadge_${setWinId}" style="font-size:0.68rem; font-weight:700; padding:0.12rem 0.5rem; border-radius:4px; background:rgba(148,163,184,0.15); color:#94a3b8;">
+                    CHECKING...
+                  </span>
+                </div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4;">
+                  Enforce a 6-digit verification code from Google Authenticator, Authy, or 1Password when logging in to safeguard access to your servers.
+                </p>
+
+                <div id="totpSection_${setWinId}">
+                  <!-- Dynamic 2FA content -->
+                </div>
+              </div>
+
               <!-- Session Termination -->
               <div class="settings-card" style="margin-top:1.25rem; display:flex; align-items:center; justify-content:space-between;">
                 <div>
@@ -7190,6 +9200,329 @@ class DesktopAppsController {
               if (uEl) uEl.textContent = res.user.username;
             }
           } catch (_) {}
+
+          // 2FA State Manager
+          const totpBadge = contentPane.querySelector(`#totpBadge_${setWinId}`);
+          const totpSection = contentPane.querySelector(`#totpSection_${setWinId}`);
+
+          const load2FAState = async () => {
+            try {
+              const resp = await fetch('/api/settings/2fa/status');
+              const res = await resp.json();
+              const isEnabled = res.success && res.enabled;
+              if (isEnabled) {
+                totpBadge.style.background = 'rgba(16,185,129,0.15)';
+                totpBadge.style.color = '#34d399';
+                totpBadge.style.border = '1px solid rgba(16,185,129,0.3)';
+                totpBadge.textContent = 'ACTIVE (PROTECTED)';
+
+                totpSection.innerHTML = `
+                  <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                    <div style="font-size:0.78rem; color:#cbd5e1; display:flex; align-items:center; gap:0.4rem;">
+                      <svg style="width:14px;height:14px;color:#34d399;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      Two-factor authentication is currently active on your administrator account.
+                    </div>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                      <button class="btn btn-secondary btn-sm" id="btnToggleBackupCodes_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem; color:#38bdf8; border-color:rgba(56,189,248,0.3);">
+                        <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        View Backup Recovery Codes
+                      </button>
+                      <button class="btn btn-secondary btn-sm" id="btnShowDisable2FA_${setWinId}" style="color:#f87171; border-color:rgba(239,68,68,0.3);">
+                        Disable Two-Factor Authentication
+                      </button>
+                    </div>
+
+                    <!-- Backup Codes Container -->
+                    <div id="backupCodesBox_${setWinId}" style="display:none; margin-top:0.25rem; padding:0.85rem; background:rgba(2,132,199,0.06); border:1px solid rgba(56,189,248,0.25); border-radius:6px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem;">
+                        <div>
+                          <div style="font-size:0.78rem; font-weight:700; color:#38bdf8;">Your Emergency Backup Recovery Codes</div>
+                          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Each code can be entered once if you lose access to your authenticator app.</div>
+                        </div>
+                        <div style="display:flex; gap:0.4rem;">
+                          <button class="btn btn-secondary btn-xs" id="btnCopyActiveCodes_${setWinId}" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Copy All Codes</button>
+                          <button class="btn btn-secondary btn-xs" id="btnRegenCodes_${setWinId}" style="font-size:0.7rem; padding:0.2rem 0.5rem; color:#fbbf24; border-color:rgba(245,158,11,0.3);">Regenerate Fresh Codes</button>
+                        </div>
+                      </div>
+                      <div id="backupCodesGrid_${setWinId}" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.45rem; margin-top:0.6rem;">
+                        <span style="font-size:0.75rem; color:var(--text-muted);">Loading codes...</span>
+                      </div>
+                    </div>
+
+                    <div id="disable2FAForm_${setWinId}" style="display:none; margin-top:0.5rem; max-width:380px; padding:0.75rem; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:6px;">
+                      <label style="display:block; font-size:0.75rem; font-weight:600; color:#cbd5e1; margin-bottom:0.3rem;">Confirm Master Password to Disable</label>
+                      <input type="password" id="disable2FAPass_${setWinId}" class="form-control" placeholder="Current master password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; margin-bottom:0.5rem;">
+                      <div id="disable2FAStatus_${setWinId}" style="display:none; font-size:0.72rem; margin-bottom:0.4rem;"></div>
+                      <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-danger btn-xs" id="btnConfirmDisable2FA_${setWinId}">Confirm & Disable</button>
+                        <button class="btn btn-secondary btn-xs" id="btnCancelDisable2FA_${setWinId}">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+
+                // Backup codes logic
+                let activeCodesList = [];
+                const codesBox = totpSection.querySelector(`#backupCodesBox_${setWinId}`);
+                const codesGrid = totpSection.querySelector(`#backupCodesGrid_${setWinId}`);
+                const btnToggleCodes = totpSection.querySelector(`#btnToggleBackupCodes_${setWinId}`);
+                const btnCopyActive = totpSection.querySelector(`#btnCopyActiveCodes_${setWinId}`);
+                const btnRegen = totpSection.querySelector(`#btnRegenCodes_${setWinId}`);
+
+                const renderCodes = (codes) => {
+                  activeCodesList = codes || [];
+                  if (!activeCodesList.length) {
+                    codesGrid.innerHTML = '<span style="font-size:0.75rem; color:#f87171; grid-column:1/-1;">No backup codes remaining. Click "Regenerate Fresh Codes" to generate 8 new recovery codes.</span>';
+                    return;
+                  }
+                  codesGrid.innerHTML = activeCodesList.map(c => `
+                    <code style="background:rgba(0,0,0,0.35); padding:0.35rem 0.5rem; border-radius:4px; font-size:0.8rem; text-align:center; color:#38bdf8; font-family:monospace; border:1px solid rgba(56,189,248,0.2); user-select:all; display:block;">${c}</code>
+                  `).join('');
+                };
+
+                const fetchBackupCodes = async () => {
+                  try {
+                    codesGrid.innerHTML = '<span style="font-size:0.72rem; color:var(--text-muted); grid-column:1/-1;">Retrieving active backup recovery codes...</span>';
+                    const cResp = await fetch('/api/settings/2fa/backup-codes');
+                    const cRes = await cResp.json();
+                    if (cRes.success && Array.isArray(cRes.backup_codes)) {
+                      renderCodes(cRes.backup_codes);
+                    } else {
+                      codesGrid.innerHTML = `<span style="font-size:0.72rem; color:#f87171; grid-column:1/-1;">${cRes.error || 'Failed to load backup codes.'}</span>`;
+                    }
+                  } catch (e) {
+                    codesGrid.innerHTML = `<span style="font-size:0.72rem; color:#f87171; grid-column:1/-1;">Network error loading codes: ${e}</span>`;
+                  }
+                };
+
+                btnToggleCodes.onclick = async () => {
+                  const isVisible = codesBox.style.display !== 'none';
+                  if (isVisible) {
+                    codesBox.style.display = 'none';
+                    btnToggleCodes.innerHTML = `<svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> View Backup Recovery Codes`;
+                  } else {
+                    codesBox.style.display = 'block';
+                    btnToggleCodes.innerHTML = `<svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Hide Backup Recovery Codes`;
+                    await fetchBackupCodes();
+                  }
+                };
+
+                btnCopyActive.onclick = () => {
+                  if (!activeCodesList.length) return;
+                  navigator.clipboard.writeText(activeCodesList.join('\n'));
+                  if (window.showToast) window.showToast('Copied all backup recovery codes to clipboard.', 'success');
+                };
+
+                btnRegen.onclick = async () => {
+                  const ok = await DesktopModal.confirm({
+                    title: 'Regenerate Backup Codes',
+                    message: 'Are you sure you want to invalidate old backup codes and generate a fresh set of 8 recovery codes?',
+                    confirmText: 'Regenerate Codes',
+                    isDanger: true
+                  });
+                  if (!ok) return;
+                  btnRegen.disabled = true;
+                  btnRegen.textContent = 'Regenerating...';
+                  try {
+                    const rResp = await fetch('/api/settings/2fa/regenerate-backup-codes', { method: 'POST' });
+                    const rRes = await rResp.json();
+                    if (rRes.success && Array.isArray(rRes.backup_codes)) {
+                      renderCodes(rRes.backup_codes);
+                      if (window.showToast) window.showToast('Fresh backup recovery codes generated!', 'success');
+                    } else {
+                      DesktopModal.alert({ title: 'Regeneration Failed', message: rRes.error || 'Failed to regenerate codes.', type: 'danger' });
+                    }
+                  } catch (err) {
+                    DesktopModal.alert({ title: 'Network Error', message: String(err), type: 'danger' });
+                  } finally {
+                    btnRegen.disabled = false;
+                    btnRegen.textContent = 'Regenerate Fresh Codes';
+                  }
+                };
+
+                totpSection.querySelector(`#btnShowDisable2FA_${setWinId}`).onclick = () => {
+                  totpSection.querySelector(`#disable2FAForm_${setWinId}`).style.display = 'block';
+                };
+                totpSection.querySelector(`#btnCancelDisable2FA_${setWinId}`).onclick = () => {
+                  totpSection.querySelector(`#disable2FAForm_${setWinId}`).style.display = 'none';
+                };
+                totpSection.querySelector(`#btnConfirmDisable2FA_${setWinId}`).onclick = async () => {
+                  const pw = totpSection.querySelector(`#disable2FAPass_${setWinId}`).value;
+                  const stat = totpSection.querySelector(`#disable2FAStatus_${setWinId}`);
+                  if (!pw) {
+                    stat.style.display = 'block';
+                    stat.style.color = '#f87171';
+                    stat.textContent = 'Password is required.';
+                    return;
+                  }
+                  try {
+                    const dResp = await fetch('/api/settings/2fa/disable', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ password: pw })
+                    });
+                    const dRes = await dResp.json();
+                    if (dRes.success) {
+                      if (window.showToast) window.showToast('2FA has been disabled.', 'info');
+                      load2FAState();
+                    } else {
+                      stat.style.display = 'block';
+                      stat.style.color = '#f87171';
+                      stat.textContent = dRes.error || 'Failed to disable 2FA.';
+                    }
+                  } catch (e) {
+                    stat.style.display = 'block';
+                    stat.style.color = '#f87171';
+                    stat.textContent = 'Network error: ' + e;
+                  }
+                };
+              } else {
+                totpBadge.style.background = 'rgba(239,68,68,0.12)';
+                totpBadge.style.color = '#f87171';
+                totpBadge.style.border = '1px solid rgba(239,68,68,0.25)';
+                totpBadge.textContent = 'DISABLED';
+
+                totpSection.innerHTML = `
+                  <div>
+                    <button class="btn btn-primary btn-sm" id="btnStart2FASetup_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                      <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      Enable Two-Factor Authentication
+                    </button>
+                    <div id="totpWizard_${setWinId}" style="display:none; margin-top:1rem; padding:1rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px;"></div>
+                  </div>
+                `;
+
+                const startBtn = totpSection.querySelector(`#btnStart2FASetup_${setWinId}`);
+                const wizardDiv = totpSection.querySelector(`#totpWizard_${setWinId}`);
+
+                startBtn.onclick = async () => {
+                  startBtn.disabled = true;
+                  startBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Generating keys...`;
+                  try {
+                    const sResp = await fetch('/api/settings/2fa/setup', { method: 'POST' });
+                    const sRes = await sResp.json();
+                    if (sRes.success) {
+                      startBtn.style.display = 'none';
+                      wizardDiv.style.display = 'block';
+                      wizardDiv.innerHTML = `
+                        <div style="display:flex; flex-direction:column; gap:1.25rem;">
+                          <div style="display:flex; gap:1.5rem; align-items:flex-start; flex-wrap:wrap;">
+                            <!-- QR Code SVG container -->
+                            <div style="background:#ffffff; padding:0.6rem; border-radius:8px; width:160px; height:160px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.3); flex-shrink:0;">
+                              <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+                                ${sRes.qr_svg}
+                              </div>
+                            </div>
+                            <div style="flex:1; min-width:240px;">
+                              <div style="font-size:0.85rem; font-weight:700; color:#f8fafc; margin-bottom:0.25rem;">1. Scan Barcode</div>
+                              <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem; line-height:1.4;">
+                                Open Google Authenticator, Authy, or 1Password and scan this QR code.
+                              </p>
+                              <div style="font-size:0.72rem; color:#94a3b8; margin-bottom:0.25rem;">Manual Entry Secret Key:</div>
+                              <div style="display:flex; align-items:center; gap:0.4rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:6px; padding:0.35rem 0.6rem;">
+                                <code style="font-size:0.8rem; font-family:monospace; color:#38bdf8; flex:1; letter-spacing:0.05em;">${sRes.secret}</code>
+                                <button class="btn btn-secondary btn-xs" id="btnCopySecret_${setWinId}" style="padding:0.2rem 0.5rem; font-size:0.7rem;">Copy</button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- One-time backup recovery codes -->
+                          <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.25); border-radius:6px; padding:0.75rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                              <span style="font-size:0.78rem; font-weight:700; color:#38bdf8;">2. Emergency Backup Recovery Codes</span>
+                              <button class="btn btn-secondary btn-xs" id="btnCopyCodes_${setWinId}" style="font-size:0.7rem; padding:0.15rem 0.5rem;">Copy All Codes</button>
+                            </div>
+                            <p style="font-size:0.72rem; color:var(--text-muted); margin-bottom:0.6rem;">
+                              Store these backup codes safely. If you lose access to your device, each code can be used once to log in.
+                            </p>
+                            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.4rem;">
+                              ${sRes.backup_codes.map(c => `<code style="background:rgba(0,0,0,0.3); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.75rem; text-align:center; color:#cbd5e1; font-family:monospace;">${c}</code>`).join('')}
+                            </div>
+                          </div>
+
+                          <!-- Step 3: Verification -->
+                          <div style="display:flex; flex-direction:column; gap:0.4rem; max-width:340px;">
+                            <label style="font-size:0.78rem; font-weight:700; color:#f8fafc;">3. Verify Authenticator Code</label>
+                            <div style="display:flex; gap:0.5rem;">
+                              <input type="text" id="inpVerifyCode_${setWinId}" maxlength="6" class="form-control" placeholder="123456"
+                                     style="width:130px; font-size:1.1rem; letter-spacing:0.2em; text-align:center; font-family:monospace; font-weight:700;">
+                              <button class="btn btn-primary btn-sm" id="btnConfirm2FA_${setWinId}">Verify & Enable</button>
+                              <button class="btn btn-secondary btn-sm" id="btnCancel2FA_${setWinId}">Cancel</button>
+                            </div>
+                            <div id="verify2FAStatus_${setWinId}" style="display:none; font-size:0.72rem; margin-top:0.2rem;"></div>
+                          </div>
+                        </div>
+                      `;
+
+                      wizardDiv.querySelector(`#btnCopySecret_${setWinId}`).onclick = () => {
+                        navigator.clipboard.writeText(sRes.secret);
+                        if (window.showToast) window.showToast('Secret key copied', 'info');
+                      };
+
+                      wizardDiv.querySelector(`#btnCopyCodes_${setWinId}`).onclick = () => {
+                        navigator.clipboard.writeText(sRes.backup_codes.join('\n'));
+                        if (window.showToast) window.showToast('All recovery codes copied', 'info');
+                      };
+
+                      wizardDiv.querySelector(`#btnCancel2FA_${setWinId}`).onclick = () => {
+                        load2FAState();
+                      };
+
+                      const codeInp = wizardDiv.querySelector(`#inpVerifyCode_${setWinId}`);
+                      const confirmBtn = wizardDiv.querySelector(`#btnConfirm2FA_${setWinId}`);
+                      const statDiv = wizardDiv.querySelector(`#verify2FAStatus_${setWinId}`);
+
+                      confirmBtn.onclick = async () => {
+                        const code = codeInp.value.trim();
+                        if (code.length < 6) {
+                          statDiv.style.display = 'block';
+                          statDiv.style.color = '#f87171';
+                          statDiv.textContent = 'Enter the 6-digit code from your authenticator.';
+                          return;
+                        }
+                        confirmBtn.disabled = true;
+                        confirmBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Verifying...`;
+                        try {
+                          const vResp = await fetch('/api/settings/2fa/verify-enable', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ code })
+                          });
+                          const vRes = await vResp.json();
+                          if (vRes.success) {
+                            if (window.showToast) window.showToast('Two-Factor Authentication is now ENABLED!', 'success');
+                            load2FAState();
+                          } else {
+                            statDiv.style.display = 'block';
+                            statDiv.style.color = '#f87171';
+                            statDiv.textContent = vRes.error || 'Verification failed.';
+                            confirmBtn.disabled = false;
+                            confirmBtn.textContent = 'Verify & Enable';
+                          }
+                        } catch (err) {
+                          statDiv.style.display = 'block';
+                          statDiv.style.color = '#f87171';
+                          statDiv.textContent = 'Network error: ' + err;
+                          confirmBtn.disabled = false;
+                          confirmBtn.textContent = 'Verify & Enable';
+                        }
+                      };
+                    } else {
+                      DesktopModal.alert({ title: '2FA Setup Failed', message: sRes.error || 'Unknown error initializing 2FA setup.', type: 'danger' });
+                      startBtn.disabled = false;
+                      startBtn.textContent = 'Enable Two-Factor Authentication';
+                    }
+                  } catch (e) {
+                    DesktopModal.alert({ title: 'Network Error', message: 'Network error initializing 2FA: ' + e, type: 'danger' });
+                    startBtn.disabled = false;
+                    startBtn.textContent = 'Enable Two-Factor Authentication';
+                  }
+                };
+              }
+            } catch (_) {}
+          };
+
+          load2FAState();
 
           // Password change handler
           const submitBtn = contentPane.querySelector(`#admSubmitPass_${setWinId}`);
@@ -7435,6 +9768,411 @@ class DesktopAppsController {
           }
         };
 
+        // Render Server Health & Alerts Tab
+        const renderAlertsTab = () => {
+          const toastEnabled = localStorage.getItem('shellman_toast_alerts') !== 'false';
+          const pushEnabled = localStorage.getItem('shellman_push_alerts') !== 'false';
+          const currentCpuThresh = localStorage.getItem('shellman_alert_cpu_threshold') || '90';
+          const currentRamThresh = localStorage.getItem('shellman_alert_ram_threshold') || '90';
+          const currentDuration = localStorage.getItem('shellman_alert_duration_mins') || '5';
+          const hasNotif = 'Notification' in window;
+          const perm = hasNotif ? Notification.permission : 'unsupported';
+
+          let permBadge = '';
+          if (!hasNotif) {
+            permBadge = '<span style="font-size:0.68rem; background:rgba(148,163,184,0.15); color:#94a3b8; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">UNSUPPORTED</span>';
+          } else if (perm === 'granted') {
+            permBadge = '<span style="font-size:0.68rem; background:rgba(16,185,129,0.15); color:#34d399; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">ALLOWED</span>';
+          } else if (perm === 'denied') {
+            permBadge = '<span style="font-size:0.68rem; background:rgba(239,68,68,0.15); color:#f87171; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">BLOCKED</span>';
+          } else {
+            permBadge = '<span style="font-size:0.68rem; background:rgba(245,158,11,0.15); color:#fbbf24; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">PROMPT REQUIRED</span>';
+          }
+
+          contentPane.innerHTML = `
+            <div>
+              <h3 class="settings-section-title">Server Health & Notifications</h3>
+              <p class="settings-section-desc">Configure automated alerts for offline nodes and customize resource threshold triggers for CPU and RAM.</p>
+
+              <!-- Channels Card -->
+              <div class="settings-card" style="margin-bottom:1.25rem;">
+                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Alert Notification Channels</div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">Choose how ShellMan notifies you when a monitored server requires attention.</p>
+
+                <div style="display:flex; flex-direction:column; gap:0.9rem;">
+                  <!-- In-App Toasts -->
+                  <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.85rem; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid var(--border-color);">
+                    <div>
+                      <div style="font-size:0.82rem; font-weight:600; color:#f8fafc;">In-App Desktop Toast Banners</div>
+                      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Real-time glassmorphism alerts rendered directly inside the ShellMan desktop workspace.</div>
+                    </div>
+                    <label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:pointer;">
+                      <input type="checkbox" id="chkToastAlerts_${setWinId}" ${toastEnabled ? 'checked' : ''} style="opacity:0; width:0; height:0;">
+                      <span id="sliderToast_${setWinId}" style="position:absolute; top:0; left:0; right:0; bottom:0; background-color:${toastEnabled ? '#0284c7' : '#334155'}; border-radius:20px; transition:.2s;"></span>
+                    </label>
+                  </div>
+
+                  <!-- OS / Browser Notifications -->
+                  <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.85rem; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid var(--border-color);">
+                    <div>
+                      <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="font-size:0.82rem; font-weight:600; color:#f8fafc;">Browser & OS Push Notifications</span>
+                        ${permBadge}
+                      </div>
+                      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Native desktop push alerts via Web Notifications API / PWA when ShellMan is minimized or in background.</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.6rem;">
+                      ${hasNotif && perm !== 'granted' ? `<button class="btn btn-secondary btn-xs" id="btnRequestPerm_${setWinId}" style="font-size:0.72rem; padding:0.2rem 0.5rem;">Request Permission</button>` : ''}
+                      <label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:pointer;">
+                        <input type="checkbox" id="chkPushAlerts_${setWinId}" ${pushEnabled ? 'checked' : ''} style="opacity:0; width:0; height:0;">
+                        <span id="sliderPush_${setWinId}" style="position:absolute; top:0; left:0; right:0; bottom:0; background-color:${pushEnabled ? '#0284c7' : '#334155'}; border-radius:20px; transition:.2s;"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Configurable Resource Thresholds Card -->
+              <div class="settings-card" style="margin-bottom:1.25rem;">
+                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Resource Alert Thresholds</div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">Set custom numbers for resource thresholds and sustained duration before ShellMan dispatches warnings.</p>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.85rem; margin-bottom:1rem;">
+                  <!-- CPU Threshold -->
+                  <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.4rem;">
+                      CPU Alert Limit
+                    </label>
+                    <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.5rem;">
+                      <input type="number" id="inpCpuThresh_${setWinId}" min="1" max="100" class="form-control" value="${currentCpuThresh}" style="width:75px; text-align:center; font-weight:700; font-size:0.88rem; padding:0.35rem 0.4rem;">
+                      <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">%</span>
+                    </div>
+                    <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                      ${['60','70','80','85','90','95'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-cpu" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentCpuThresh === v ? 'border-color:#38bdf8; color:#38bdf8;' : ''}">${v}%</button>`).join('')}
+                    </div>
+                  </div>
+
+                  <!-- RAM Threshold -->
+                  <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.4rem;">
+                      RAM Alert Limit
+                    </label>
+                    <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.5rem;">
+                      <input type="number" id="inpRamThresh_${setWinId}" min="1" max="100" class="form-control" value="${currentRamThresh}" style="width:75px; text-align:center; font-weight:700; font-size:0.88rem; padding:0.35rem 0.4rem;">
+                      <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">%</span>
+                    </div>
+                    <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                      ${['60','70','80','85','90','95'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-ram" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentRamThresh === v ? 'border-color:#38bdf8; color:#38bdf8;' : ''}">${v}%</button>`).join('')}
+                    </div>
+                  </div>
+
+                  <!-- Duration Filter -->
+                  <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.4rem;">
+                      Sustained Duration
+                    </label>
+                    <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.5rem;">
+                      <input type="number" id="inpDuration_${setWinId}" min="1" max="60" class="form-control" value="${currentDuration}" style="width:75px; text-align:center; font-weight:700; font-size:0.88rem; padding:0.35rem 0.4rem;">
+                      <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">mins</span>
+                    </div>
+                    <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                      ${['1','2','3','5','10'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-dur" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentDuration === v ? 'border-color:#38bdf8; color:#38bdf8;' : ''}">${v}m</button>`).join('')}
+                    </div>
+                  </div>
+                </div>
+
+                <div style="padding:0.6rem 0.8rem; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:6px; display:flex; align-items:center; gap:0.5rem;">
+                  <svg style="width:16px;height:16px;color:#f87171;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  <div style="font-size:0.72rem; color:#cbd5e1; line-height:1.4;">
+                    <strong>Node Outage Detection:</strong> Always active. Alerts automatically after 3 failed consecutive polls (~15s) and sends recovery notifications when connectivity returns.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Test Alert Card -->
+              <div class="settings-card" style="display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                  <div style="font-weight:600; font-size:0.82rem; color:#f8fafc;">Test Notification Dispatcher</div>
+                  <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Trigger a mock health alert to verify both in-app toast and OS push notifications.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="btnTestAlert_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                  <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  Dispatch Test Alert
+                </button>
+              </div>
+            </div>
+          `;
+
+          // Handlers
+          const chkToast = contentPane.querySelector(`#chkToastAlerts_${setWinId}`);
+          const sliderToast = contentPane.querySelector(`#sliderToast_${setWinId}`);
+          if (chkToast) {
+            chkToast.onchange = (e) => {
+              localStorage.setItem('shellman_toast_alerts', e.target.checked ? 'true' : 'false');
+              if (sliderToast) sliderToast.style.backgroundColor = e.target.checked ? '#0284c7' : '#334155';
+            };
+          }
+
+          const chkPush = contentPane.querySelector(`#chkPushAlerts_${setWinId}`);
+          const sliderPush = contentPane.querySelector(`#sliderPush_${setWinId}`);
+          if (chkPush) {
+            chkPush.onchange = (e) => {
+              localStorage.setItem('shellman_push_alerts', e.target.checked ? 'true' : 'false');
+              if (sliderPush) sliderPush.style.backgroundColor = e.target.checked ? '#0284c7' : '#334155';
+            };
+          }
+
+          // Custom numeric inputs & presets
+          const inpCpu = contentPane.querySelector(`#inpCpuThresh_${setWinId}`);
+          const cpuPresets = contentPane.querySelectorAll('.btn-preset-cpu');
+          const saveCpu = (val) => {
+            const num = Math.min(100, Math.max(1, parseInt(val, 10) || 90));
+            inpCpu.value = num;
+            localStorage.setItem('shellman_alert_cpu_threshold', String(num));
+            cpuPresets.forEach(b => {
+              const active = b.getAttribute('data-val') === String(num);
+              b.style.borderColor = active ? '#38bdf8' : '';
+              b.style.color = active ? '#38bdf8' : '';
+            });
+            if (window.showToast) window.showToast(`CPU alert threshold set to ${num}%`, 'info');
+          };
+          if (inpCpu) {
+            inpCpu.onchange = (e) => saveCpu(e.target.value);
+            cpuPresets.forEach(b => {
+              b.onclick = () => saveCpu(b.getAttribute('data-val'));
+            });
+          }
+
+          const inpRam = contentPane.querySelector(`#inpRamThresh_${setWinId}`);
+          const ramPresets = contentPane.querySelectorAll('.btn-preset-ram');
+          const saveRam = (val) => {
+            const num = Math.min(100, Math.max(1, parseInt(val, 10) || 90));
+            inpRam.value = num;
+            localStorage.setItem('shellman_alert_ram_threshold', String(num));
+            ramPresets.forEach(b => {
+              const active = b.getAttribute('data-val') === String(num);
+              b.style.borderColor = active ? '#38bdf8' : '';
+              b.style.color = active ? '#38bdf8' : '';
+            });
+            if (window.showToast) window.showToast(`RAM alert threshold set to ${num}%`, 'info');
+          };
+          if (inpRam) {
+            inpRam.onchange = (e) => saveRam(e.target.value);
+            ramPresets.forEach(b => {
+              b.onclick = () => saveRam(b.getAttribute('data-val'));
+            });
+          }
+
+          const inpDur = contentPane.querySelector(`#inpDuration_${setWinId}`);
+          const durPresets = contentPane.querySelectorAll('.btn-preset-dur');
+          const saveDur = (val) => {
+            const num = Math.min(60, Math.max(1, parseInt(val, 10) || 5));
+            inpDur.value = num;
+            localStorage.setItem('shellman_alert_duration_mins', String(num));
+            durPresets.forEach(b => {
+              const active = b.getAttribute('data-val') === String(num);
+              b.style.borderColor = active ? '#38bdf8' : '';
+              b.style.color = active ? '#38bdf8' : '';
+            });
+            if (window.showToast) window.showToast(`Sustained alert duration set to ${num} minutes`, 'info');
+          };
+          if (inpDur) {
+            inpDur.onchange = (e) => saveDur(e.target.value);
+            durPresets.forEach(b => {
+              b.onclick = () => saveDur(b.getAttribute('data-val'));
+            });
+          }
+
+          const reqBtn = contentPane.querySelector(`#btnRequestPerm_${setWinId}`);
+          if (reqBtn && hasNotif) {
+            reqBtn.onclick = async () => {
+              await Notification.requestPermission();
+              renderAlertsTab();
+            };
+          }
+
+          const testBtn = contentPane.querySelector(`#btnTestAlert_${setWinId}`);
+          if (testBtn) {
+            testBtn.onclick = () => {
+              const cVal = inpCpu ? inpCpu.value : '90';
+              const rVal = inpRam ? inpRam.value : '90';
+              if (window.ServerHealthAlerts) {
+                window.ServerHealthAlerts.triggerAlert('Test Server Alert', `Host "production-server" CPU utilization sustained at ${cVal}% and RAM at ${rVal}%.`, 'danger');
+              } else if (window.showToast) {
+                window.showToast(`Test Health Alert: Host "production-server" CPU sustained at ${cVal}%`, 'danger');
+              }
+            };
+          }
+        };
+
+        // Render Backup & Export Tab
+        const renderBackupTab = () => {
+          contentPane.innerHTML = `
+            <div>
+              <h3 class="settings-section-title">Configuration Backup & Migration</h3>
+              <p class="settings-section-desc">Export or import custom automation actions, server nodes, and visual UI preferences in a unified JSON document.</p>
+
+              <!-- Export Card -->
+              <div class="settings-card" style="margin-bottom:1.25rem;">
+                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Export ShellMan Archive</div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4;">
+                  Packages all registered server hosts, custom action scripts, and desktop appearance preferences into a portable JSON document.<br>
+                  <span style="color:#fbbf24; font-weight:600;">Security Notice:</span> Master passwords and SSH private keys are sanitized from the export. You can safely transfer this file across machines.
+                </p>
+                <div>
+                  <button class="btn btn-primary btn-sm" id="btnExportConfig_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                    <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export Settings Archive (.json)
+                  </button>
+                </div>
+              </div>
+
+              <!-- Import Card -->
+              <div class="settings-card">
+                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Import Configuration Archive</div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4;">
+                  Restore server nodes, custom actions, and desktop preferences from a previously exported <code style="color:#38bdf8;">shellman_backup_*.json</code> file. Existing nodes and actions will be merged seamlessly.
+                </p>
+
+                <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:440px;">
+                  <div>
+                    <input type="file" id="inpImportConfig_${setWinId}" accept=".json,application/json" class="form-control" style="font-size:0.8rem; padding:0.4rem;">
+                  </div>
+
+                  <div id="importStatusBox_${setWinId}" style="display:none; padding:0.45rem 0.75rem; border-radius:4px; font-size:0.75rem;"></div>
+
+                  <div>
+                    <button class="btn btn-secondary btn-sm" id="btnImportConfig_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                      <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                      Import and Restore Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+
+          // Export handler
+          const expBtn = contentPane.querySelector(`#btnExportConfig_${setWinId}`);
+          if (expBtn) {
+            expBtn.onclick = async () => {
+              expBtn.disabled = true;
+              expBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Exporting...`;
+              try {
+                const prefs = {
+                  shellman_theme: localStorage.getItem('shellman_theme') || 'dark',
+                  shellman_wallpaper: localStorage.getItem('shellman_wallpaper') || '',
+                  shellman_font_size: localStorage.getItem('shellman_font_size') || '16',
+                  shellman_font_family: localStorage.getItem('shellman_font_family') || '',
+                  shellman_toast_alerts: localStorage.getItem('shellman_toast_alerts') || 'true',
+                  shellman_push_alerts: localStorage.getItem('shellman_push_alerts') || 'true',
+                  shellman_ip_revealed: localStorage.getItem('shellman_ip_revealed') || 'false'
+                };
+                const resp = await fetch('/api/settings/export', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ preferences: prefs })
+                });
+                const res = await resp.json();
+                if (res.success && res.data) {
+                  const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = res.filename || 'shellman_backup.json';
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                  if (window.showToast) window.showToast('Configuration archive exported successfully!', 'success');
+                } else {
+                  DesktopModal.alert({ title: 'Export Failed', message: res.error || 'Failed to export configuration archive.', type: 'danger' });
+                }
+              } catch (e) {
+                DesktopModal.alert({ title: 'Export Error', message: String(e), type: 'danger' });
+              } finally {
+                expBtn.disabled = false;
+                expBtn.innerHTML = `
+                  <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Export Settings Archive (.json)
+                `;
+              }
+            };
+          }
+
+          // Import handler
+          const impBtn = contentPane.querySelector(`#btnImportConfig_${setWinId}`);
+          const fileInp = contentPane.querySelector(`#inpImportConfig_${setWinId}`);
+          const statusBox = contentPane.querySelector(`#importStatusBox_${setWinId}`);
+
+          if (impBtn && fileInp) {
+            impBtn.onclick = async () => {
+              const file = fileInp.files && fileInp.files[0];
+              if (!file) {
+                statusBox.style.display = 'block';
+                statusBox.style.background = 'rgba(239,68,68,0.12)';
+                statusBox.style.color = '#f87171';
+                statusBox.textContent = 'Please choose a .json backup file first.';
+                return;
+              }
+
+              impBtn.disabled = true;
+              impBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Restoring...`;
+              statusBox.style.display = 'none';
+
+              try {
+                const text = await file.text();
+                const jsonPayload = JSON.parse(text);
+
+                const resp = await fetch('/api/settings/import', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(jsonPayload)
+                });
+                const res = await resp.json();
+                if (res.success) {
+                  statusBox.style.display = 'block';
+                  statusBox.style.background = 'rgba(16,185,129,0.12)';
+                  statusBox.style.color = '#34d399';
+                  statusBox.textContent = '✓ ' + (res.message || 'Configuration restored successfully!');
+
+                  // Restore UI preferences
+                  if (res.preferences && typeof res.preferences === 'object') {
+                    for (const [k, v] of Object.entries(res.preferences)) {
+                      if (v !== undefined && v !== null) {
+                        localStorage.setItem(k, v);
+                      }
+                    }
+                    if (res.preferences.shellman_wallpaper) {
+                      const ws = document.getElementById('desktopWorkspace');
+                      if (ws) ws.style.backgroundImage = `url('${res.preferences.shellman_wallpaper}')`;
+                    }
+                  }
+
+                  if (window.showToast) window.showToast('Settings restored successfully!', 'success');
+                  loadServers();
+                } else {
+                  statusBox.style.display = 'block';
+                  statusBox.style.background = 'rgba(239,68,68,0.12)';
+                  statusBox.style.color = '#f87171';
+                  statusBox.textContent = res.error || 'Failed to restore configuration.';
+                }
+              } catch (e) {
+                statusBox.style.display = 'block';
+                statusBox.style.background = 'rgba(239,68,68,0.12)';
+                statusBox.style.color = '#f87171';
+                statusBox.textContent = 'Invalid file or parsing error: ' + e;
+              } finally {
+                impBtn.disabled = false;
+                impBtn.innerHTML = `
+                  <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  Import and Restore Settings
+                `;
+              }
+            };
+          }
+        };
+
         // Render About Tab
         const renderAboutTab = () => {
           contentPane.innerHTML = `
@@ -7594,6 +10332,8 @@ class DesktopAppsController {
           if (tab === 'servers') renderServersTab();
           else if (tab === 'admin') renderAdminTab();
           else if (tab === 'appearance') renderAppearanceTab();
+          else if (tab === 'alerts') renderAlertsTab();
+          else if (tab === 'backup') renderBackupTab();
           else if (tab === 'about') renderAboutTab();
           else if (tab === 'pwa') renderPwaTab();
         };

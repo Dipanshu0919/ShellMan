@@ -64,6 +64,10 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 | **Process & Task Management** | Coarse CPU list or heavy background poller | **Agentless POSIX control (SIGTERM, SIGKILL, SIGSTOP, SIGCONT) with RSS & PSS memory metrics** |
 | **Terminal Capability** | Simulated web console | **Real interactive PTY with xterm.js (vim, htop, tmux)** |
 | **Code Editing** | Plain textarea or basic editor | **Full Monaco Editor (VS Code engine)** |
+| **Directory Sync & Backup** | Complex CLI syntax or absent | **Dual-Mode Agentless Rsync (Local &harr; Remote Push/Pull + Server Mirror) with dry-run diffs** |
+| **Scheduled Jobs (Cron)** | Raw crontab text editing | **Visual Crontab Manager with human-readable scheduler & 1-click Run Now subshell tester** |
+| **Git Deployment** | Manual terminal pulls | **Git Continuous Deployment with live commits log, branch tracking, & automated webhook triggers** |
+| **Two-Factor Security** | Often absent or complex addon | **Native TOTP 2FA with pure SVG QR codes & emergency recovery backup codes** |
 | **Interface Style** | Tab-heavy static web pages | **Fluid Multi-Window Web Desktop OS & PWA** |
 | **Clean Exit** | Leaves packages, scripts, & config cruft | **Disconnect SSH and your server is completely untouched** |
 
@@ -105,10 +109,12 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 
 ## Key Features
 
-### 1. Multi-Window Desktop Workspace (Window Manager)
+### 1. Multi-Window Desktop Workspace & Window Snapping
 - **True Desktop Experience**: Open multiple applications side-by-side. Move, resize, minimize to dock, maximize, and cascade windows smoothly.
-- **Interactive Application Dock**: Launch and switch between Overview, Terminal, File Manager, Code Workspace, Task Manager, Nginx & Domains Manager, Services, Logs, and Settings.
+- **Drag-and-Drop Aero Window Snapping**: Drag any window to the left or right edge of the screen to snap to 50% viewport width, or drag to the top edge to maximize. Displays a translucent glassmorphism snap preview overlay with smooth restore on drag release.
+- **Interactive Application Dock**: Launch and switch between Overview, Terminal, File Manager, Code Workspace, Task Manager, Nginx & Domains Manager, Services, Logs, Rsync Sync, Cron Scheduler, Git Deployments, and Settings.
 - **Central Node Switcher**: Seamlessly switch active servers with one click.
+- **Unified Command Palette (Ctrl+K)**: Instant search across desktop apps, registered server nodes, and remote server files over SFTP. Typing a filename (e.g. `nginx.conf`) searches the host and opens it directly in Monaco Code Workspace.
 - **Privacy IP Masking Toggle**: Sensitive server IP addresses are masked by default (`20.219.2***:22`). Click the inline eye icon SVG to reveal or hide unmasked host endpoints instantly.
 - **Persistent Preferences**: Wallpapers, window geometry, and privacy settings persist in local browser storage.
 
@@ -164,9 +170,11 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Host Telemetry Bar**: Integrated header meters displaying live host-wide CPU %, RAM %, and root partition disk % with animated capacity bars.
 - **Column Customization & Instant Filtering**: Select visible columns with localStorage persistence. Filter instantly across PID, username, command name, and argument flags. Sort columns ascending or descending with one click.
 
-### 7. System Services & Journalctl Logs
+### 7. System Services, Journalctl Logs & Live Viewer
 - **Systemd Unit Control**: Inspect all service states (`active`, `running`, `failed`, `inactive`) with one-click Start, Stop, and Restart actions.
-- **System & Journalctl Logs**: Stream journal logs in real-time with filtering by service unit and severity level.
+- **Regex Syntax Highlighting**: Journal and system logs are rendered with color-coded syntax formatting: errors (`red`), warnings (`amber`), notice/info (`cyan`), debug (`gray`), IPv4/IPv6 addresses (`blue`), and HTTP status codes.
+- **Continuous Live View Streaming**: Real-time streaming toggle (`Live View: ON/OFF`) polls and streams incoming system log entries continuously into the terminal view without requiring manual refreshes or reopening the window.
+- **Severity Counters & In-Log Filtering**: Live count pills for Total, Errors, Warnings, and Info lines, coupled with instant regex search filtering.
 
 ### 8. Nginx Web Server, Reverse Proxy Routing & Certbot SSL
 - **Reverse Proxy Domain Routing**: Route public domains and subdomains to internal backend services and microservices running on local ports (Node.js, Python/Flask/FastAPI, Next.js, Go, or Docker containers).
@@ -178,6 +186,51 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 ### 9. Progressive Web App (PWA) Support
 - **Installable Desktop App**: Install ShellMan as a native desktop application in Chrome, Brave, Edge, or Safari with custom window controls overlay.
 - **Distraction-Free**: Runs in standalone mode without browser tabs, address bars, or extension clutter.
+
+### 10. Two-Factor Authentication (2FA / TOTP)
+- **Time-Based One-Time Passwords (TOTP)**: Protect master administrator access using standard authenticator apps (Google Authenticator, Authy, 1Password, Bitwarden).
+- **Pure Vector QR Code**: High-contrast SVG QR barcode generated dynamically without raster image dependencies.
+- **Emergency Recovery Backup Codes**: Generates 8 one-time alphanumeric backup recovery codes (`XXXX-XXXX`) during 2FA activation with a 1-click copy/download modal to prevent lockouts.
+- **Dedicated Recovery Flow**: Login prompt includes an alternative "Use a backup code instead" option that validates single-use codes seamlessly with or without dashes.
+- **Safe 2FA Deactivation**: Requires entering the current master administrator password to disable 2FA, preventing unauthorized deactivations.
+
+### 11. Configuration Backup & Migration (Export / Import)
+- **Unified JSON Portability**: Export your complete ShellMan setup into a single portable `.json` archive.
+- **Credential Sanitization**: Server nodes are exported with passwords and private keys stripped, making backups safe to share or store.
+- **Seamless Restore**: Import restores custom automation actions, server nodes, and visual preferences (`theme`, `wallpaper`, `font-size`) across machines.
+
+### 12. Server Health Monitoring & Configurable Alerts
+- **Configurable Resource Thresholds**: Customize exact trigger thresholds for **CPU Utilization** (e.g. 60% to 95%) and **RAM Utilization** (e.g. 60% to 95%) with custom value inputs.
+- **Sustained Duration Filter**: Set minimum duration (1 to 10 minutes) before an alert fires to eliminate false alarms from transient compilation or backup spikes.
+- **Node Outage Detection**: Automatically alerts when a host fails 3 consecutive telemetry polls (~15s) and dispatches recovery notices upon reconnection.
+- **Dual Delivery Channels**: Real-time glassmorphism in-app toast banners plus native OS push notifications via Web Notifications API / PWA. Includes a test alert dispatcher.
+
+### 13. Agentless File Sync (Rsync over SSH)
+- **Dual Sync Engine**:
+  - **Mode 1: Local &harr; Remote Sync**: Transfer and synchronize folders directly between your local workstation running ShellMan and the remote server over SSH:
+    - **Push (`Local &rarr; Remote Server`)**: Uploads and synchronizes local project directories to remote server destinations.
+    - **Pull (`Remote Server &rarr; Local`)**: Downloads and mirrors remote directories to your local machine.
+    - **Zero-Dependency SSH Auth**: Uses POSIX `SSH_ASKPASS` and temporary key permissions (`chmod 0600`) — fully supporting both password and private key authentication without needing `sshpass`.
+  - **Mode 2: Server Backup & Mirror**: Direct server-side directory replication (e.g., `/var/www/` &rarr; `/var/backups/www/`) executed entirely on the remote host via the persistent SSH session without pulling data over your local connection.
+- **Interactive Directory Browser (Local & Remote)**: Built-in modal directory picker supporting both remote server SFTP and local workstation filesystems with breadcrumb navigation, double-click traversal, quick presets (`~/`, `~/Projects`, `~/Documents`, `/var/www/`, `/opt/`, `/etc/`), and real-time directory creation (`+ New Folder`).
+- **Safe Dry-Run Preview (`-n`)**: Evaluates transfer operations beforehand, presenting the exact files to be synchronized, total files count, and byte statistics before applying changes.
+- **Flexible Options**: Toggle Archive mode (`-a`), network stream compression (`-z`), and exact mirror deletion (`--delete`).
+- **Exclude Pattern Filters**: Ignore build artifacts and cache folders (`.git`, `node_modules`, `__pycache__`, `*.tmp`, `.DS_Store`).
+- **Live Output Stream**: Formatted terminal output pane with status badges (`IDLE`, `ANALYZING`, `PREVIEW OK`, `SYNCING`, `SUCCESS`, `FAILED`) and exit code tracking.
+
+### 14. Cron Job Manager (Scheduler)
+- **Visual Crontab Manager**: Inspect, add, edit, toggle, and delete scheduled cron entries on remote servers without manual terminal editing.
+- **Human-Readable Decoder**: Automatically translates raw cron syntax (`0 2 * * *`) into plain English descriptions ("Daily at 02:00").
+- **Schedule Presets**: 1-click presets for Hourly, Daily, Weekly, Monthly, Every 5/15 Minutes, and System Startup (`@reboot`).
+- **Immediate Execution Tester**: "Run Now" action executes any scheduled cron command in a subshell over SSH and displays stdout/stderr output immediately.
+- **Native 38px Utility Toolbar**: Integrated live search filter, schedule badges, and clean vector SVG icons.
+
+### 15. Git Continuous Deployment & Webhooks
+- **Repository Linking**: Link Git repositories to any server directory with branch tracking (`main`, `master`, `staging`) and interactive SFTP Directory Picker support.
+- **Live Git Inspection**: Inspect real-time branch status, remote origin URL, working tree clean/dirty state, and recent commit history (hash, author, relative time, message).
+- **1-Click Pull Latest**: Pull updates and automatically execute post-deployment commands (e.g. `npm install && npm run build` or `systemctl reload nginx`).
+- **Automated Deployment Webhooks**: Generates unique webhook URLs (`/api/deploy/webhook/<token>`) for GitHub and GitLab to automate deployment on `git push`.
+- **Native 38px Utility Toolbar**: Filter across deployments, status badges, and deployment logs.
 
 ---
 
@@ -223,8 +276,10 @@ http://127.0.0.1:5000
 ## Security Architecture
 
 - **Zero-Agent Attack Surface**: Because no daemon runs on your managed server, there are no extra background listeners or open ports vulnerable to exploitation.
+- **Two-Factor Authentication (TOTP)**: Master administrator accounts can be protected with standard 6-digit TOTP authenticator codes and single-use emergency backup recovery codes.
 - **Fernet AES-128 Encryption**: Server passwords and SSH private keys are stored using symmetric authenticated encryption (`cryptography.fernet.Fernet`).
 - **IP Masking**: Server IP addresses in the top node pill are masked to prevent accidental leakage during screen shares or streaming, with an interactive toggle button to unmask when needed.
+- **Sanitized Backup Archives**: Settings and server configurations exported for portability are strictly scrubbed of passwords and private keys.
 - **Path Traversal Protection**: All SFTP path parameters are strictly normalized and sanitized against directory traversal attacks (`../`).
 - **Key Authentication**: Full support for standard password authentication as well as RSA and Ed25519 OpenSSH private key pairs (with passphrase support).
 
@@ -235,7 +290,7 @@ http://127.0.0.1:5000
 | Shortcut | Action |
 | :--- | :--- |
 | <kbd>Alt</kbd> + <kbd>Tab</kbd> | Interactive Application Switcher |
-| <kbd>Ctrl</kbd> + <kbd>K</kbd> | Quick Command Palette & Server Search |
+| <kbd>Ctrl</kbd> + <kbd>K</kbd> | Unified Command Palette (Apps, Server Nodes & Remote SFTP Files) |
 | <kbd>Ctrl</kbd> + <kbd>P</kbd> | File Search in Monaco Workspace |
 | <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save File directly over SFTP |
 | <kbd>Ctrl</kbd> + <kbd>C</kbd> | Piped directly to remote terminal (`SIGINT`) |

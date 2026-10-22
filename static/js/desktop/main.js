@@ -206,6 +206,24 @@ function renderDesktopIcons() {
       icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M7 16V8l5 8V8M16 8v8" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     },
     {
+      id: 'sync',
+      title: 'File Sync',
+      gradient: 'linear-gradient(135deg, #0284c7, #0369a1)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    },
+    {
+      id: 'cron',
+      title: 'Cron Jobs',
+      gradient: 'linear-gradient(135deg, #d97706, #f59e0b)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><polyline points="12 6 12 12 16 14" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg>'
+    },
+    {
+      id: 'git',
+      title: 'Git Deploy',
+      gradient: 'linear-gradient(135deg, #e11d48, #f43f5e)',
+      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="18" cy="18" r="3" stroke="#ffffff" stroke-width="1.8"/><circle cx="6" cy="6" r="3" stroke="#ffffff" stroke-width="1.8"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12" stroke="#ffffff" stroke-width="1.8"/></svg>'
+    },
+    {
       id: 'settings',
       title: 'Settings',
       gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
@@ -236,6 +254,100 @@ function handleDesktopIconClick(el, appId) {
 }
 
 // Centralized Telemetry Bus for Synchronized System Metrics
+const ServerHealthAlerts = {
+  states: {},
+  getOrCreateState(serverId) {
+    if (!this.states[serverId]) {
+      this.states[serverId] = {
+        failedConsecutivePolls: 0,
+        highCpuStartTime: null,
+        offlineAlertSent: false,
+        lastCpuAlertSentAt: 0,
+        highRamStartTime: null,
+        lastRamAlertSentAt: 0
+      };
+    }
+    return this.states[serverId];
+  },
+  triggerAlert(title, message, severity = 'warning') {
+    // 1. In-App Desktop Toast
+    const toastAllowed = localStorage.getItem('shellman_toast_alerts') !== 'false';
+    if (toastAllowed && typeof window.showToast === 'function') {
+      window.showToast(`${title}: ${message}`, severity);
+    }
+
+    // 2. OS / Browser Push Notification
+    const pushAllowed = localStorage.getItem('shellman_push_alerts') !== 'false';
+    if (pushAllowed && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(`ShellMan: ${title}`, {
+          body: message,
+          icon: '/static/icons/icon-192.png'
+        });
+      } catch (e) {
+        console.warn('Browser notification error:', e);
+      }
+    }
+  },
+  evaluate(serverId, serverName, isOnline, metrics) {
+    if (!serverId) return;
+    const state = this.getOrCreateState(serverId);
+
+    if (!isOnline) {
+      state.failedConsecutivePolls++;
+      if (state.failedConsecutivePolls >= 3 && !state.offlineAlertSent) {
+        state.offlineAlertSent = true;
+        this.triggerAlert('Server Offline', `Host "${serverName}" is unreachable or offline!`, 'danger');
+      }
+    } else {
+      if (state.offlineAlertSent) {
+        this.triggerAlert('Server Restored', `Host "${serverName}" is back online and responding.`, 'success');
+        state.offlineAlertSent = false;
+      }
+      state.failedConsecutivePolls = 0;
+
+      // Configurable user thresholds
+      const cpuThreshold = parseInt(localStorage.getItem('shellman_alert_cpu_threshold') || '90', 10);
+      const ramThreshold = parseInt(localStorage.getItem('shellman_alert_ram_threshold') || '90', 10);
+      const durationMins = parseInt(localStorage.getItem('shellman_alert_duration_mins') || '5', 10);
+      const durationMs = Math.max(1, durationMins) * 60 * 1000;
+
+      // 1. CPU Threshold Check
+      const cpu = metrics && typeof metrics.cpu === 'number' ? metrics.cpu : 0;
+      if (cpu >= cpuThreshold) {
+        const now = Date.now();
+        if (!state.highCpuStartTime) {
+          state.highCpuStartTime = now;
+        } else if (now - state.highCpuStartTime >= durationMs) {
+          if (now - state.lastCpuAlertSentAt >= durationMs) {
+            this.triggerAlert('High CPU Utilization', `Host "${serverName}" CPU has exceeded ${cpuThreshold}% for >${durationMins}m (${cpu}%).`, 'danger');
+            state.lastCpuAlertSentAt = now;
+          }
+        }
+      } else {
+        state.highCpuStartTime = null;
+      }
+
+      // 2. RAM / Memory Threshold Check
+      const ram = (metrics && metrics.memory && typeof metrics.memory.percent === 'number') ? metrics.memory.percent : 0;
+      if (ram >= ramThreshold) {
+        const now = Date.now();
+        if (!state.highRamStartTime) {
+          state.highRamStartTime = now;
+        } else if (now - state.highRamStartTime >= durationMs) {
+          if (now - state.lastRamAlertSentAt >= durationMs) {
+            this.triggerAlert('High RAM Utilization', `Host "${serverName}" RAM usage has exceeded ${ramThreshold}% for >${durationMins}m (${ram}%).`, 'danger');
+            state.lastRamAlertSentAt = now;
+          }
+        }
+      } else {
+        state.highRamStartTime = null;
+      }
+    }
+  }
+};
+window.ServerHealthAlerts = ServerHealthAlerts;
+
 const DesktopTelemetry = {
   serverId: null,
   subscribers: new Set(),
@@ -261,6 +373,9 @@ const DesktopTelemetry = {
   async poll(force = false) {
     if (!this.serverId || (this.isPolling && !force)) return;
     this.isPolling = true;
+    const srv = (window.DesktopServersList || []).find(s => s.id === this.serverId);
+    const serverName = srv ? srv.name : `Server #${this.serverId}`;
+
     try {
       const url = `/api/servers/${this.serverId}/metrics` + (force ? '?force=1' : '');
       const resp = await fetch(url);
@@ -269,11 +384,15 @@ const DesktopTelemetry = {
         this.broadcast(res.metrics);
         const topDot = document.getElementById('topServerDot');
         if (topDot) topDot.className = 'status-dot connected';
+        ServerHealthAlerts.evaluate(this.serverId, serverName, true, res.metrics);
       } else {
         const topDot = document.getElementById('topServerDot');
         if (topDot) topDot.className = 'status-dot disconnected';
+        ServerHealthAlerts.evaluate(this.serverId, serverName, false, null);
       }
-    } catch (_) {}
+    } catch (_) {
+      ServerHealthAlerts.evaluate(this.serverId, serverName, false, null);
+    }
     finally {
       this.isPolling = false;
     }

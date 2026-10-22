@@ -15,6 +15,7 @@
   <script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-fit.js') }}"></script>
   <!-- Load Monaco Editor AMD Loader -->
   <script src="{{ url_for('static', filename='vendor/monaco/loader.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/modal.js') }}?v=1.0"></script>
   <style>
     body, html {
       margin: 0;
@@ -328,13 +329,19 @@
     renderTabs();
   }
 
-  function closeFile(filePath, event) {
+  async function closeFile(filePath, event) {
     if (event) event.stopPropagation();
     const file = openFiles.find(f => f.path === filePath);
     if (!file) return;
 
-    if (file.isDirty && !confirm(`Discard unsaved changes in ${file.name}?`)) {
-      return;
+    if (file.isDirty) {
+      const ok = await DesktopModal.confirm({
+        title: 'Discard Changes',
+        message: `Discard unsaved changes in "${file.name}"?`,
+        confirmText: 'Discard Changes',
+        isDanger: true
+      });
+      if (!ok) return;
     }
 
     if (file.model) {
@@ -808,7 +815,13 @@
   async function ctxHandleDelete() {
     if (!contextTarget) return;
     const name = contextTarget.path.split('/').pop();
-    if (!confirm(`Are you sure you want to delete ${name}?`)) return;
+    const ok = await DesktopModal.confirm({
+      title: 'Delete Item',
+      message: `Are you sure you want to delete "${name}"?`,
+      confirmText: 'Delete',
+      isDanger: true
+    });
+    if (!ok) return;
 
     try {
       const resp = await fetch(`/api/servers/${serverId}/files/delete`, {

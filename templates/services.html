@@ -137,7 +137,13 @@
   }
 
   async function svcAction(name, action) {
-    if (!confirm(`Perform action '${action}' on service ${name}?`)) return;
+    const ok = await DesktopModal.confirm({
+      title: 'Service Action',
+      message: `Perform action '${action}' on service ${name}?`,
+      confirmText: 'Execute',
+      isDanger: action === 'stop' || action === 'restart'
+    });
+    if (!ok) return;
 
     try {
       const resp = await fetch(`/api/servers/${serverId}/services/action`, {
@@ -147,10 +153,10 @@
       });
       const res = await resp.json();
       if (window.showToast) window.showToast(res.message, res.success ? 'success' : 'error');
-      else alert(res.message);
+      else DesktopModal.alert({ title: 'Service Result', message: res.message, type: res.success ? 'success' : 'danger' });
       loadServices();
     } catch (e) {
-      alert('Error triggering service action: ' + e);
+      DesktopModal.alert({ title: 'Service Error', message: 'Error triggering service action: ' + e, type: 'danger' });
     }
   }
 

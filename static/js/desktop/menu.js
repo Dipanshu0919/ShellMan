@@ -165,59 +165,179 @@ class DesktopMenusController {
     const input = this.cmdPaletteEl.querySelector('#cmdInput');
     if (input) {
       input.value = '';
+      this._selectedIndex = 0;
+      this._activeQuery = '';
       this.renderCommandResults('');
       input.focus();
+
+      if (!input._hasPaletteNav) {
+        input._hasPaletteNav = true;
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.navigatePalette(1);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.navigatePalette(-1);
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            this.execCommand(this._selectedIndex || 0);
+          } else if (e.key === 'Escape') {
+            this.closeCommandPalette();
+          }
+        });
+      }
     }
   }
 
   closeCommandPalette() {
     if (this.cmdPaletteEl) this.cmdPaletteEl.style.display = 'none';
+    if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
+  }
+
+  navigatePalette(dir) {
+    if (!this._currentCmds || this._currentCmds.length === 0) return;
+    this._selectedIndex = Math.max(0, Math.min(this._currentCmds.length - 1, (this._selectedIndex || 0) + dir));
+    const items = this.cmdPaletteEl.querySelectorAll('.cmd-item');
+    items.forEach((item, idx) => {
+      const isSel = idx === this._selectedIndex;
+      item.classList.toggle('selected', isSel);
+      if (isSel) item.scrollIntoView({ block: 'nearest' });
+    });
   }
 
   renderCommandResults(query) {
-    query = (query || '').toLowerCase().trim();
+    const rawQuery = (query || '').trim();
+    const qLower = rawQuery.toLowerCase();
+    this._activeQuery = rawQuery;
+    this._selectedIndex = 0;
+
     const resultsContainer = this.cmdPaletteEl.querySelector('#cmdResults');
     if (!resultsContainer) return;
 
+    const currentServerId = window.DesktopConfig ? window.DesktopConfig.serverId : null;
+    const currentServerName = window.DesktopConfig ? window.DesktopConfig.serverName : 'Server';
+
+    // 1. Applications & Window Actions
     const availableCommands = [
-      { name: 'Terminal', desc: 'Open interactive SSH shell', action: () => DesktopApps.launch('terminal'), badge: 'App' },
-      { name: 'File Manager', desc: 'Browse, edit, and upload SFTP files', action: () => DesktopApps.launch('files'), badge: 'App' },
-      { name: 'Code Workspace', desc: 'Open Monaco remote IDE', action: () => DesktopApps.launch('code'), badge: 'App' },
-      { name: 'System Overview', desc: 'View live node telemetry & dials', action: () => DesktopApps.launch('overview'), badge: 'App' },
-      { name: 'Task Manager', desc: 'Manage Linux processes & signals', action: () => DesktopApps.launch('processes'), badge: 'App' },
-      { name: 'Systemd Services', desc: 'Start, stop, and restart units', action: () => DesktopApps.launch('services'), badge: 'App' },
-      { name: 'System Logs', desc: 'Stream journalctl entries', action: () => DesktopApps.launch('logs'), badge: 'App' },
-      { name: 'Hardware Specs', desc: 'View CPU architecture & interfaces', action: () => DesktopApps.launch('hardware'), badge: 'App' },
-      { name: 'Network & Sockets', desc: 'Inspect listening ports', action: () => DesktopApps.launch('network'), badge: 'App' },
-      { name: 'Nginx & Domains', desc: 'Reverse proxy routing, configuration editor, and Let\'s Encrypt SSL certificates', action: () => DesktopApps.launch('nginx'), badge: 'App' },
-      { name: 'System Settings', desc: 'Manage remote servers, admin password, and desktop appearance', action: () => DesktopApps.launch('settings'), badge: 'App' },
-      { name: 'Managed Servers', desc: 'Add, edit, test or delete server nodes', action: () => DesktopApps.launch('settings', { tab: 'servers' }), badge: 'App' },
-      { name: 'Install ShellMan App (PWA)', desc: 'Download website as standalone desktop operating app', action: () => PwaManager.promptInstall(), badge: 'PWA' },
-      { name: 'Cascade Windows', desc: 'Neatly arrange all open windows', action: () => WindowManager.cascadeWindows(), badge: 'Action' },
-      { name: 'Minimize All', desc: 'Minimize all windows to desktop', action: () => WindowManager.minimizeAll(), badge: 'Action' }
+      { name: 'Terminal', desc: 'Open interactive SSH shell', action: () => DesktopApps.launch('terminal'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>' },
+      { name: 'File Manager', desc: 'Browse, edit, and upload SFTP files', action: () => DesktopApps.launch('files'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>' },
+      { name: 'Code Workspace', desc: 'Open Monaco remote IDE', action: () => DesktopApps.launch('code'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>' },
+      { name: 'System Overview', desc: 'View live node telemetry & dials', action: () => DesktopApps.launch('overview'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>' },
+      { name: 'Task Manager', desc: 'Manage Linux processes & signals', action: () => DesktopApps.launch('processes'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>' },
+      { name: 'Systemd Services', desc: 'Start, stop, and restart units', action: () => DesktopApps.launch('services'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' },
+      { name: 'System Logs', desc: 'Stream journalctl entries with syntax highlighter', action: () => DesktopApps.launch('logs'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>' },
+      { name: 'Hardware Specs', desc: 'View CPU architecture & interfaces', action: () => DesktopApps.launch('hardware'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>' },
+      { name: 'Network & Sockets', desc: 'Inspect listening ports and established connections', action: () => DesktopApps.launch('network'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>' },
+      { name: 'Nginx & Domains', desc: 'Reverse proxy routing, configuration editor, and Let\'s Encrypt SSL certificates', action: () => DesktopApps.launch('nginx'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M7 16V8l5 8V8M16 8v8"></path></svg>' },
+      { name: 'File Sync (Rsync)', desc: 'Agentless remote directory sync and replication over SSH with dry-run preview', action: () => DesktopApps.launch('sync'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>' },
+      { name: 'Cron Job Manager', desc: 'Manage, schedule, and test crontab entries with presets and execution test', action: () => DesktopApps.launch('cron'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>' },
+      { name: 'Git Deployment', desc: 'Link Git repositories, pull latest code, and configure deployment webhooks', action: () => DesktopApps.launch('git'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12"></path></svg>' },
+      { name: 'System Settings', desc: 'Manage remote servers, admin password, and desktop appearance', action: () => DesktopApps.launch('settings'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' },
+      { name: 'Managed Servers', desc: 'Add, edit, test or delete server nodes', action: () => DesktopApps.launch('settings', { tab: 'servers' }), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>' },
+      { name: 'Install ShellMan App (PWA)', desc: 'Download website as standalone desktop operating app', action: () => PwaManager.promptInstall(), badge: 'PWA', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>' },
+      { name: 'Cascade Windows', desc: 'Neatly arrange all open windows', action: () => WindowManager.cascadeWindows(), badge: 'Action', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="16" height="16" rx="2"></rect><path d="M6 6h16v16H6z"></path></svg>' },
+      { name: 'Minimize All', desc: 'Minimize all windows to desktop', action: () => WindowManager.minimizeAll(), badge: 'Action', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>' }
     ];
 
-    const matched = availableCommands.filter(c => 
-      !query || c.name.toLowerCase().includes(query) || c.desc.toLowerCase().includes(query)
+    const matchedCmds = availableCommands.filter(c => 
+      !qLower || c.name.toLowerCase().includes(qLower) || c.desc.toLowerCase().includes(qLower)
     );
 
-    if (matched.length === 0) {
-      resultsContainer.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:0.8rem;">No matching commands</div>`;
+    // 2. Servers Search
+    const matchedServers = [];
+    if (window.DesktopServersList && Array.isArray(window.DesktopServersList)) {
+      window.DesktopServersList.forEach(s => {
+        if (!qLower || s.name.toLowerCase().includes(qLower) || s.host.toLowerCase().includes(qLower) || (s.username && s.username.toLowerCase().includes(qLower))) {
+          matchedServers.push({
+            name: s.name,
+            desc: `Switch to ${s.username}@${s.host}:${s.port}`,
+            action: () => { window.location.href = `/?server_id=${s.id}`; },
+            badge: s.id === currentServerId ? 'Active Server' : 'Server',
+            icon: `<svg viewBox="0 0 24 24" fill="none" stroke="${s.is_online ? '#34d399' : '#94a3b8'}" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>`
+          });
+        }
+      });
+    }
+
+    const initialCombined = [...matchedCmds, ...matchedServers];
+    this._currentCmds = initialCombined;
+    this.renderPaletteHtml(resultsContainer, initialCombined, rawQuery.length >= 2);
+
+    // 3. Debounced Remote Files Search over SFTP
+    if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
+
+    if (rawQuery.length >= 2 && currentServerId) {
+      this._fileSearchTimer = setTimeout(async () => {
+        try {
+          const resp = await fetch(`/api/servers/${currentServerId}/files/search?q=${encodeURIComponent(rawQuery)}`);
+          const data = await resp.json();
+          if (data.success && Array.isArray(data.results) && this._activeQuery === rawQuery) {
+            const fileCmds = data.results.map(f => ({
+              name: f.name,
+              desc: `${currentServerName}: ${f.path}`,
+              action: () => {
+                if (f.is_dir) {
+                  DesktopApps.launch('files', { serverId: currentServerId, path: f.path });
+                } else {
+                  DesktopApps.launch('code', { serverId: currentServerId, path: f.path, isDir: false });
+                }
+              },
+              badge: f.is_dir ? 'Remote Dir' : 'Remote File',
+              icon: f.is_dir 
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>'
+            }));
+
+            this._currentCmds = [...matchedCmds, ...matchedServers, ...fileCmds];
+            this.renderPaletteHtml(resultsContainer, this._currentCmds, false);
+          }
+        } catch (_) {}
+      }, 220);
+    }
+  }
+
+  renderPaletteHtml(container, items, isSearchingFiles) {
+    if (items.length === 0 && !isSearchingFiles) {
+      container.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:0.8rem;">No matching apps, servers, or files</div>`;
       return;
     }
 
-    resultsContainer.innerHTML = matched.map((c, idx) => `
-      <div class="cmd-item ${idx === 0 ? 'selected' : ''}" onclick="DesktopMenus.execCommand(${idx})">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        <div>
-          <div style="font-weight:600;color:var(--text-primary);">${c.name}</div>
-          <div style="font-size:0.74rem;color:var(--text-muted);">${c.desc}</div>
+    let html = items.map((c, idx) => `
+      <div class="cmd-item ${idx === (this._selectedIndex || 0) ? 'selected' : ''}" onclick="DesktopMenus.execCommand(${idx})">
+        <span style="display:inline-flex; align-items:center; flex-shrink:0;">${c.icon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg>'}</span>
+        <div style="min-width:0; overflow:hidden;">
+          <div style="font-weight:600; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${this.escapeHtml(c.name)}</div>
+          <div style="font-size:0.73rem; color:var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${this.escapeHtml(c.desc)}</div>
         </div>
-        <span class="cmd-badge">${c.badge}</span>
+        <span class="cmd-badge" style="flex-shrink:0;">${this.escapeHtml(c.badge)}</span>
       </div>
     `).join('');
 
-    this._currentCmds = matched;
+    if (isSearchingFiles) {
+      html += `
+        <div style="display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.8rem; font-size:0.72rem; color:var(--accent-cyan); border-top:1px solid rgba(255,255,255,0.06);">
+          <svg style="width:13px; height:13px; animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+          <span>Searching remote server files for "${this.escapeHtml(this._activeQuery)}"...</span>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+  }
+
+  escapeHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  execCommand(index) {
+    if (this._currentCmds) {
+      const cmd = this._currentCmds[index];
+      if (cmd && typeof cmd.action === 'function') {
+        this.closeCommandPalette();
+        cmd.action();
+      }
+    }
   }
 
   execCommand(index) {
