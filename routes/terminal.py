@@ -30,8 +30,18 @@ def register_terminal_sock(sock):
             ws.close()
             return
 
-        cols = int(request.args.get('cols', 80))
-        rows = int(request.args.get('rows', 24))
+        try:
+            raw_cols = int(request.args.get('cols', 80) or 80)
+            cols = max(10, min(500, raw_cols)) if raw_cols > 0 else 80
+        except (ValueError, TypeError):
+            cols = 80
+
+        try:
+            raw_rows = int(request.args.get('rows', 24) or 24)
+            rows = max(4, min(200, raw_rows)) if raw_rows > 0 else 24
+        except (ValueError, TypeError):
+            rows = 24
+
         raw_cwd = request.args.get('cwd') or request.args.get('path') or None
         cwd = raw_cwd.strip() if raw_cwd else None
         

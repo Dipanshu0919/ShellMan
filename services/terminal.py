@@ -15,8 +15,16 @@ class TerminalSession:
     def __init__(self, ws, server, cols=80, rows=24, term='xterm-256color', cwd=None):
         self.ws = ws
         self.server = server
-        self.cols = cols
-        self.rows = rows
+        try:
+            c = int(cols or 80)
+            self.cols = max(10, min(500, c)) if c > 0 else 80
+        except (ValueError, TypeError):
+            self.cols = 80
+        try:
+            r = int(rows or 24)
+            self.rows = max(4, min(200, r)) if r > 0 else 24
+        except (ValueError, TypeError):
+            self.rows = 24
         self.term = term
         self.cwd = cwd
         self.client = None
@@ -114,12 +122,20 @@ class TerminalSession:
                     self.channel.send(data.encode('utf-8'))
 
             elif mtype == 'resize':
-                cols = int(msg.get('cols', 80))
-                rows = int(msg.get('rows', 24))
+                try:
+                    c = int(msg.get('cols', 80) or 80)
+                    r = int(msg.get('rows', 24) or 24)
+                    cols = max(10, min(500, c)) if c > 0 else 80
+                    rows = max(4, min(200, r)) if r > 0 else 24
+                except (ValueError, TypeError):
+                    cols, rows = 80, 24
                 if self.channel and not self.channel.closed:
-                    self.channel.resize_pty(width=cols, height=rows)
-                    self.cols = cols
-                    self.rows = rows
+                    try:
+                        self.channel.resize_pty(width=cols, height=rows)
+                        self.cols = cols
+                        self.rows = rows
+                    except Exception as err:
+                        logger.debug(f"Failed to resize PTY: {err}")
 
             elif mtype == 'ping':
                 self.ws.send(json.dumps({'type': 'pong'}))
