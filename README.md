@@ -183,7 +183,27 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Safe Configuration Editor with Auto-Rollback**: Inspect and modify `/etc/nginx/nginx.conf` and site configs inside an embedded editor. Every save is pre-flight tested using `nginx -t`. If validation fails, changes are instantly rolled back to the backup copy to prevent service downtime.
 - **Service Controls**: One-click configuration reload (`nginx -s reload`), service restart, syntax testing, and native package installer for Nginx and Certbot across Debian, Ubuntu, RHEL/CentOS, and Arch Linux.
 
-### 9. Progressive Web App (PWA) Support
+### 9. Cloudflare Domains & Authoritative DNS Management
+- **Operator-Level Cloudflare Integration**: Connect your personal Cloudflare account once using a minimum-privilege scoped API token. No SaaS multi-tenant overhead or third-party credential exposure.
+- **Fernet Encrypted Secret Storage**: The Cloudflare API token is encrypted at rest using local per-installation Fernet keys (`0600` permissions) and is never transmitted in browser API responses, HTML, logs, or diagnostic outputs.
+- **Unified Domain Dashboard**: View domain zones, Cloudflare activation state (`active`, `pending`, `error`), assigned authoritative nameservers, SSL/TLS encryption mode, DNSSEC status, and associated ShellMan server node.
+- **Add Domain Workflow**: Add domains to Cloudflare with immediate retrieval of assigned nameservers, 1-click individual and bulk copy buttons, registrar update guidelines, and mail record disruption warnings.
+- **Full DNS Record Manager**: Add, edit, search, and delete records across all major record types: `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, `SRV`, and `CAA`.
+  - **Cloudflare Proxy Toggle**: 1-click toggle for Cloudflare edge proxying (CDN, WAF, DDoS protection) on eligible record types (`A`, `AAAA`, `CNAME`).
+  - **Granular TTL & Priority Controls**: Configure TTL from Automatic down to 1 minute, with priority inputs for `MX` and `SRV`.
+- **Domain-to-Server Linkage**: Connect root `@` or subdomains directly to any ShellMan server IP.
+  - **Private IP Guard**: Detects RFC 1918 / loopback / link-local addresses and warns if a private IP is about to be exposed publicly.
+  - **DNS Conflict Detection**: Detects if an existing record points to a different IP and requires explicit confirmation before overwriting.
+  - **Nginx & SSL Handoff**: 1-click transition to Nginx virtual host configuration and Certbot HTTPS certificate provisioning.
+- **Live Diagnostics & Reachability Probe**: Probes public DNS resolution, validates origin IP matching, checks HTTP/HTTPS status, and verifies SSL certificate presence.
+
+### 10. Live Netstat & DDoS Socket Monitor
+- **Interactive Active Socket Telemetry**: Displays all live TCP and UDP connections with protocol, connection state, local socket, remote foreign IP, and process/program names via standard `ss` / `netstat`.
+- **DDoS Activity Leaderboard**: Automatically aggregates and ranks remote IP addresses by total concurrent socket count and SYN_RECV state, giving immediate visibility into traffic spikes, port scans, and SYN flood attacks.
+- **State Breakdown**: Instant metric counters for Total Active, Established, SYN_RECV, and Time Wait sockets.
+- **Interactive Filtering & Auto-Refresh**: Real-time search across IP, port, or process, state filter dropdown (`ESTABLISHED`, `SYN_RECV`, `TIME_WAIT`, `CLOSE_WAIT`), 1-click IP copy, and configurable live polling intervals (`3s`, `5s`, `10s`, or paused).
+
+### 11. Progressive Web App (PWA) Support
 - **Installable Desktop App**: Install ShellMan as a native desktop application in Chrome, Brave, Edge, or Safari with custom window controls overlay.
 - **Distraction-Free**: Runs in standalone mode without browser tabs, address bars, or extension clutter.
 
@@ -270,6 +290,58 @@ http://127.0.0.1:5000
 > [!IMPORTANT]
 > **ShellMan does not ship with insecure default passwords.**
 > On your very first visit, you will automatically be directed to the **First-Time Setup Wizard** (`/setup`) where you create your master administrator username and secure password. Once created, the wizard locks permanently and launches you directly into your desktop environment.
+
+---
+
+## Cloudflare Integration Guide
+
+ShellMan includes an operator-level Cloudflare Domain & DNS manager. The integration connects to your personal Cloudflare account once to manage zones, configure DNS records, and link domains to your servers.
+
+### 1. Creating a Minimum-Privilege Scoped API Token
+Do **not** use your Cloudflare Global API Key or an R2 storage token (`cfat_...`). Create a scoped User API Token with only the permissions ShellMan requires:
+
+1. Log in to the [Cloudflare API Tokens Dashboard](https://dash.cloudflare.com/profile/api-tokens).
+2. Click **Create Token** > select **Create Custom Token** > **Get started**.
+3. Name your token (e.g. `ShellMan`).
+4. Under **Permissions**, configure the following entries:
+   - `Account` > `Account Settings` > `Read` *(Required to identify your Cloudflare Account)*
+   - `Zone` > `Zone Settings` > `Read`
+   - `Zone` > `Zone` > `Read`
+   - `Zone` > `DNS` > `Read`
+   - `Zone` > `Zone` > `Edit`
+   - `Zone` > `SSL and Certificates` > `Read`
+   - `Zone` > `DNS` > `Edit`
+5. Under **Account Resources**, select: `Include` > `All accounts` *(or your chosen account)*.
+6. Under **Zone Resources**, select: `Include` > `All zones`.
+7. Click **Continue to summary** > **Create Token**, and copy the generated token secret.
+
+![Cloudflare Token Permissions Setup](static/images/cloudflare-token-setup.png)
+
+### 2. Connecting to ShellMan
+1. Open the **Cloudflare Domains** app from the dock or launcher.
+2. Click **Cloudflare Settings** (or the status pill in the top header).
+3. Paste your scoped API token and click **Save & Connect**.
+4. ShellMan verifies the token with Cloudflare, encrypts it at rest in `instance/shellman.db` using your local per-install Fernet key (`instance/.fernet.key`), and automatically syncs existing zones.
+5. The connection is permanently stored in the local SQLite database across ShellMan restarts.
+
+### 3. Adding Domains & Updating Nameservers
+1. In the Domains app, click **+ Add Domain**.
+2. Enter your registered root domain (e.g. `example.com` or `run.place`).
+   > [!NOTE]
+   > - **Apex Domain Requirement**: Cloudflare manages DNS zones at the root domain level (e.g. `run.place`), not individual subdomains (e.g. `dipanshu.run.place`). Subdomains are configured as `A`, `AAAA`, or `CNAME` records inside the domain's **DNS Records** tab.
+   > - **Registrar Requirement**: ShellMan creates the DNS zone in Cloudflare but does not purchase or register domain ownership. You must already own the domain at a registrar (e.g. Namecheap, GoDaddy, Squarespace).
+3. Copy the two assigned Cloudflare nameservers (e.g., `ns1.cloudflare.com` and `ns2.cloudflare.com`).
+4. Log in to your domain registrar and update the nameserver settings from *Default* to *Custom Nameservers*.
+5. Return to ShellMan and click **Check Nameservers Now**. Once verified, the status badge will update to **Active**.
+
+### 4. Linking Domains to ShellMan Server Nodes
+1. Click on your domain in the dashboard to open the **Domain Details** view.
+2. Navigate to the **Server & Nginx Link** tab.
+3. Select your target server node and specify your subdomain (`@` for root, or `api`, `app`).
+4. ShellMan automatically detects the server's public IP address (and warns if a private RFC 1918 address is selected).
+5. Choose whether to enable Cloudflare edge proxying (CDN & DDoS protection) or DNS-only.
+6. Click **Apply & Create DNS A-Record**. If a conflicting record exists, ShellMan highlights the conflict and asks for confirmation before updating.
+7. Click **Open Nginx Manager** to configure a virtual host and provision Let's Encrypt SSL certificates seamlessly.
 
 ---
 

@@ -320,14 +320,16 @@ class SystemMonitor:
 
     @staticmethod
     def get_network_info(server) -> Dict[str, Any]:
-        """Retrieves network interface statistics and active listening ports."""
+        """Retrieves network interface statistics, active listening ports, and live active socket connections for DDoS/debugging."""
         script = (
             "echo '---INTERFACES---'; "
             "ip -br -s link 2>/dev/null || cat /proc/net/dev; "
             "echo '---LISTEN_PORTS---'; "
-            "ss -tulnp 2>/dev/null || netstat -tulnp 2>/dev/null"
+            "ss -tulnp 2>/dev/null || netstat -tulnp 2>/dev/null; "
+            "echo '---ACTIVE_CONNECTIONS---'; "
+            "ss -tunap 2>/dev/null || netstat -tunap 2>/dev/null"
         )
-        _, stdout, _ = ssh_manager.execute(server, script, timeout=8)
+        _, stdout, _ = ssh_manager.execute(server, script, timeout=10)
 
         sections = {}
         curr_section = None
@@ -338,7 +340,7 @@ class SystemMonitor:
             elif curr_section:
                 sections[curr_section].append(line)
 
-        # Parse listening ports
+        # 1. Parse listening ports
         ports = []
         for line in sections.get('LISTEN_PORTS', [])[1:]:
             line = line.strip()
@@ -347,16 +349,121 @@ class SystemMonitor:
             parts = line.split()
             if len(parts) >= 5:
                 proto = parts[0]
-                state = parts[1] if parts[0] in ('tcp', 'udp') else ''
                 local_addr = parts[4] if parts[0] in ('tcp', 'udp') else parts[3]
-                process = parts[-1] if len(parts) >= 6 and 'users:' in parts[-1] or '/' in parts[-1] else 'System'
+                process = parts[-1] if len(parts) >= 6 and ('users:' in parts[-1] or '/' in parts[-1]) else 'System'
                 ports.append({
                     'proto': proto,
                     'local_addr': local_addr,
                     'process': process.strip('users:(("").)')
                 })
 
+        # 2. Parse active socket connections (netstat / ss)
+        connections = []
+        state_counts: Dict[str, int] = {}
+        ip_counts: Dict[str, Dict[str, Any]] = {}
+
+        for line in sections.get('ACTIVE_CONNECTIONS', []):
+            line = line.strip()
+            if not line or line.startswith('Netid') or line.startswith('Proto') or 'Active Internet' in line:
+                continue
+
+            parts = line.split()
+            if len(parts) < 5:
+                continue
+
+            proto = parts[0].lower()
+            if not (proto.startswith('tcp') or proto.startswith('udp')):
+                continue
+
+            state = ''
+            recv_q = '0'
+            send_q = '0'
+            local_addr = ''
+            remote_addr = ''
+            process = 'Unknown'
+
+            # Detect ss output vs netstat output
+            # ss: Netid State Recv-Q Send-Q Local Address:Port Peer Address:Port Process
+            if len(parts) >= 6 and parts[1].upper() in ('ESTAB', 'ESTABLISHED', 'SYN-SENT', 'SYN-RECV', 'FIN-WAIT-1', 'FIN-WAIT-2', 'TIME-WAIT', 'CLOSE-WAIT', 'LAST-ACK', 'LISTEN', 'CLOSING', 'UNCONN'):
+                state = parts[1].upper()
+                if state == 'LISTEN':
+                    continue  # Filter out listening sockets from active connections list
+                recv_q = parts[2]
+                send_q = parts[3]
+                local_addr = parts[4]
+                remote_addr = parts[5]
+                if len(parts) >= 7:
+                    process = ' '.join(parts[6:]).strip('users:(("").)')
+            # netstat: Proto Recv-Q Send-Q Local Address Foreign Address State [PID/Program]
+            elif len(parts) >= 6:
+                recv_q = parts[1]
+                send_q = parts[2]
+                local_addr = parts[3]
+                remote_addr = parts[4]
+                state = parts[5].upper()
+                if state == 'LISTEN':
+                    continue
+                if len(parts) >= 7:
+                    process = parts[6]
+
+            # Normalize state
+            if state in ('ESTAB', 'ESTABLISHED'):
+                state = 'ESTABLISHED'
+            elif state in ('SYN-RECV', 'SYN_RECV'):
+                state = 'SYN_RECV'
+            elif state in ('TIME-WAIT', 'TIME_WAIT'):
+                state = 'TIME_WAIT'
+            elif state in ('CLOSE-WAIT', 'CLOSE_WAIT'):
+                state = 'CLOSE_WAIT'
+
+            # Extract remote IP and port
+            remote_ip = ''
+            remote_port = ''
+            if ':' in remote_addr:
+                r_parts = remote_addr.rsplit(':', 1)
+                remote_ip = r_parts[0].strip('[]')
+                remote_port = r_parts[1]
+            else:
+                remote_ip = remote_addr
+
+            # Ignore wildcard or loopback only if requested, but keep external IPs
+            if not remote_ip or remote_ip in ('0.0.0.0', '*', '::'):
+                continue
+
+            # Update stats
+            state_counts[state] = state_counts.get(state, 0) + 1
+
+            # Track DDoS / IP grouping
+            if remote_ip not in ip_counts:
+                ip_counts[remote_ip] = {
+                    'ip': remote_ip,
+                    'count': 0,
+                    'states': {},
+                    'sample_process': process
+                }
+            ip_counts[remote_ip]['count'] += 1
+            ip_counts[remote_ip]['states'][state] = ip_counts[remote_ip]['states'].get(state, 0) + 1
+
+            connections.append({
+                'proto': proto.upper(),
+                'state': state,
+                'recv_q': recv_q,
+                'send_q': send_q,
+                'local_addr': local_addr,
+                'remote_addr': remote_addr,
+                'remote_ip': remote_ip,
+                'remote_port': remote_port,
+                'process': process
+            })
+
+        # Generate top remote IPs sorted by connection count descending
+        top_remote_ips = sorted(ip_counts.values(), key=lambda x: x['count'], reverse=True)[:25]
+
         return {
             'raw_interfaces': '\n'.join(sections.get('INTERFACES', [])),
-            'ports': ports
+            'ports': ports,
+            'connections': connections[:300],
+            'total_connections': len(connections),
+            'state_counts': state_counts,
+            'top_remote_ips': top_remote_ips
         }

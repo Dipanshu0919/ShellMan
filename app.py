@@ -9,6 +9,7 @@ from models.user import User
 from models.server import Server
 from models.action import CustomAction
 from models.git_deployment import GitDeployment
+from models.domain import CloudflareSetting, Domain
 
 # Initialize Flask-Sock
 sock = Sock()
@@ -46,6 +47,7 @@ def create_app(config_class=Config):
     from routes.sync import sync_bp
     from routes.cron import cron_bp
     from routes.git import git_bp
+    from routes.domains import domains_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -64,6 +66,7 @@ def create_app(config_class=Config):
     app.register_blueprint(sync_bp)
     app.register_blueprint(cron_bp)
     app.register_blueprint(git_bp)
+    app.register_blueprint(domains_bp)
 
     # Register terminal websocket handler
     register_terminal_sock(sock)

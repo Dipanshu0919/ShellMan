@@ -73,11 +73,38 @@ class SSHConnectionManager:
         else:
             connect_kwargs['password'] = server.password
 
-        client.connect(**connect_kwargs)
-        transport = client.get_transport()
-        if transport:
-            transport.set_keepalive(15)
-        return client
+        # Attempt connection with resilience against transient SSH banner drops / connection resets (e.g. OpenSSH MaxStartups or cloud rate limits)
+        for attempt in range(1, 3):
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            try:
+                client.connect(**connect_kwargs)
+                transport = client.get_transport()
+                if transport:
+                    transport.set_keepalive(15)
+                return client
+            except (paramiko.SSHException, socket.error, EOFError, ConnectionResetError) as e:
+                err_str = str(e).lower()
+                is_transient = (
+                    "banner" in err_str
+                    or "connection reset" in err_str
+                    or "reset by peer" in err_str
+                    or "eof" in err_str
+                    or "104" in err_str
+                    or isinstance(e, (ConnectionResetError, EOFError))
+                )
+                try:
+                    client.close()
+                except Exception:
+                    pass
+                if attempt < 2 and is_transient:
+                    logger.warning(
+                        f"Transient SSH banner/reset error connecting to {server.host}:{server.port} "
+                        f"(attempt {attempt}/2): {e}. Retrying in 0.6s..."
+                    )
+                    time.sleep(0.6)
+                    continue
+                raise
 
     def get_client(self, server, force_new: bool = False) -> paramiko.SSHClient:
         """Retrieve an active SSH client or create a new one."""
