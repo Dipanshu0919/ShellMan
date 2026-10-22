@@ -187,6 +187,16 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Operator-Level Cloudflare Integration**: Connect your personal Cloudflare account once using a minimum-privilege scoped API token. No SaaS multi-tenant overhead or third-party credential exposure.
 - **Fernet Encrypted Secret Storage**: The Cloudflare API token is encrypted at rest using local per-installation Fernet keys (`0600` permissions) and is never transmitted in browser API responses, HTML, logs, or diagnostic outputs.
 - **Unified Domain Dashboard**: View domain zones, Cloudflare activation state (`active`, `pending`, `error`), assigned authoritative nameservers, SSL/TLS encryption mode, DNSSEC status, and associated ShellMan server node.
+- **Cloudflare Origin CA Certificate Generator (15-Year Validity)**:
+  - Generates RSA 2048-bit private keys locally and signs standard PEM-encoded Certificate Signing Requests (CSR) with domain and wildcard Subject Alternative Names (SANs).
+  - Issues official 15-year certificates via Cloudflare's `/certificates` API.
+  - **1-Click Server Installation**: Deploys certificate and private key directly to `/etc/nginx/ssl/{domain}.crt` and `/etc/nginx/ssl/{domain}.key` via SSH, verifies permissions (`0644` / `0600`), and runs automated `nginx -t` syntax validation.
+  - Completely eliminates 90-day Let's Encrypt renewal failures behind proxied domains.
+- **1-Click Edge Cache Purge**: Instant **Purge Everything** for global cache invalidation upon deployments, or **Purge by URL / Prefix** to invalidate specific stylesheets, scripts, or assets.
+- **Development Mode Toggle**: Temporarily bypasses Cloudflare edge cache for 3 hours with a live visual countdown timer, ensuring HTML, CSS, and JS edits in ShellMan's Monaco editor reflect immediately in the browser.
+- **1-Click "Under Attack Mode"**: Enables Cloudflare edge JavaScript challenge during incoming floods or high `SYN_RECV` states detected in the Live Netstat/DDoS monitor, absorbing malicious traffic before it reaches origin server resources.
+- **24-Hour Traffic Ticker & Telemetry**: Visual edge metrics showing Total Requests, Unique Visitors, Cached vs Uncached bandwidth, and Blocked Threat count.
+- **Export RFC 1035 BIND Zone File**: 1-click download of all DNS records formatted in standard RFC 1035 / BIND format (`.txt`) for emergency offline backups or provider migrations.
 - **Add Domain Workflow**: Add domains to Cloudflare with immediate retrieval of assigned nameservers, 1-click individual and bulk copy buttons, registrar update guidelines, and mail record disruption warnings.
 - **Full DNS Record Manager**: Add, edit, search, and delete records across all major record types: `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, `SRV`, and `CAA`.
   - **Cloudflare Proxy Toggle**: 1-click toggle for Cloudflare edge proxying (CDN, WAF, DDoS protection) on eligible record types (`A`, `AAAA`, `CNAME`).
@@ -194,7 +204,7 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Domain-to-Server Linkage**: Connect root `@` or subdomains directly to any ShellMan server IP.
   - **Private IP Guard**: Detects RFC 1918 / loopback / link-local addresses and warns if a private IP is about to be exposed publicly.
   - **DNS Conflict Detection**: Detects if an existing record points to a different IP and requires explicit confirmation before overwriting.
-  - **Nginx & SSL Handoff**: 1-click transition to Nginx virtual host configuration and Certbot HTTPS certificate provisioning.
+  - **Nginx & SSL Handoff**: 1-click transition to Nginx virtual host configuration and Origin CA HTTPS certificate provisioning.
 - **Live Diagnostics & Reachability Probe**: Probes public DNS resolution, validates origin IP matching, checks HTTP/HTTPS status, and verifies SSL certificate presence.
 
 ### 10. Live Netstat & DDoS Socket Monitor
@@ -207,25 +217,25 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Installable Desktop App**: Install ShellMan as a native desktop application in Chrome, Brave, Edge, or Safari with custom window controls overlay.
 - **Distraction-Free**: Runs in standalone mode without browser tabs, address bars, or extension clutter.
 
-### 10. Two-Factor Authentication (2FA / TOTP)
+### 12. Two-Factor Authentication (2FA / TOTP)
 - **Time-Based One-Time Passwords (TOTP)**: Protect master administrator access using standard authenticator apps (Google Authenticator, Authy, 1Password, Bitwarden).
 - **Pure Vector QR Code**: High-contrast SVG QR barcode generated dynamically without raster image dependencies.
 - **Emergency Recovery Backup Codes**: Generates 8 one-time alphanumeric backup recovery codes (`XXXX-XXXX`) during 2FA activation with a 1-click copy/download modal to prevent lockouts.
 - **Dedicated Recovery Flow**: Login prompt includes an alternative "Use a backup code instead" option that validates single-use codes seamlessly with or without dashes.
 - **Safe 2FA Deactivation**: Requires entering the current master administrator password to disable 2FA, preventing unauthorized deactivations.
 
-### 11. Configuration Backup & Migration (Export / Import)
+### 13. Configuration Backup & Migration (Export / Import)
 - **Unified JSON Portability**: Export your complete ShellMan setup into a single portable `.json` archive.
 - **Credential Sanitization**: Server nodes are exported with passwords and private keys stripped, making backups safe to share or store.
 - **Seamless Restore**: Import restores custom automation actions, server nodes, and visual preferences (`theme`, `wallpaper`, `font-size`) across machines.
 
-### 12. Server Health Monitoring & Configurable Alerts
+### 14. Server Health Monitoring & Configurable Alerts
 - **Configurable Resource Thresholds**: Customize exact trigger thresholds for **CPU Utilization** (e.g. 60% to 95%) and **RAM Utilization** (e.g. 60% to 95%) with custom value inputs.
 - **Sustained Duration Filter**: Set minimum duration (1 to 10 minutes) before an alert fires to eliminate false alarms from transient compilation or backup spikes.
 - **Node Outage Detection**: Automatically alerts when a host fails 3 consecutive telemetry polls (~15s) and dispatches recovery notices upon reconnection.
 - **Dual Delivery Channels**: Real-time glassmorphism in-app toast banners plus native OS push notifications via Web Notifications API / PWA. Includes a test alert dispatcher.
 
-### 13. Agentless File Sync (Rsync over SSH)
+### 15. Agentless File Sync (Rsync over SSH)
 - **Dual Sync Engine**:
   - **Mode 1: Local &harr; Remote Sync**: Transfer and synchronize folders directly between your local workstation running ShellMan and the remote server over SSH:
     - **Push (`Local &rarr; Remote Server`)**: Uploads and synchronizes local project directories to remote server destinations.
@@ -238,14 +248,14 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Exclude Pattern Filters**: Ignore build artifacts and cache folders (`.git`, `node_modules`, `__pycache__`, `*.tmp`, `.DS_Store`).
 - **Live Output Stream**: Formatted terminal output pane with status badges (`IDLE`, `ANALYZING`, `PREVIEW OK`, `SYNCING`, `SUCCESS`, `FAILED`) and exit code tracking.
 
-### 14. Cron Job Manager (Scheduler)
+### 16. Cron Job Manager (Scheduler)
 - **Visual Crontab Manager**: Inspect, add, edit, toggle, and delete scheduled cron entries on remote servers without manual terminal editing.
 - **Human-Readable Decoder**: Automatically translates raw cron syntax (`0 2 * * *`) into plain English descriptions ("Daily at 02:00").
 - **Schedule Presets**: 1-click presets for Hourly, Daily, Weekly, Monthly, Every 5/15 Minutes, and System Startup (`@reboot`).
 - **Immediate Execution Tester**: "Run Now" action executes any scheduled cron command in a subshell over SSH and displays stdout/stderr output immediately.
 - **Native 38px Utility Toolbar**: Integrated live search filter, schedule badges, and clean vector SVG icons.
 
-### 15. Git Continuous Deployment & Webhooks
+### 17. Git Continuous Deployment & Webhooks
 - **Repository Linking**: Link Git repositories to any server directory with branch tracking (`main`, `master`, `staging`) and interactive SFTP Directory Picker support.
 - **Live Git Inspection**: Inspect real-time branch status, remote origin URL, working tree clean/dirty state, and recent commit history (hash, author, relative time, message).
 - **1-Click Pull Latest**: Pull updates and automatically execute post-deployment commands (e.g. `npm install && npm run build` or `systemctl reload nginx`).
@@ -303,13 +313,11 @@ Do **not** use your Cloudflare Global API Key or an R2 storage token (`cfat_...`
 1. Log in to the [Cloudflare API Tokens Dashboard](https://dash.cloudflare.com/profile/api-tokens).
 2. Click **Create Token** > select **Create Custom Token** > **Get started**.
 3. Name your token (e.g. `ShellMan`).
-4. Under **Permissions**, configure the following entries:
+4. Under **Permissions**, configure the following 5 entries:
    - `Account` > `Account Settings` > `Read` *(Required to identify your Cloudflare Account)*
-   - `Zone` > `Zone Settings` > `Read`
-   - `Zone` > `Zone` > `Read`
-   - `Zone` > `DNS` > `Read`
+   - `Zone` > `Zone Settings` > `Edit` *(Required for Under Attack Mode & Dev Mode)*
    - `Zone` > `Zone` > `Edit`
-   - `Zone` > `SSL and Certificates` > `Read`
+   - `Zone` > `SSL and Certificates` > `Edit` *(Required for 15-Year Origin CA Certificate Generator)*
    - `Zone` > `DNS` > `Edit`
 5. Under **Account Resources**, select: `Include` > `All accounts` *(or your chosen account)*.
 6. Under **Zone Resources**, select: `Include` > `All zones`.
@@ -341,7 +349,15 @@ Do **not** use your Cloudflare Global API Key or an R2 storage token (`cfat_...`
 4. ShellMan automatically detects the server's public IP address (and warns if a private RFC 1918 address is selected).
 5. Choose whether to enable Cloudflare edge proxying (CDN & DDoS protection) or DNS-only.
 6. Click **Apply & Create DNS A-Record**. If a conflicting record exists, ShellMan highlights the conflict and asks for confirmation before updating.
-7. Click **Open Nginx Manager** to configure a virtual host and provision Let's Encrypt SSL certificates seamlessly.
+7. Click **Open Nginx Manager** to configure a virtual host and point SSL directives to your Cloudflare Origin certificate.
+
+### 5. Generating & Installing 15-Year Origin CA Certificates
+1. In the Domain Details view, navigate to the **SSL & Origin CA** tab.
+2. Review the pre-populated hostnames (e.g., `example.com, *.example.com`).
+3. Click **Generate 15-Year Certificate**. ShellMan generates an RSA 2048 private key locally, submits a signed CSR to Cloudflare, and receives the signed 15-year Origin CA certificate.
+4. Select your target server node from the dropdown.
+5. Click **Install to /etc/nginx/ssl on Server**. ShellMan transfers the certificate to `/etc/nginx/ssl/{domain}.crt` and key to `/etc/nginx/ssl/{domain}.key`, secures permissions (`0644`/`0600`), and executes `nginx -t` to verify configuration syntax.
+6. Set **Cloudflare SSL/TLS Encryption Mode** to **Full (Strict)** to enable 100% end-to-end encrypted traffic between Cloudflare edge and your origin server.
 
 ---
 
