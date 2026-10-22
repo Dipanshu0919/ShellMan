@@ -3703,8 +3703,11 @@ class DesktopAppsController {
                 <textarea id="fallbackTxt_${codeId}" style="width:100%; height:100%; background:#1e1e1e; color:#f8fafc; font-family:var(--font-mono); font-size:0.88rem; border:none; padding:1rem; resize:none; outline:none; display:none;"></textarea>
               </div>
 
+              <!-- Vertical Resizer for Terminal Panel -->
+              <div class="code-terminal-resizer" id="termResizer_${codeId}" style="height:5px; cursor:row-resize; background:rgba(255,255,255,0.06); display:none; flex-shrink:0;" title="Drag to resize terminal"></div>
+
               <!-- Collapsible Bottom Terminal Panel -->
-              <div class="code-terminal-panel" id="termPanel_${codeId}" style="height:170px; display:none; flex-direction:column; background:#090d16; border-top:1px solid rgba(56,189,248,0.25); flex-shrink:0;">
+              <div class="code-terminal-panel" id="termPanel_${codeId}" style="height:190px; min-height:120px; display:none; flex-direction:column; background:#090d16; border-top:1px solid rgba(56,189,248,0.25); flex-shrink:0;">
                 <div class="code-term-header" style="height:28px; background:#0f1522; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 0.65rem;">
                   <div style="display:flex; align-items:center; gap:0.4rem;">
                     <span class="status-dot connected"></span>
@@ -3751,6 +3754,7 @@ class DesktopAppsController {
         const saveBtn = bodyEl.querySelector(`#saveCodeBtn_${codeId}`);
         const toggleTermBtn = bodyEl.querySelector(`#toggleTermBtn_${codeId}`);
         const termPanel = bodyEl.querySelector(`#termPanel_${codeId}`);
+        const termResizer = bodyEl.querySelector(`#termResizer_${codeId}`);
         const termScreen = bodyEl.querySelector(`#termScreen_${codeId}`);
         const termCloseBtn = bodyEl.querySelector(`#termCloseBtn_${codeId}`);
         const termClearBtn = bodyEl.querySelector(`#termClearBtn_${codeId}`);
@@ -4216,11 +4220,26 @@ class DesktopAppsController {
         const toggleTerminal = () => {
           isTerminalOpen = !isTerminalOpen;
           termPanel.style.display = isTerminalOpen ? 'flex' : 'none';
+          if (termResizer) termResizer.style.display = isTerminalOpen ? 'block' : 'none';
           if (isTerminalOpen) {
             if (!termInstance) {
               initIntegratedTerminal();
             } else {
-              setTimeout(() => { if (termFitAddon) termFitAddon.fit(); }, 60);
+              setTimeout(() => {
+                try {
+                  if (termFitAddon) termFitAddon.fit();
+                  if (termInstance) {
+                    termInstance.focus();
+                    if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+                      termSocket.send(JSON.stringify({
+                        type: 'resize',
+                        cols: Math.max(10, termInstance.cols || 80),
+                        rows: Math.max(4, termInstance.rows || 12)
+                      }));
+                    }
+                  }
+                } catch (_) {}
+              }, 60);
             }
           }
         };
@@ -4230,7 +4249,54 @@ class DesktopAppsController {
         termCloseBtn.onclick = () => {
           isTerminalOpen = false;
           termPanel.style.display = 'none';
+          if (termResizer) termResizer.style.display = 'none';
         };
+
+        // Drag to resize integrated terminal panel
+        if (termResizer) {
+          let isDragging = false;
+          let startY = 0;
+          let startH = 0;
+
+          const onPointerMove = (e) => {
+            if (!isDragging) return;
+            const deltaY = startY - e.clientY;
+            const newH = Math.max(120, Math.min(500, Math.round(startH + deltaY)));
+            termPanel.style.height = `${newH}px`;
+            if (termFitAddon) {
+              try { termFitAddon.fit(); } catch (_) {}
+            }
+          };
+
+          const onPointerUp = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+            if (termFitAddon && termInstance) {
+              try {
+                termFitAddon.fit();
+                termInstance.focus();
+                if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+                  termSocket.send(JSON.stringify({
+                    type: 'resize',
+                    cols: Math.max(10, termInstance.cols || 80),
+                    rows: Math.max(4, termInstance.rows || 12)
+                  }));
+                }
+              } catch (_) {}
+            }
+          };
+
+          termResizer.onpointerdown = (e) => {
+            isDragging = true;
+            startY = e.clientY;
+            startH = termPanel.offsetHeight;
+            document.addEventListener('pointermove', onPointerMove);
+            document.addEventListener('pointerup', onPointerUp);
+            e.preventDefault();
+          };
+        }
 
         const initIntegratedTerminal = () => {
           termInstance = new Terminal({
@@ -4253,24 +4319,66 @@ class DesktopAppsController {
           termInstance.loadAddon(termFitAddon);
           termInstance.open(termScreen);
 
+          // Click on terminal viewport to autofocus
+          termScreen.onclick = () => {
+            if (termInstance) termInstance.focus();
+          };
+
+          termInstance.onResize(({ cols, rows }) => {
+            if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+              termSocket.send(JSON.stringify({
+                type: 'resize',
+                cols: Math.max(10, cols || 80),
+                rows: Math.max(4, rows || 12)
+              }));
+            }
+          });
+
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          let url = `${protocol}//${window.location.host}/ws/terminal/${this.serverId}?cols=80&rows=12`;
-          if (workspaceRoot) {
-            url += `&cwd=${encodeURIComponent(workspaceRoot)}&path=${encodeURIComponent(workspaceRoot)}`;
+          const initCols = Math.max(10, termInstance.cols || 80);
+          const initRows = Math.max(4, termInstance.rows || 12);
+          let url = `${protocol}//${window.location.host}/ws/terminal/${this.serverId}?cols=${initCols}&rows=${initRows}`;
+          const activeRoot = currentWorkspaceRoot || initialRoot;
+          if (activeRoot) {
+            url += `&cwd=${encodeURIComponent(activeRoot)}&path=${encodeURIComponent(activeRoot)}`;
           }
           termSocket = new WebSocket(url);
 
           termSocket.onopen = () => {
-            termFitAddon.fit();
-            termInstance.focus();
+            setTimeout(() => {
+              try {
+                if (termFitAddon) termFitAddon.fit();
+                if (termInstance) {
+                  termInstance.focus();
+                  if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+                    termSocket.send(JSON.stringify({
+                      type: 'resize',
+                      cols: Math.max(10, termInstance.cols || 80),
+                      rows: Math.max(4, termInstance.rows || 12)
+                    }));
+                  }
+                }
+              } catch (_) {}
+            }, 60);
           };
 
           termSocket.onmessage = (evt) => {
             try {
               const msg = JSON.parse(evt.data);
               if (msg.type === 'data') termInstance.write(msg.data);
+              else if (msg.type === 'error') termInstance.write(`\r\n\x1b[31m${msg.data}\x1b[0m\r\n`);
             } catch (_) {
               termInstance.write(evt.data);
+            }
+          };
+
+          termSocket.onerror = (e) => {
+            console.warn('[Terminal PTY] WebSocket error:', e);
+          };
+
+          termSocket.onclose = () => {
+            if (termInstance) {
+              termInstance.write('\r\n\x1b[33m[Integrated terminal session closed]\x1b[0m\r\n');
             }
           };
 
@@ -4281,7 +4389,12 @@ class DesktopAppsController {
           });
 
           termClearBtn.onclick = () => termInstance.clear();
-          setTimeout(() => { termFitAddon.fit(); }, 150);
+          setTimeout(() => {
+            try {
+              if (termFitAddon) termFitAddon.fit();
+              if (termInstance) termInstance.focus();
+            } catch (_) {}
+          }, 150);
         };
 
         // Initialize IDE

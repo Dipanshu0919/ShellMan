@@ -498,6 +498,8 @@
 
   function initWsTerminal() {
     const termContainer = document.getElementById('wsTerminalScreen');
+    if (!termContainer) return;
+
     termInstance = new Terminal({
       cursorBlink: true,
       cursorStyle: 'bar',
@@ -509,7 +511,26 @@
     termFit = new FitAddon.FitAddon();
     termInstance.loadAddon(termFit);
     termInstance.open(termContainer);
-    termFit.fit();
+
+    // Autofocus on clicking anywhere in terminal viewport
+    termContainer.addEventListener('click', () => {
+      if (termInstance) termInstance.focus();
+    });
+
+    try {
+      termFit.fit();
+    } catch (_) {}
+
+    // Track dynamic size changes and send to backend
+    termInstance.onResize(({ cols, rows }) => {
+      if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+        termSocket.send(JSON.stringify({
+          type: 'resize',
+          cols: Math.max(10, cols || 80),
+          rows: Math.max(4, rows || 24)
+        }));
+      }
+    });
 
     termInstance.attachCustomKeyEventHandler((event) => {
       if (event.ctrlKey && !event.altKey) {
@@ -540,11 +561,27 @@
 
   function connectTerminalWebSocket(cwd) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/terminal/${serverId}?cols=${termInstance.cols}&rows=${termInstance.rows}&cwd=${encodeURIComponent(cwd || currentWorkspacePath)}`;
+    const cols = Math.max(10, (termInstance && termInstance.cols) ? termInstance.cols : 80);
+    const rows = Math.max(4, (termInstance && termInstance.rows) ? termInstance.rows : 14);
+    const wsUrl = `${protocol}//${window.location.host}/ws/terminal/${serverId}?cols=${cols}&rows=${rows}&cwd=${encodeURIComponent(cwd || currentWorkspacePath)}`;
 
     termSocket = new WebSocket(wsUrl);
     termSocket.onopen = () => {
-      termInstance.focus();
+      setTimeout(() => {
+        try {
+          if (termFit) termFit.fit();
+          if (termInstance) {
+            termInstance.focus();
+            if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+              termSocket.send(JSON.stringify({
+                type: 'resize',
+                cols: Math.max(10, termInstance.cols || 80),
+                rows: Math.max(4, termInstance.rows || 14)
+              }));
+            }
+          }
+        } catch (_) {}
+      }, 50);
     };
     termSocket.onmessage = (event) => {
       try {
@@ -553,6 +590,14 @@
         else if (msg.type === 'error') termInstance.write(`\r\n\x1b[31m${msg.data}\x1b[0m\r\n`);
       } catch (e) {
         termInstance.write(event.data);
+      }
+    };
+    termSocket.onerror = (e) => {
+      console.warn('[Terminal] WebSocket error:', e);
+    };
+    termSocket.onclose = () => {
+      if (termInstance) {
+        termInstance.write('\r\n\x1b[33m[Terminal disconnected. Click restart to reconnect]\x1b[0m\r\n');
       }
     };
   }
@@ -569,7 +614,21 @@
     if (panel.style.display === 'none') {
       panel.style.display = 'flex';
       resizer.style.display = 'block';
-      if (termFit) termFit.fit();
+      setTimeout(() => {
+        try {
+          if (termFit) termFit.fit();
+          if (termInstance) {
+            termInstance.focus();
+            if (termSocket && termSocket.readyState === WebSocket.OPEN) {
+              termSocket.send(JSON.stringify({
+                type: 'resize',
+                cols: Math.max(10, termInstance.cols || 80),
+                rows: Math.max(4, termInstance.rows || 14)
+              }));
+            }
+          }
+        } catch (_) {}
+      }, 50);
     } else {
       panel.style.display = 'none';
       resizer.style.display = 'none';
@@ -947,9 +1006,11 @@
     window.addEventListener('mousemove', (e) => {
       if (isTermResizing) {
         const newH = window.innerHeight - e.clientY - 22;
-        if (newH > 40 && newH < (window.innerHeight * 0.7)) {
+        if (newH > 110 && newH < (window.innerHeight * 0.75)) {
           termPanel.style.height = newH + 'px';
-          if (termFit) termFit.fit();
+          if (termFit) {
+            try { termFit.fit(); } catch (_) {}
+          }
         }
       }
     });

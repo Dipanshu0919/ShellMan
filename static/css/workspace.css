@@ -276,7 +276,7 @@
 /* 4. Bottom Integrated Terminal Panel */
 .ws-terminal-panel {
   height: 220px;
-  min-height: 40px;
+  min-height: 120px;
   max-height: 70vh;
   background-color: #181818;
   display: flex;
