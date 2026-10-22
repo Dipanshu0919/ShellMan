@@ -83,7 +83,7 @@ def create_item(server_id):
     if not path:
         return jsonify({'success': False, 'error': 'Path required'}), 400
     
-    if item_type == 'dir':
+    if item_type in ('dir', 'directory'):
         ok, msg = SFTPService.create_dir(server, path)
     else:
         ok, msg = SFTPService.create_file(server, path)

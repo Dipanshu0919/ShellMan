@@ -968,9 +968,13 @@
     if (count === 0) return;
     const names = Array.from(selectedItems.values()).map(i => i.name).slice(0, 5).join(', ');
     const extra = count > 5 ? ` and ${count - 5} more` : '';
-    if (!confirm(`Are you sure you want to permanently delete these ${count} selected item(s)?\n(${names}${extra})\n\nThis cannot be undone.`)) {
-      return;
-    }
+    const ok = await DesktopModal.confirm({
+      title: 'Batch Delete',
+      message: `Are you sure you want to permanently delete these ${count} selected item(s)?\n\n(${names}${extra})\n\nThis cannot be undone.`,
+      confirmText: 'Delete Items',
+      isDanger: true
+    });
+    if (!ok) return;
 
     try {
       const paths = Array.from(selectedItems.keys());
@@ -1222,7 +1226,13 @@
 
   async function deleteItem(path, isDir) {
     const itemType = isDir ? 'directory' : 'file';
-    if (!confirm(`Are you sure you want to delete this ${itemType}?\n${path}`)) return;
+    const ok = await DesktopModal.confirm({
+      title: `Delete ${isDir ? 'Directory' : 'File'}`,
+      message: `Are you sure you want to permanently delete this ${itemType}?\n\n${path}`,
+      confirmText: `Delete ${isDir ? 'Directory' : 'File'}`,
+      isDanger: true
+    });
+    if (!ok) return;
 
     try {
       const resp = await fetch(`/api/servers/${serverId}/files/delete`, {

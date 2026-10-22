@@ -529,7 +529,12 @@
       confirmMsg = `Resume execution of PID ${pid} (${comm}) with SIGCONT (-18)?`;
     }
 
-    if (!confirm(confirmMsg)) return;
+    const ok = await DesktopModal.confirm({
+      title: 'Signal Process',
+      message: confirmMsg,
+      isDanger: signal === 'SIGKILL'
+    });
+    if (!ok) return;
 
     try {
       const resp = await fetch(`/api/servers/${serverId}/processes/kill`, {
@@ -539,10 +544,10 @@
       });
       const res = await resp.json();
       if (window.showToast) window.showToast(res.message, res.success ? 'success' : 'error');
-      else alert(res.message);
+      else DesktopModal.alert({ title: 'Process Signal', message: res.message, type: res.success ? 'success' : 'danger' });
       loadProcesses();
     } catch (e) {
-      alert('Error signalling process: ' + e);
+      DesktopModal.alert({ title: 'Signal Error', message: 'Error signalling process: ' + e, type: 'danger' });
     }
   }
 

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Two-Factor Authentication - ShellMan</title>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b111c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ShellMan">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: radial-gradient(circle at center, #1e293b 0%, #0a0f1d 100%);
+      margin: 0;
+      padding: 1.5rem;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      box-sizing: border-box;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 2.25rem 2rem;
+      background: #111827;
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(56, 189, 248, 0.08);
+    }
+
+    .code-field {
+      width: 100%;
+      box-sizing: border-box;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', Menlo, Monaco, Consolas, monospace;
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.12em;
+      padding: 0.75rem 1rem;
+      background-color: rgba(15, 23, 42, 0.8);
+      border: 1.5px solid rgba(56, 189, 248, 0.25);
+      border-radius: 10px;
+      color: #38bdf8;
+      outline: none;
+      text-transform: uppercase;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .code-field:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.4);
+      background-color: rgba(15, 23, 42, 0.95);
+    }
+
+    .code-field::placeholder {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 0.88rem;
+      font-weight: 400;
+      letter-spacing: normal;
+      text-transform: none;
+      color: #64748b;
+      opacity: 0.8;
+    }
+
+    .auth-alert {
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .auth-alert-danger {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .auth-alert-success {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #86efac;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <!-- Brand / Header -->
+    <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 1.5rem; text-align: center;">
+      <div style="position: relative; width: 64px; height: 64px; margin-bottom: 0.75rem;">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ShellMan Logo" style="width: 64px; height: 64px; filter: drop-shadow(0 6px 20px rgba(14, 165, 233, 0.4));">
+        <div style="position: absolute; bottom: -3px; right: -3px; width: 24px; height: 24px; background: #0284c7; border: 2.5px solid #0f172a; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;">
+          <svg style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        </div>
+      </div>
+      <h1 style="font-size: 1.45rem; font-weight: 700; color: #f8fafc; margin: 0 0 0.4rem; letter-spacing: -0.01em;">Two-Factor Authentication</h1>
+      <p style="font-size: 0.82rem; color: #94a3b8; margin: 0; line-height: 1.45;">
+        Enter your verification code or backup code for <span style="color: #38bdf8; font-weight: 600; background: rgba(56, 189, 248, 0.1); padding: 0.12rem 0.45rem; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.2);">{{ user.username }}</span>
+      </p>
+    </div>
+
+    <!-- Flash Alert Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="auth-alert auth-alert-{{ category }}">
+            <svg style="width: 18px; height: 18px; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div style="flex: 1;">{{ message }}</div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- 2FA Submission Form -->
+    <form method="POST" action="{{ url_for('auth.login_2fa') }}" id="totpForm">
+      <div style="margin-bottom: 1.25rem;">
+        <label for="code" style="display: block; font-size: 0.78rem; font-weight: 600; color: #cbd5e1; margin-bottom: 0.45rem;">
+          Security Code or Backup Code
+        </label>
+        <input class="code-field" type="text" id="code" name="code"
+               maxlength="16" autocomplete="one-time-code" required autofocus
+               placeholder="e.g. 123456 or 1FED-0AD8">
+
+        <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.72rem; color: #94a3b8; margin-top: 0.55rem; line-height: 1.35;">
+          <svg style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Accepts both your 6-digit authenticator code and 8-character backup recovery codes.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.65rem; margin-top: 1.5rem;">
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <span>Verify & Access Workspace</span>
+          <svg style="width: 15px; height: 15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <a href="{{ url_for('auth.login_2fa_cancel') }}" class="btn btn-secondary" style="width: 100%; padding: 0.65rem; text-align: center; text-decoration: none; font-size: 0.82rem; color: #94a3b8;">
+          Cancel & Return to Sign In
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const codeInp = document.getElementById('code');
+    if (codeInp) {
+      codeInp.addEventListener('input', (e) => {
+        e.target.value = e.target.value.toUpperCase();
+      });
+    }
+  </script>
+</body>
+</html>

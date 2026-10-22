@@ -401,14 +401,19 @@ class SFTPService:
 
     @classmethod
     def search_files(cls, server, base_path: str, query: str) -> Tuple[bool, Any]:
-        """Fast remote search using standard Linux find command."""
+        """Fast remote search using standard Linux find command with virtual filesystem pruning."""
         base_path = cls._normalize_path(base_path, server)
         if not query or not query.strip():
             return False, "Query cannot be empty"
         query = query.strip().replace("'", "").replace('"', "").replace(';', '')
         quoted_path = shlex_quote(base_path)
-        cmd = f"find {quoted_path} -maxdepth 4 -iname '*{query}*' 2>/dev/null | head -n 100"
-        code, stdout, _ = ssh_manager.execute(server, cmd, timeout=6)
+
+        if base_path == "/":
+            cmd = f"find / \\( -path /proc -o -path /sys -o -path /dev -o -path /run -o -path '/var/lib/docker' -o -path '/var/lib/containerd' \\) -prune -o -maxdepth 6 -iname '*{query}*' -print 2>/dev/null | head -n 60"
+        else:
+            cmd = f"find {quoted_path} -maxdepth 6 -iname '*{query}*' 2>/dev/null | head -n 60"
+
+        code, stdout, _ = ssh_manager.execute(server, cmd, timeout=7)
         
         results = []
         for line in stdout.splitlines():

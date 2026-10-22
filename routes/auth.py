@@ -76,6 +76,11 @@ def login():
 
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            if user.totp_enabled:
+                session['2fa_pending_user_id'] = user.id
+                session['2fa_next_url'] = request.args.get('next') or url_for('dashboard.index')
+                return redirect(url_for('auth.login_2fa'))
+
             session['user_id'] = user.id
             session['username'] = user.username
             user.last_login = datetime.now(timezone.utc)
@@ -89,6 +94,52 @@ def login():
             flash('Invalid username or password.', 'danger')
 
     return render_template('login.html')
+
+@auth_bp.route('/login/2fa', methods=['GET', 'POST'])
+def login_2fa():
+    pending_user_id = session.get('2fa_pending_user_id')
+    if not pending_user_id:
+        return redirect(url_for('auth.login'))
+
+    user = db.session.get(User, pending_user_id)
+    if not user or not user.totp_enabled:
+        session.pop('2fa_pending_user_id', None)
+        return redirect(url_for('auth.login'))
+
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+
+        authenticated = False
+        # 1. First test TOTP if the code is 6 numeric digits
+        clean_num = code.replace(' ', '').replace('-', '')
+        if len(clean_num) == 6 and clean_num.isdigit():
+            authenticated = user.verify_totp(clean_num)
+
+        # 2. If TOTP did not authenticate, check if code matches an unused backup recovery code
+        if not authenticated:
+            authenticated = user.verify_and_consume_backup_code(code)
+
+        if authenticated:
+            session.pop('2fa_pending_user_id', None)
+            session['user_id'] = user.id
+            session['username'] = user.username
+            user.last_login = datetime.now(timezone.utc)
+            db.session.commit()
+
+            next_page = session.pop('2fa_next_url', None) or url_for('dashboard.index')
+            if next_page and next_page.startswith('/'):
+                return redirect(next_page)
+            return redirect(url_for('dashboard.index'))
+        else:
+            flash('Invalid 2FA code or backup code. Please try again.', 'danger')
+
+    return render_template('login_2fa.html', user=user)
+
+@auth_bp.route('/login/2fa/cancel', methods=['GET', 'POST'])
+def login_2fa_cancel():
+    session.pop('2fa_pending_user_id', None)
+    session.pop('2fa_next_url', None)
+    return redirect(url_for('auth.login'))
 
 @auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
