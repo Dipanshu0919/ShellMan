@@ -9,6 +9,7 @@
 
 <p align="center">
   <a href="#the-story-why-shellman"><img src="https://img.shields.io/badge/Agent-0_MB_Overhead-0ea5e9?style=for-the-badge&logo=linux&logoColor=white" alt="Agentless"></a>
+  <a href="#option-a-1-command-docker-deployment-recommended"><img src="https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready"></a>
   <a href="#quick-start-guide"><img src="https://img.shields.io/badge/Python-3.9+-38bdf8?style=for-the-badge&logo=python&logoColor=white" alt="Python Version"></a>
   <a href="#2-real-interactive-ssh-pty-terminal"><img src="https://img.shields.io/badge/Terminal-xterm.js_%2B_PTY-10b981?style=for-the-badge&logo=gnometerminal&logoColor=white" alt="Terminal"></a>
   <a href="#3-sftp-file-manager-with-recursive-folder-drag-and-drop--custom-actions"><img src="https://img.shields.io/badge/Transport-SFTP_over_SSH-f59e0b?style=for-the-badge&logo=files&logoColor=white" alt="SFTP"></a>
@@ -93,16 +94,28 @@ Your remote servers dedicate **100% of their compute and memory to your workload
   <img src="docs/screenshots/terminal-window.png" alt="ShellMan SSH PTY Terminal" width="950">
 </p>
 
-### 4. Monaco Code Workspace (VS Code Engine)
-> Full remote IDE with multi-tab workspace, folder tree explorer, syntax highlighting, and instant asynchronous SFTP save.
+### 4. Monaco Code Workspace (VS Code Engine) with Integrated Terminal
+> Full remote IDE with multi-tab workspace, folder tree explorer, context menu operations, syntax highlighting, instant asynchronous SFTP save, and built-in interactive PTY shell.
 <p align="center">
   <img src="docs/screenshots/code-workspace.png" alt="ShellMan Monaco Code Workspace" width="950">
 </p>
 
-### 5. Node Fleet Management & Quick Server Onboarding
-> System Settings modal for registering remote nodes with encrypted credentials, custom SSH ports, and instant connection testing.
+### 5. Cloudflare DNS Management & System Security Settings
+> Multi-window desktop workflow featuring full Cloudflare zone & DNS record orchestration alongside native TOTP 2FA authentication, active session controls, and administrative security.
 <p align="center">
-  <img src="docs/screenshots/settings-node-management.png" alt="ShellMan Server Node Management" width="950">
+  <img src="docs/screenshots/settings-node-management.png" alt="ShellMan Cloudflare & Security Settings" width="950">
+</p>
+
+### 6. Database Explorer (.db / SQLite / MySQL / Postgres) & Task Manager
+> Agentless database explorer with table viewer, live SELECT query console, 1-click compressed backups, and real-time process monitoring with CPU/RAM metrics.
+<p align="center">
+  <img src="docs/screenshots/database-and-processes.png" alt="ShellMan Database Explorer and Task Manager" width="950">
+</p>
+
+### 7. Real-Time Journalctl System Log Streamer & Analyzer
+> Streaming Linux system logs with automatic error/failure badge highlighting, log level filters, IP address detection, and regex keyword searching.
+<p align="center">
+  <img src="docs/screenshots/system-logs.png" alt="ShellMan System Logs Viewer" width="950">
 </p>
 
 ---
@@ -120,6 +133,7 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 
 ### 2. Real Interactive SSH PTY Terminal
 - **True Pseudo-Terminal (PTY)**: Backed by Paramiko `invoke_shell(term='xterm-256color')` streamed over low-latency WebSockets directly to `xterm.js`.
+- **Multiple Color Themes**: Choose from 16 curated developer color schemes: **ShellMan Cyberpunk (Default)**, **Dracula**, **One Dark**, **Nord Frost**, **Tokyo Night**, **Catppuccin Mocha**, **Gruvbox Dark**, **Synthwave '84**, **Solarized Dark**, **Solarized Light**, **Material Ocean**, **Cobalt2**, **GitHub Dark**, **Night Owl**, **Monokai Pro**, and **The Matrix Green**. Switch themes on the fly from the terminal toolbar or globally in System Settings, automatically applying to all active terminals and integrated consoles.
 - **Full Curses & Terminal App Support**: Effortlessly run `htop`, `vim`, `nano`, `tmux`, `less`, `tail -f`, and interactive REPLs with zero input lag.
 - **Signal Handling**: Dedicated raw input interception handles <kbd>Ctrl</kbd>+<kbd>C</kbd>, <kbd>Ctrl</kbd>+<kbd>D</kbd>, <kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>L</kbd>, and arrow keys without browser collision.
 - **Dynamic Viewport Auto-Fit**: Window resizes trigger real-time PTY terminal column and row recalculations via `fitAddon`.
@@ -138,7 +152,10 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 
 ### 4. Monaco Code Workspace (VS Code Engine)
 - **Full-Fledged Editor**: Powered by Microsoft Monaco with syntax highlighting, bracket matching, line numbers, and multi-cursor support.
+- **Local File Drag & Drop Integration**: Drag any file directly from your local desktop onto the editor viewport to immediately open it in an editable tab. Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save and upload it directly to the remote server workspace. Dragging files onto the left explorer tree immediately saves them to the active folder and refreshes the directory hierarchy.
+- **Desktop-Grade Right-Click Context Menus**: Full context menu suite on explorer files and folders (New File, New Folder, Rename, Duplicate/Copy, Move with Remote Directory Picker, Open in Terminal, Download, Copy Absolute/Relative Path, Delete) and editor tabs (Close, Close Others, Close All, Save, Copy Path).
 - **Broad Language Support**: Python, JavaScript, TypeScript, Shell Script, Dockerfile, Nginx config, JSON, YAML, HTML, CSS, SQL, and Markdown.
+- **Integrated Terminal Panel**: Collapsible bottom PTY terminal panel synchronized with the active workspace directory for seamless test and build cycles.
 - **Fast Remote Editing**: Hotkeys for Quick Open (<kbd>Ctrl</kbd>+<kbd>P</kbd>) and instant asynchronous SFTP remote save (<kbd>Ctrl</kbd>+<kbd>S</kbd>).
 
 ### 5. Live Telemetry & Resource Hub
@@ -298,28 +315,59 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 
 ## Quick Start Guide
 
-### 1. Requirements
+### Option A: 1-Command Docker Deployment (Recommended)
+
+Run ShellMan with a single Docker command. All encryption keys, server credentials, and SQLite state are persisted in the `shellman_data` volume:
+
+```bash
+docker run -d \
+  -p 5000:5000 \
+  -v shellman_data:/app/instance \
+  --name shellman \
+  --restart unless-stopped \
+  dipanshu0919/shellman
+```
+
+Navigate to `http://localhost:5000` to access your environment.
+
+### Option B: Docker Compose
+
+Clone the repository and run via Docker Compose:
+
+```bash
+git clone https://github.com/Dipanshu0919/ShellMan.git
+cd ShellMan
+
+docker compose up -d
+```
+
+To view live container logs:
+```bash
+docker compose logs -f
+```
+
+### Option C: Native Python Environment
+
+#### 1. Requirements
 - **Python 3.9+**
 - Standard Linux, macOS, or Windows (WSL recommended) environment
+- `openssh-client` and `rsync`
 
-### 2. Installation
+#### 2. Setup & Installation
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/Dipanshu0919/ShellMan.git
 cd ShellMan
 
-# 2. Set up virtual environment
+# 2. Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Launch ShellMan
-
-```bash
+# 4. Launch ShellMan
 python3 app.py
 ```
 
@@ -328,10 +376,28 @@ Open your browser and navigate to:
 http://127.0.0.1:5000
 ```
 
-### 4. Guided First-Time Setup Wizard (No Default Credentials)
+### First-Time Setup Wizard (No Default Credentials)
 > [!IMPORTANT]
 > **ShellMan does not ship with insecure default passwords.**
 > On your very first visit, you will automatically be directed to the **First-Time Setup Wizard** (`/setup`) where you create your master administrator username and secure password. Once created, the wizard locks permanently and launches you directly into your desktop environment.
+
+---
+
+## Deploying a Public Live Demo Instance
+
+To deploy a live read-only or sandbox demonstration of ShellMan for colleagues or the community (e.g. on Render, Railway, Fly.io, or an entry-tier VPS):
+
+1. **Deploy Container**: Point your host's Docker or Git deployment pipeline to this repository.
+2. **Environment Variables**:
+   ```ini
+   HOST=0.0.0.0
+   PORT=5000
+   SHELLMAN_SECRET_KEY=generate-a-strong-secret-key-here
+   ```
+3. **Persistent Volume**: Attach a persistent disk mount to `/app/instance` to retain the initialized demo account and sample sandbox nodes across restarts.
+4. **Security for Public Demos**:
+   - Provide pre-configured guest/demo credentials in the login page or README.
+   - For public sandboxes, connect the demo to a dedicated isolated test VPS or local mock container rather than production infrastructure.
 
 ---
 
@@ -397,6 +463,7 @@ Do **not** use your Cloudflare Global API Key or an R2 storage token (`cfat_...`
 
 - **Zero-Agent Attack Surface**: Because no daemon runs on your managed server, there are no extra background listeners or open ports vulnerable to exploitation.
 - **Two-Factor Authentication (TOTP)**: Master administrator accounts can be protected with standard 6-digit TOTP authenticator codes and single-use emergency backup recovery codes.
+- **Password Manager Auto-Fill Standard**: Full compliance with W3C autocomplete standards (`username`, `current-password`, `new-password`, `one-time-code`) ensuring automated password management via 1Password, Bitwarden, KeePass, and browser vaults.
 - **Fernet AES-128 Encryption**: Server passwords and SSH private keys are stored using symmetric authenticated encryption (`cryptography.fernet.Fernet`).
 - **IP Masking**: Server IP addresses in the top node pill are masked to prevent accidental leakage during screen shares or streaming, with an interactive toggle button to unmask when needed.
 - **Sanitized Backup Archives**: Settings and server configurations exported for portability are strictly scrubbed of passwords and private keys.

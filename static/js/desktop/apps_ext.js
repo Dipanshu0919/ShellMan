@@ -735,8 +735,8 @@
               <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Inspect databases and tables directly over local Unix socket / localhost without opening external database ports.</p>
               
               <div style="display:flex; gap:0.6rem; align-items:center; margin-bottom:1rem;">
-                <input type="text" id="inpMysqlUser_${dbWinId}" placeholder="User (e.g. root)" class="form-control" style="font-size:0.78rem; width:160px;" value="root">
-                <input type="password" id="inpMysqlPass_${dbWinId}" placeholder="Password (leave blank for socket)" class="form-control" style="font-size:0.78rem; width:220px;">
+                <input type="text" id="inpMysqlUser_${dbWinId}" placeholder="User (e.g. root)" class="form-control" style="font-size:0.78rem; width:160px;" value="root" autocomplete="username">
+                <input type="password" id="inpMysqlPass_${dbWinId}" placeholder="Password (leave blank for socket)" class="form-control" style="font-size:0.78rem; width:220px;" autocomplete="current-password">
                 <button class="btn btn-primary btn-sm" id="btnConnectMysql_${dbWinId}">Connect &amp; List Databases</button>
               </div>
 

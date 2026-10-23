@@ -35,7 +35,7 @@
 
       <div class="form-group">
         <label class="form-label" for="username">SSH Username</label>
-        <input class="form-control" type="text" id="username" name="username" required placeholder="root or ubuntu" value="{{ server.username if server else 'root' }}">
+        <input class="form-control" type="text" id="username" name="username" required placeholder="root or ubuntu" value="{{ server.username if server else 'root' }}" autocomplete="username">
       </div>
 
       <div class="form-group">
@@ -58,7 +58,7 @@
           SSH Password
           {% if action == 'edit' %}<span style="font-size:0.75rem; color:var(--text-muted);">(Leave blank to keep existing password)</span>{% endif %}
         </label>
-        <input class="form-control" type="password" id="password" name="password" placeholder="••••••••••••">
+        <input class="form-control" type="password" id="password" name="password" placeholder="••••••••••••" autocomplete="current-password">
       </div>
 
       <!-- Private key section -->
@@ -72,7 +72,7 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="passphrase">Private Key Passphrase (optional)</label>
-          <input class="form-control" type="password" id="passphrase" name="passphrase" placeholder="Key passphrase if encrypted">
+          <input class="form-control" type="password" id="passphrase" name="passphrase" placeholder="Key passphrase if encrypted" autocomplete="current-password">
         </div>
       </div>
 
