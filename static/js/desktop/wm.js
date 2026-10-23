@@ -102,8 +102,8 @@ class DesktopWindowManager {
       minHeight = 260,
       x = null,
       y = null,
-      contentHtml = '',
-      onInit = null,
+      contentHtml = options.contentHtml || options.content || '',
+      onInit = options.onInit || options.onCreated || null,
       onResize = null,
       onClose = null,
       multiInstance = false

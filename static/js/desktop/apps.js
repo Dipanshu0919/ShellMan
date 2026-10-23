@@ -66,6 +66,18 @@ class DesktopAppsController {
         return this.launchGit(params);
       case 'domains':
         return this.launchDomains(params);
+      case 'ssh_diag':
+      case 'diagnostics':
+        return this.launchSshDiagnostics(params);
+      case 'docker':
+      case 'containers':
+        return this.launchDocker(params);
+      case 'database':
+      case 'db':
+        return this.launchDatabase(params);
+      case 'firewall':
+      case 'ufw':
+        return this.launchFirewall(params);
       case 'servers':
         return this.launchSettings({ tab: 'servers' });
       case 'settings':
@@ -78,11 +90,14 @@ class DesktopAppsController {
   // =========================================================================
   // REUSABLE SFTP & LOCAL DIRECTORY PICKER DIALOG
   // =========================================================================
-  showDirectoryPicker({ serverId, initialPath, title, isLocal = false, onSelect }) {
+  showDirectoryPicker({ serverId, initialPath, title, isLocal = false, selectFiles = false, fileExtensions = null, onSelect }) {
     const sId = serverId || this.serverId;
     let currentPath = initialPath || (isLocal ? '~/' : '/');
     let selectedPath = currentPath;
-    const defaultTitle = isLocal ? 'Select Local Machine Directory' : 'Select Server Directory';
+    let isFileSelected = !selectFiles;
+    const defaultTitle = selectFiles 
+      ? (isLocal ? 'Select Local Machine File' : 'Select Server File')
+      : (isLocal ? 'Select Local Machine Directory' : 'Select Server Directory');
     const dialogTitle = title || defaultTitle;
     const defaultPlaces = isLocal 
       ? ['~/', '~/Projects', '~/Documents', '~/Downloads', '~/Desktop', '/tmp', '/']
@@ -98,16 +113,19 @@ class DesktopAppsController {
     `;
 
     overlay.innerHTML = `
-      <div style="width: 100%; max-width: 640px; height: 520px; background: var(--bg-surface, #111827); border: 1px solid var(--border-color, #1f2937); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); display: flex; flex-direction: column; overflow: hidden;">
+      <div style="width: 100%; max-width: 660px; height: 530px; background: var(--bg-surface, #111827); border: 1px solid var(--border-color, #1f2937); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); display: flex; flex-direction: column; overflow: hidden;">
         <!-- Header -->
         <div style="height: 42px; padding: 0 1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02);">
           <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.88rem; color: #f8fafc;">
-            ${isLocal
-              ? '<svg style="width: 16px; height: 16px; color: #38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
-              : '<svg style="width: 16px; height: 16px; color: #38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>'
+            ${selectFiles
+              ? '<svg style="width: 16px; height: 16px; color: #10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>'
+              : (isLocal
+                ? '<svg style="width: 16px; height: 16px; color: #38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
+                : '<svg style="width: 16px; height: 16px; color: #38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>')
             }
             <span>${dialogTitle}</span>
             <span style="font-size: 0.68rem; padding: 0.12rem 0.45rem; border-radius: 3px; font-weight:600; background: ${isLocal ? 'rgba(56,189,248,0.15); color:#38bdf8;' : 'rgba(52,211,153,0.15); color:#34d399;'}">${isLocal ? 'Local Machine' : 'Remote Server'}</span>
+            ${fileExtensions && fileExtensions.length ? `<span style="font-size:0.66rem; padding:0.1rem 0.4rem; border-radius:3px; background:rgba(16,185,129,0.15); color:#10b981; font-family:var(--font-mono);">${fileExtensions.join(', ')}</span>` : ''}
           </div>
           <button class="btn btn-secondary btn-xs" id="dpCloseBtn" style="padding: 0.15rem 0.45rem;">&times;</button>
         </div>
@@ -123,10 +141,11 @@ class DesktopAppsController {
             <input type="text" id="dpPathInput" value="${currentPath}" style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-mono); font-size: 0.78rem; color: #f8fafc;">
           </div>
           <button class="btn btn-secondary btn-xs" id="dpGoBtn" style="padding: 0.25rem 0.6rem;">Go</button>
+          ${!selectFiles ? `
           <button class="btn btn-secondary btn-xs" id="dpNewFolderBtn" title="Create Folder Here" style="display: flex; align-items: center; gap: 3px; padding: 0.25rem 0.55rem;">
             <svg style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             New Folder
-          </button>
+          </button>` : ''}
         </div>
 
         <!-- Quick location presets -->
@@ -147,11 +166,11 @@ class DesktopAppsController {
         <!-- Footer -->
         <div style="padding: 0.65rem 1rem; border-top: 1px solid var(--border-subtle); background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
           <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--text-muted);">
-            Selected Directory: <strong id="dpSelectedPathText" style="color: #38bdf8; font-family: var(--font-mono);">${selectedPath}</strong>
+            ${selectFiles ? 'Selected File:' : 'Selected Directory:'} <strong id="dpSelectedPathText" style="color: #38bdf8; font-family: var(--font-mono);">${selectedPath}</strong>
           </div>
           <div style="display: flex; gap: 0.5rem;">
             <button class="btn btn-secondary btn-sm" id="dpCancelBtn">Cancel</button>
-            <button class="btn btn-primary btn-sm" id="dpConfirmBtn" style="font-weight: 600;">Choose Directory</button>
+            <button class="btn btn-primary btn-sm" id="dpConfirmBtn" style="font-weight: 600;">${selectFiles ? 'Choose File' : 'Choose Directory'}</button>
           </div>
         </div>
       </div>
@@ -178,6 +197,12 @@ class DesktopAppsController {
     cancelBtn.onclick = closePicker;
 
     confirmBtn.onclick = () => {
+      if (selectFiles && !isFileSelected) {
+        if (typeof window.showToast === 'function') {
+          window.showToast('Please select a file to continue', 'warning');
+        }
+        return;
+      }
       if (typeof onSelect === 'function') {
         onSelect(selectedPath);
       }
@@ -188,14 +213,16 @@ class DesktopAppsController {
       dirPath = (dirPath || (isLocal ? '~/' : '/')).trim();
       if (!dirPath) dirPath = isLocal ? '~/' : '/';
       currentPath = dirPath;
-      selectedPath = dirPath;
+      if (!selectFiles) {
+        selectedPath = dirPath;
+        selText.textContent = selectedPath;
+      }
       pathInp.value = currentPath;
-      selText.textContent = selectedPath;
 
       listEl.innerHTML = `
         <div style="text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.8rem;">
           <span class="spinner-border spinner-border-sm" style="width: 12px; height: 12px; margin-right: 6px;"></span>
-          Listing folders in <code style="color: #38bdf8;">${currentPath}</code>...
+          Listing files and folders in <code style="color: #38bdf8;">${currentPath}</code>...
         </div>
       `;
 
@@ -216,33 +243,68 @@ class DesktopAppsController {
 
         currentPath = res.data.current_path || dirPath;
         parentPath = res.data.parent_path;
-        selectedPath = currentPath;
+        if (!selectFiles) {
+          selectedPath = currentPath;
+          selText.textContent = selectedPath;
+        }
         pathInp.value = currentPath;
-        selText.textContent = selectedPath;
 
         const allItems = res.data.items || [];
         const dirItems = allItems.filter(item => item.is_dir && item.name !== '.' && item.name !== '..');
+        const fileItems = selectFiles ? allItems.filter(item => {
+          if (item.is_dir) return false;
+          if (!fileExtensions || !fileExtensions.length) return true;
+          const lower = item.name.toLowerCase();
+          return fileExtensions.some(ext => lower.endsWith(ext.toLowerCase()));
+        }) : [];
 
-        if (dirItems.length === 0) {
+        if (dirItems.length === 0 && fileItems.length === 0) {
           listEl.innerHTML = `
             <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.78rem;">
               <svg style="width: 28px; height: 28px; color: #475569; margin: 0 auto 0.5rem; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-              No subdirectories inside this folder.<br>
-              Click <strong>"Choose Directory"</strong> below to select <code style="color: #38bdf8;">${currentPath}</code>.
+              No matching files or subdirectories inside this folder.<br>
+              ${!selectFiles ? `Click <strong>"Choose Directory"</strong> below to select <code style="color: #38bdf8;">${currentPath}</code>.` : ''}
             </div>
           `;
           return;
         }
 
-        listEl.innerHTML = dirItems.map(item => `
-          <div class="dp-folder-row" data-path="${item.path}" style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-size: 0.82rem; user-select: none;">
-            <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0;">
-              <svg style="width: 16px; height: 16px; color: #38bdf8; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 21a3 3 0 0 0 3-3v-4.5a3 3 0 0 0-3-3h-1.5V9a3 3 0 0 0-3-3h-3.38a3 3 0 0 1-2.12-.88l-.7-.7A3 3 0 0 0 6.68 3.5H4.5A3 3 0 0 0 1.5 6.5v11.5a3 3 0 0 0 3 3h15z"/></svg>
-              <span style="font-weight: 500; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}</span>
+        let html = '';
+
+        // Render Subdirectories
+        dirItems.forEach(item => {
+          html += `
+            <div class="dp-folder-row" data-path="${item.path}" data-type="dir" style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-size: 0.82rem; user-select: none;">
+              <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0;">
+                <svg style="width: 16px; height: 16px; color: #38bdf8; flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 21a3 3 0 0 0 3-3v-4.5a3 3 0 0 0-3-3h-1.5V9a3 3 0 0 0-3-3h-3.38a3 3 0 0 1-2.12-.88l-.7-.7A3 3 0 0 0 6.68 3.5H4.5A3 3 0 0 0 1.5 6.5v11.5a3 3 0 0 0 3 3h15z"/></svg>
+                <span style="font-weight: 500; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}/</span>
+              </div>
+              <span style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono);">${item.permissions || 'directory'}</span>
             </div>
-            <span style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono);">${item.permissions || 'directory'}</span>
-          </div>
-        `).join('');
+          `;
+        });
+
+        // Render Files (when selectFiles is true)
+        fileItems.forEach(item => {
+          const isDb = item.name.endsWith('.db') || item.name.endsWith('.sqlite') || item.name.endsWith('.sqlite3');
+          html += `
+            <div class="dp-folder-row dp-file-row" data-path="${item.path}" data-type="file" style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-size: 0.82rem; user-select: none; border-left: 2px solid transparent;">
+              <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0;">
+                ${isDb
+                  ? '<svg style="width: 16px; height: 16px; color: #10b981; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>'
+                  : '<svg style="width: 16px; height: 16px; color: #94a3b8; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>'
+                }
+                <span style="font-weight: 500; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 0.7rem; color: #38bdf8; font-family: var(--font-mono);">${item.size_human || item.size || ''}</span>
+                <span style="font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">${item.permissions || 'file'}</span>
+              </div>
+            </div>
+          `;
+        });
+
+        listEl.innerHTML = html;
 
         const rows = listEl.querySelectorAll('.dp-folder-row');
         rows.forEach(row => {
@@ -253,15 +315,28 @@ class DesktopAppsController {
             rows.forEach(r => {
               r.classList.remove('active');
               r.style.background = 'transparent';
+              r.style.borderLeftColor = 'transparent';
             });
             row.classList.add('active');
             row.style.background = 'rgba(2, 132, 199, 0.25)';
+            row.style.borderLeftColor = '#38bdf8';
             selectedPath = row.dataset.path;
             selText.textContent = selectedPath;
+            if (row.dataset.type === 'file') {
+              isFileSelected = true;
+            } else if (selectFiles) {
+              isFileSelected = false;
+            }
           };
 
           row.ondblclick = () => {
-            loadDirectory(row.dataset.path);
+            if (row.dataset.type === 'dir') {
+              loadDirectory(row.dataset.path);
+            } else if (row.dataset.type === 'file') {
+              selectedPath = row.dataset.path;
+              isFileSelected = true;
+              confirmBtn.click();
+            }
           };
         });
 
@@ -2374,6 +2449,8 @@ class DesktopAppsController {
             const item = items.find(i => i.path === path);
             if (item && isImage(item.name)) {
               showImagePreviewModal(item);
+            } else if (item && (item.name.endsWith('.db') || item.name.endsWith('.sqlite') || item.name.endsWith('.sqlite3'))) {
+              DesktopApps.launch('database', { path });
             } else {
               DesktopApps.launch('code', { path });
             }
@@ -6090,6 +6167,9 @@ class DesktopAppsController {
                 <div style="display:flex; align-items:center; gap:0.35rem;">
                   <code style="font-size:0.75rem; color:#38bdf8;">${c.remote_addr}</code>
                   <button type="button" class="btn btn-ghost btn-xs btn-copy-ip" data-ip="${c.remote_ip}" style="padding:0 3px; font-size:0.65rem;" title="Copy IP">&copy;</button>
+                  ${c.remote_ip && c.remote_ip !== '0.0.0.0' && c.remote_ip !== '127.0.0.1' && c.remote_ip !== '::1' && c.remote_ip !== '*' ? `
+                    <button type="button" class="btn btn-ghost btn-xs btn-ban-ip" data-ip="${c.remote_ip}" style="padding:0 4px; font-size:0.65rem; color:#f87171;" title="Block ${c.remote_ip} in Firewall">Ban</button>
+                  ` : ''}
                 </div>
               </td>
               <td style="font-size:0.72rem; font-family:monospace; color:var(--text-muted);">${c.recv_q} / ${c.send_q}</td>
@@ -6101,6 +6181,12 @@ class DesktopAppsController {
             btn.onclick = () => {
               navigator.clipboard.writeText(btn.dataset.ip);
               if (window.showToast) window.showToast(`Copied ${btn.dataset.ip}`, 'info');
+            };
+          });
+
+          tbody.querySelectorAll('.btn-ban-ip').forEach(btn => {
+            btn.onclick = () => {
+              DesktopApps.launch('firewall', { ban_ip: btn.dataset.ip });
             };
           });
         };
@@ -6143,16 +6229,24 @@ class DesktopAppsController {
                 topList.innerHTML = `<span style="font-size:0.72rem; color:var(--text-muted);">No external client connections</span>`;
               } else {
                 topList.innerHTML = topIps.map(item => `
-                  <button type="button" class="btn btn-secondary btn-xs btn-chip-ip" data-ip="${item.ip}" style="display:flex; align-items:center; gap:0.3rem; padding:0.15rem 0.45rem; font-size:0.7rem; white-space:nowrap;">
-                    <span style="font-family:monospace; color:#f8fafc;">${item.ip}</span>
-                    <span class="badge" style="background:${item.count > 10 ? '#ef4444' : 'rgba(56,189,248,0.2)'}; color:${item.count > 10 ? '#fff' : '#38bdf8'}; font-weight:700;">${item.count}</span>
-                  </button>
+                  <div style="display:inline-flex; align-items:center; background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:4px; padding:1px 3px;">
+                    <button type="button" class="btn btn-ghost btn-xs btn-chip-ip" data-ip="${item.ip}" style="display:flex; align-items:center; gap:0.3rem; padding:0.12rem 0.35rem; font-size:0.7rem; white-space:nowrap; border:none;">
+                      <span style="font-family:monospace; color:#f8fafc;">${item.ip}</span>
+                      <span class="badge" style="background:${item.count > 10 ? '#ef4444' : 'rgba(56,189,248,0.2)'}; color:${item.count > 10 ? '#fff' : '#38bdf8'}; font-weight:700;">${item.count}</span>
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-xs btn-ban-chip" data-ip="${item.ip}" title="Block ${item.ip} in Firewall" style="padding:0.1rem 0.3rem; font-size:0.65rem; color:#f87171; border:none;">Ban</button>
+                  </div>
                 `).join('');
 
                 topList.querySelectorAll('.btn-chip-ip').forEach(chip => {
                   chip.onclick = () => {
                     searchInp.value = chip.dataset.ip;
                     renderConnectionsList();
+                  };
+                });
+                topList.querySelectorAll('.btn-ban-chip').forEach(btn => {
+                  btn.onclick = () => {
+                    DesktopApps.launch('firewall', { ban_ip: btn.dataset.ip });
                   };
                 });
               }

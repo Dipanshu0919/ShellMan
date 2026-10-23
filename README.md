@@ -262,6 +262,38 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Automated Deployment Webhooks**: Generates unique webhook URLs (`/api/deploy/webhook/<token>`) for GitHub and GitLab to automate deployment on `git push`.
 - **Native 38px Utility Toolbar**: Filter across deployments, status badges, and deployment logs.
 
+### 18. Docker & Container Manager
+- **100% Agentless Container Discovery**: Inspects Docker engine and active/stopped containers over standard SSH via `docker ps -a --format '{{json .}}'` with 0 MB resident RAM overhead.
+- **Full Lifecycle Operations**: 1-click Start, Graceful Stop (`-t 10`), Restart, Pause, and Forced Remove (`rm -f`).
+- **Live Container Log Streaming**: Tail and stream container logs directly into an interactive modal viewer with syntax formatting, timestamps, search filter, and clipboard copy.
+- **Docker Compose Automation**: Execute `docker compose up -d --build`, `down`, and `restart` in remote directories with custom compose file paths.
+- **Performance Telemetry**: Inspect non-streaming container CPU %, Memory usage, and Network I/O metrics on demand.
+
+### 19. Database Explorer & Backups (SQLite .db Viewer, MySQL, PostgreSQL)
+- **Interactive SQLite .db / .sqlite File Viewer**:
+  - Open and inspect any remote SQLite database file directly from the SFTP File Manager (double-click integration) or path input.
+  - Automatic table schema viewer (`PRAGMA table_info`), primary key badges, and column data types.
+  - Paginated row browser with responsive data grid.
+  - Safe read-only SQL console: executes custom `SELECT`, `PRAGMA`, and `EXPLAIN` queries while blocking mutations (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`).
+  - Auto-Discovery: 1-click scanner searches `/var/www`, `/home`, and `/opt` to locate SQLite database files automatically.
+- **MySQL & MariaDB Explorer**: Connects via local Unix socket without exposing ports, browse databases and tables, and preview rows.
+- **PostgreSQL Explorer**: Connects using peer authentication, lists active databases and public schema tables.
+- **1-Click Compressed Dump Generator**: Creates compressed backups (`.db.gz` or `.sql.gz`) in `/tmp/` ready for immediate SFTP retrieval.
+
+### 20. Firewall (UFW) & Fail2Ban Security Shield
+- **Visual UFW Firewall Control**: Real-time status display (`Active` / `Inactive`), default traffic policy readout, and numbered rule table.
+- **Rule Management**: Add allow/deny/limit rules for ports and specific IP addresses; delete rules with 1-click confirmation.
+- **Fail2Ban Jail Inspector**: Queries active intrusion jails (e.g. `sshd`), lists currently banned malicious IPs, and offers 1-click unban.
+- **DDoS Monitor Integration**: Connected directly with the Live Netstat & DDoS socket monitor. Click "Ban" next to any abusive foreign IP to immediately block it at firewall rule position 1 (`sudo ufw insert 1 deny from <ip> to any`).
+
+### 21. SSH Connection Diagnostics Dashboard ("The Secret Weapon")
+- **Encrypted Transport Verification**: Proves raw SSH transport authenticity directly in the UI.
+- **Live Round-Trip Latency (RTT)**: High-precision ping measured in milliseconds via OpenSSH keepalive global requests without spawning shell subshells.
+- **Cryptographic Cipher Breakdown**: Active symmetric bulk cipher (e.g., `chacha20-poly1305@openssh.com`, `aes256-gcm`), Key Exchange engine (`curve25519-sha256`), and MAC digest.
+- **Strict KEX & Anti-Terrapin Verification**: Displays whether strict key exchange negotiation is active.
+- **Host Key SHA-256 Fingerprint**: Instant fingerprint inspection and 1-click clipboard copy.
+- **Socket & Protocol Banners**: Displays remote OpenSSH banner, client banner, socket endpoint, and SFTP subsystem pool status.
+
 ---
 
 ## Quick Start Guide

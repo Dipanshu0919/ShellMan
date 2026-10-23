@@ -664,6 +664,49 @@ html, body {
   word-break: break-word;
 }
 
+/* Desktop Icon Size Variants */
+.desktop-icons-container.size-compact {
+  gap: 0.45rem 0.65rem;
+}
+.desktop-icons-container.size-compact .desktop-icon {
+  width: 62px;
+  padding: 0.25rem 0.15rem;
+}
+.desktop-icons-container.size-compact .desktop-icon-tile {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  margin-bottom: 0.25rem;
+}
+.desktop-icons-container.size-compact .desktop-icon-tile svg {
+  width: 20px;
+  height: 20px;
+}
+.desktop-icons-container.size-compact .desktop-icon-label {
+  font-size: 0.65rem;
+}
+
+.desktop-icons-container.size-large {
+  gap: 0.85rem 1.05rem;
+}
+.desktop-icons-container.size-large .desktop-icon {
+  width: 88px;
+  padding: 0.5rem 0.35rem;
+}
+.desktop-icons-container.size-large .desktop-icon-tile {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  margin-bottom: 0.45rem;
+}
+.desktop-icons-container.size-large .desktop-icon-tile svg {
+  width: 28px;
+  height: 28px;
+}
+.desktop-icons-container.size-large .desktop-icon-label {
+  font-size: 0.78rem;
+}
+
 /* ==========================================================================
    4. WINDOW MANAGER (DESKTOP WINDOWS & ANIMATIONS)
    ========================================================================== */

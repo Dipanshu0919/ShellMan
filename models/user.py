@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import pyotp
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
+from models.server import encrypt_value, decrypt_value
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -13,10 +14,10 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     last_login = db.Column(db.DateTime, nullable=True)
 
-    # Two-Factor Authentication (TOTP)
-    totp_secret = db.Column(db.String(64), nullable=True)
+    # Two-Factor Authentication (TOTP) - Encrypted with local Fernet key
+    totp_secret = db.Column(db.Text, nullable=True)
     totp_enabled = db.Column(db.Boolean, default=False, nullable=False)
-    backup_codes = db.Column(db.Text, nullable=True)  # JSON-encoded array of backup codes
+    backup_codes = db.Column(db.Text, nullable=True)  # Fernet encrypted JSON-encoded array
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
@@ -24,10 +25,29 @@ class User(db.Model):
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
 
+    @property
+    def raw_totp_secret(self) -> str:
+        if not self.totp_secret:
+            return ""
+        dec = decrypt_value(self.totp_secret)
+        return dec if dec else self.totp_secret
+
+    @property
+    def raw_backup_codes(self) -> list:
+        if not self.backup_codes:
+            return []
+        dec = decrypt_value(self.backup_codes)
+        raw_str = dec if dec else self.backup_codes
+        try:
+            val = json.loads(raw_str)
+            return val if isinstance(val, list) else []
+        except Exception:
+            return []
+
     def enable_totp(self, secret: str, codes_list: list):
-        self.totp_secret = secret
+        self.totp_secret = encrypt_value(secret)
         self.totp_enabled = True
-        self.backup_codes = json.dumps(codes_list)
+        self.backup_codes = encrypt_value(json.dumps(codes_list))
 
     def disable_totp(self):
         self.totp_secret = None
@@ -35,21 +55,19 @@ class User(db.Model):
         self.backup_codes = None
 
     def verify_totp(self, token: str) -> bool:
-        if not self.totp_enabled or not self.totp_secret:
+        sec = self.raw_totp_secret
+        if not self.totp_enabled or not sec:
             return False
         clean_token = str(token).strip().replace(' ', '').replace('-', '')
-        totp = pyotp.TOTP(self.totp_secret)
+        totp = pyotp.TOTP(sec)
         # allow 1 step before and after (30s window drift)
         return bool(totp.verify(clean_token, valid_window=1))
 
     def verify_and_consume_backup_code(self, code: str) -> bool:
-        if not self.totp_enabled or not self.backup_codes:
+        if not self.totp_enabled:
             return False
-        try:
-            codes = json.loads(self.backup_codes)
-            if not isinstance(codes, list):
-                return False
-        except Exception:
+        codes = self.raw_backup_codes
+        if not codes:
             return False
 
         clean_code = str(code).strip().upper().replace(' ', '').replace('-', '')
@@ -60,7 +78,7 @@ class User(db.Model):
             norm = str(c).strip().upper().replace(' ', '').replace('-', '')
             if norm == clean_code:
                 codes.pop(i)
-                self.backup_codes = json.dumps(codes)
+                self.backup_codes = encrypt_value(json.dumps(codes))
                 return True
         return False
 

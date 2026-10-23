@@ -65,6 +65,8 @@ class SystemMonitor:
             "date +'%s %z %Z'; "
             "echo '---DISK---'; "
             "df -P -B1 -x tmpfs -x devtmpfs -x overlay -x squashfs -x iso9660 2>/dev/null; "
+            "echo '---NET---'; "
+            "cat /proc/net/dev 2>/dev/null; "
             + os_subcmd
         )
 
@@ -223,6 +225,66 @@ class SystemMonitor:
             uname = os_lines[0].strip() if len(os_lines) > 0 else (uname or "Linux")
             pretty_os = os_lines[1].strip() if len(os_lines) > 1 and os_lines[1].strip() else (uname or "Linux")
 
+        # Network Throughput (Upload & Download Speed) from /proc/net/dev
+        net_stats = {
+            'interface': 'eth0',
+            'rx_rate': 0.0,
+            'tx_rate': 0.0,
+            'rx_rate_human': '0 KB/s',
+            'tx_rate_human': '0 KB/s',
+            'rx_total_human': '0 B',
+            'tx_total_human': '0 B'
+        }
+        net_lines = sections.get('NET', [])
+        current_ifaces = {}
+        for nline in net_lines:
+            if ':' in nline:
+                iface, data = nline.split(':', 1)
+                iface = iface.strip()
+                if iface == 'lo':
+                    continue
+                parts = data.split()
+                if len(parts) >= 9:
+                    try:
+                        rx_b = int(parts[0])
+                        tx_b = int(parts[8])
+                        current_ifaces[iface] = (rx_b, tx_b)
+                    except (ValueError, IndexError):
+                        pass
+
+        if current_ifaces:
+            primary_iface = max(current_ifaces.keys(), key=lambda k: current_ifaces[k][0] + current_ifaces[k][1])
+            curr_rx, curr_tx = current_ifaces[primary_iface]
+
+            with SystemMonitor._cache_lock:
+                if not hasattr(SystemMonitor, '_net_history'):
+                    SystemMonitor._net_history = {}
+                prev_net = SystemMonitor._net_history.get(server_id)
+
+                if prev_net and prev_net.get('iface') == primary_iface:
+                    dt = now - prev_net.get('time', now)
+                    if dt > 0.3:
+                        rx_diff = max(0, curr_rx - prev_net.get('rx', curr_rx))
+                        tx_diff = max(0, curr_tx - prev_net.get('tx', curr_tx))
+                        rx_rate = rx_diff / dt
+                        tx_rate = tx_diff / dt
+                        net_stats = {
+                            'interface': primary_iface,
+                            'rx_rate': rx_rate,
+                            'tx_rate': tx_rate,
+                            'rx_rate_human': SystemMonitor.format_bytes(rx_rate) + '/s',
+                            'tx_rate_human': SystemMonitor.format_bytes(tx_rate) + '/s',
+                            'rx_total_human': SystemMonitor.format_bytes(curr_rx),
+                            'tx_total_human': SystemMonitor.format_bytes(curr_tx)
+                        }
+
+                SystemMonitor._net_history[server_id] = {
+                    'time': now,
+                    'iface': primary_iface,
+                    'rx': curr_rx,
+                    'tx': curr_tx
+                }
+
         metrics_result = {
             'cpu': cpu_usage,
             'memory': {
@@ -250,6 +312,7 @@ class SystemMonitor:
                 'used_formatted': SystemMonitor.format_bytes(disk_used_all),
                 'filesystems': disks
             },
+            'network': net_stats,
             'os': pretty_os,
             'kernel': uname
         }

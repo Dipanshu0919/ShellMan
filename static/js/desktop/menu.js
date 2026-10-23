@@ -42,10 +42,109 @@ class DesktopMenusController {
     e.stopPropagation();
 
     if (!this.contextMenuEl) return;
-    const menuWidth = 210;
-    const menuHeight = 280;
-    const posX = Math.min(window.innerWidth - menuWidth - 10, e.clientX);
-    const posY = Math.min(window.innerHeight - menuHeight - 10, e.clientY);
+
+    // Build dynamic wallpaper context menu with desktop and dock customization
+    const currentSize = window.DesktopCustomizer ? window.DesktopCustomizer.getDesktopIconSize() : 'normal';
+    const items = [
+      {
+        label: 'Customize Desktop & Dock...',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
+        action: () => {
+          if (window.DesktopCustomizer) window.DesktopCustomizer.openCustomizerModal();
+        }
+      },
+      {
+        label: `Icon Size: ${currentSize.charAt(0).toUpperCase() + currentSize.slice(1)}`,
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>',
+        action: () => {
+          const next = currentSize === 'normal' ? 'large' : (currentSize === 'large' ? 'compact' : 'normal');
+          if (window.DesktopCustomizer) window.DesktopCustomizer.setDesktopIconSize(next);
+        }
+      },
+      'separator',
+      {
+        label: 'New Terminal',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>',
+        action: () => { if (window.DesktopApps) window.DesktopApps.launch('terminal'); }
+      },
+      {
+        label: 'Open File Manager',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
+        action: () => { if (window.DesktopApps) window.DesktopApps.launch('files'); }
+      },
+      {
+        label: 'Code Workspace',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>',
+        action: () => { if (window.DesktopApps) window.DesktopApps.launch('code'); }
+      },
+      'separator',
+      {
+        label: 'Cascade Windows',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="14" height="14" rx="2"></rect><path d="M7 21h14a2 2 0 0 0 2-2V7"></path></svg>',
+        action: () => { if (window.WindowManager) window.WindowManager.cascadeWindows(); }
+      },
+      {
+        label: 'Minimize All Windows',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="4" y1="12" x2="20" y2="12"></line></svg>',
+        action: () => { if (window.WindowManager) window.WindowManager.minimizeAll(); }
+      },
+      'separator',
+      {
+        label: 'Reset Layout to Defaults',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>',
+        action: () => {
+          if (window.DesktopCustomizer) window.DesktopCustomizer.resetDefaults();
+        }
+      },
+      {
+        label: 'System Settings',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>',
+        action: () => { if (window.DesktopApps) window.DesktopApps.launch('settings'); }
+      }
+    ];
+
+    this.showCustomMenu(e, items);
+  }
+
+  showCustomMenu(e, items) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!this.contextMenuEl || !Array.isArray(items)) return;
+
+    this.contextMenuEl.innerHTML = items.map(item => {
+      if (item === 'separator' || item.type === 'separator') {
+        return '<div class="ctx-sep"></div>';
+      }
+      return `
+        <div class="ctx-item ${item.danger ? 'text-danger' : ''}" style="${item.style || ''}">
+          ${item.icon || ''}
+          <span>${this.escapeHtml(item.label)}</span>
+        </div>
+      `;
+    }).join('');
+
+    const itemEls = this.contextMenuEl.querySelectorAll('.ctx-item');
+    let realIdx = 0;
+    items.forEach(item => {
+      if (item === 'separator' || item.type === 'separator') return;
+      const el = itemEls[realIdx++];
+      if (el) {
+        el.onclick = (ev) => {
+          ev.stopPropagation();
+          this.contextMenuEl.classList.remove('open');
+          if (typeof item.action === 'function') item.action(ev);
+        };
+      }
+    });
+
+    const menuWidth = 230;
+    const menuHeight = Math.min(420, items.length * 36 + 12);
+    const clientX = e ? e.clientX : window.innerWidth / 2;
+    const clientY = e ? e.clientY : window.innerHeight / 2;
+    const posX = Math.min(window.innerWidth - menuWidth - 10, Math.max(10, clientX));
+    const posY = Math.min(window.innerHeight - menuHeight - 10, Math.max(10, clientY));
 
     this.contextMenuEl.style.left = `${posX}px`;
     this.contextMenuEl.style.top = `${posY}px`;
@@ -229,6 +328,10 @@ class DesktopMenusController {
       { name: 'System Logs', desc: 'Stream journalctl entries with syntax highlighter', action: () => DesktopApps.launch('logs'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>' },
       { name: 'Hardware Specs', desc: 'View CPU architecture & interfaces', action: () => DesktopApps.launch('hardware'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect></svg>' },
       { name: 'Network & Sockets', desc: 'Inspect listening ports and established connections', action: () => DesktopApps.launch('network'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>' },
+      { name: 'Firewall & Shield (UFW)', desc: 'Configure UFW packet filter rules, policies, and Fail2Ban security jails', action: () => DesktopApps.launch('firewall'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>' },
+      { name: 'Docker & Containers', desc: 'Manage containers, inspect live stream logs, view metrics, and compose projects', action: () => DesktopApps.launch('docker'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="3" height="3"></rect><rect x="7" y="11" width="3" height="3"></rect><rect x="11" y="11" width="3" height="3"></rect><path d="M2 14c1.5 4 5 6 10 6s9-3 10-6"></path></svg>' },
+      { name: 'Database & .db Explorer', desc: 'Inspect SQLite .db files, browse tables, run read-only queries, and export dumps', action: () => DesktopApps.launch('database'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>' },
+      { name: 'SSH Session Diagnostics', desc: 'Measure live round-trip latency (RTT), cryptographic ciphers, and transport security', action: () => DesktopApps.launch('ssh_diag'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 6v6l4 2"></path></svg>' },
       { name: 'Nginx Virtual Hosts', desc: 'Reverse proxy routing, configuration editor, and Let\'s Encrypt SSL certificates', action: () => DesktopApps.launch('nginx'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M7 16V8l5 8V8M16 8v8"></path></svg>' },
       { name: 'Cloudflare Domains & DNS', desc: 'Connect Cloudflare API, manage zones, DNS records, nameservers, and server links', action: () => DesktopApps.launch('domains'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>' },
       { name: 'File Sync (Rsync)', desc: 'Agentless remote directory sync and replication over SSH with dry-run preview', action: () => DesktopApps.launch('sync'), badge: 'App', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>' },
