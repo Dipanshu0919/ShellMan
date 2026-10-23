@@ -17,6 +17,243 @@ const formatBytes = (bytes) => {
 };
 window.formatBytes = formatBytes;
 
+// =========================================================================
+// TERMINAL COLOR THEMES
+// =========================================================================
+const SHELLMAN_TERMINAL_THEMES = {
+  shellman: {
+    id: 'shellman',
+    name: 'ShellMan Cyberpunk (Default)',
+    background: '#090d16',
+    foreground: '#f8fafc',
+    cursor: '#38bdf8',
+    cursorAccent: '#090d16',
+    selectionBackground: 'rgba(56, 189, 248, 0.3)',
+    black: '#1e293b', red: '#f43f5e', green: '#10b981', yellow: '#f59e0b',
+    blue: '#38bdf8', magenta: '#d946ef', cyan: '#06b6d4', white: '#f8fafc',
+    brightBlack: '#475569', brightRed: '#fb7185', brightGreen: '#34d399', brightYellow: '#fbbf24',
+    brightBlue: '#60a5fa', brightMagenta: '#e879f9', brightCyan: '#22d3ee', brightWhite: '#ffffff'
+  },
+  dracula: {
+    id: 'dracula',
+    name: 'Dracula',
+    background: '#282a36',
+    foreground: '#f8f8f2',
+    cursor: '#f8f8f2',
+    cursorAccent: '#282a36',
+    selectionBackground: 'rgba(68, 71, 90, 0.5)',
+    black: '#21222c', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c',
+    blue: '#bd93f9', magenta: '#ff79c6', cyan: '#8be9fd', white: '#f8f8f2',
+    brightBlack: '#6272a4', brightRed: '#ff6e6e', brightGreen: '#69ff94', brightYellow: '#ffffa5',
+    brightBlue: '#d6acff', brightMagenta: '#ff92df', brightCyan: '#a4ffff', brightWhite: '#ffffff'
+  },
+  one_dark: {
+    id: 'one_dark',
+    name: 'One Dark',
+    background: '#1e1e1e',
+    foreground: '#abb2bf',
+    cursor: '#528bff',
+    cursorAccent: '#1e1e1e',
+    selectionBackground: 'rgba(62, 68, 81, 0.5)',
+    black: '#282c34', red: '#e06c75', green: '#98c379', yellow: '#e5c07b',
+    blue: '#61afef', magenta: '#c678dd', cyan: '#56b6c2', white: '#abb2bf',
+    brightBlack: '#5c6370', brightRed: '#be5046', brightGreen: '#98c379', brightYellow: '#d19a66',
+    brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff'
+  },
+  nord: {
+    id: 'nord',
+    name: 'Nord Frost',
+    background: '#2e3440',
+    foreground: '#d8dee9',
+    cursor: '#88c0d0',
+    cursorAccent: '#2e3440',
+    selectionBackground: 'rgba(136, 192, 208, 0.3)',
+    black: '#3b4252', red: '#bf616a', green: '#a3be8c', yellow: '#ebcb8b',
+    blue: '#81a1c1', magenta: '#b48ead', cyan: '#88c0d0', white: '#e5e9f0',
+    brightBlack: '#4c566a', brightRed: '#bf616a', brightGreen: '#a3be8c', brightYellow: '#ebcb8b',
+    brightBlue: '#81a1c1', brightMagenta: '#b48ead', brightCyan: '#8fbcbb', brightWhite: '#eceff4'
+  },
+  tokyo_night: {
+    id: 'tokyo_night',
+    name: 'Tokyo Night',
+    background: '#1a1b26',
+    foreground: '#a9b1d6',
+    cursor: '#c0caf5',
+    cursorAccent: '#1a1b26',
+    selectionBackground: 'rgba(122, 162, 247, 0.3)',
+    black: '#15161e', red: '#f7768e', green: '#9ece6a', yellow: '#e0af68',
+    blue: '#7aa2f7', magenta: '#bb9af7', cyan: '#7dcfff', white: '#a9b1d6',
+    brightBlack: '#414868', brightRed: '#f7768e', brightGreen: '#9ece6a', brightYellow: '#e0af68',
+    brightBlue: '#7aa2f7', brightMagenta: '#bb9af7', brightCyan: '#7dcfff', brightWhite: '#c0caf5'
+  },
+  catppuccin_mocha: {
+    id: 'catppuccin_mocha',
+    name: 'Catppuccin Mocha',
+    background: '#1e1e2e',
+    foreground: '#cdd6f4',
+    cursor: '#f5e0dc',
+    cursorAccent: '#1e1e2e',
+    selectionBackground: 'rgba(203, 166, 247, 0.3)',
+    black: '#45475a', red: '#f38ba8', green: '#a6e3a1', yellow: '#f9e2af',
+    blue: '#89b4fa', magenta: '#f5c2e7', cyan: '#94e2d5', white: '#bac2de',
+    brightBlack: '#585b70', brightRed: '#f38ba8', brightGreen: '#a6e3a1', brightYellow: '#f9e2af',
+    brightBlue: '#89b4fa', brightMagenta: '#f5c2e7', brightCyan: '#94e2d5', brightWhite: '#a6adc8'
+  },
+  gruvbox_dark: {
+    id: 'gruvbox_dark',
+    name: 'Gruvbox Dark',
+    background: '#282828',
+    foreground: '#ebdbb2',
+    cursor: '#ebdbb2',
+    cursorAccent: '#282828',
+    selectionBackground: 'rgba(254, 128, 25, 0.3)',
+    black: '#282828', red: '#cc241d', green: '#98971a', yellow: '#d79921',
+    blue: '#458588', magenta: '#b16286', cyan: '#689d6a', white: '#a89984',
+    brightBlack: '#928374', brightRed: '#fb4934', brightGreen: '#b8bb26', brightYellow: '#fabd2f',
+    brightBlue: '#83a598', brightMagenta: '#d3869b', brightCyan: '#8ec07c', brightWhite: '#ebdbb2'
+  },
+  synthwave_84: {
+    id: 'synthwave_84',
+    name: "Synthwave '84",
+    background: '#262335',
+    foreground: '#f92aad',
+    cursor: '#ff7edb',
+    cursorAccent: '#262335',
+    selectionBackground: 'rgba(255, 126, 219, 0.3)',
+    black: '#1f1d2b', red: '#fe4450', green: '#72f1b8', yellow: '#fede5d',
+    blue: '#03edf9', magenta: '#ff7edb', cyan: '#36f9f6', white: '#ffffff',
+    brightBlack: '#614d85', brightRed: '#fe4450', brightGreen: '#72f1b8', brightYellow: '#fede5d',
+    brightBlue: '#03edf9', brightMagenta: '#ff7edb', brightCyan: '#36f9f6', brightWhite: '#ffffff'
+  },
+  solarized_dark: {
+    id: 'solarized_dark',
+    name: 'Solarized Dark',
+    background: '#002b36',
+    foreground: '#839496',
+    cursor: '#93a1a1',
+    cursorAccent: '#002b36',
+    selectionBackground: 'rgba(7, 54, 66, 0.6)',
+    black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900',
+    blue: '#268bd2', magenta: '#d33682', cyan: '#2aa198', white: '#eee8d5',
+    brightBlack: '#586e75', brightRed: '#cb4b16', brightGreen: '#586e75', brightYellow: '#657b83',
+    brightBlue: '#839496', brightMagenta: '#6c71c4', brightCyan: '#93a1a1', brightWhite: '#fdf6e3'
+  },
+  solarized_light: {
+    id: 'solarized_light',
+    name: 'Solarized Light',
+    background: '#fdf6e3',
+    foreground: '#657b83',
+    cursor: '#586e75',
+    cursorAccent: '#fdf6e3',
+    selectionBackground: 'rgba(7, 54, 66, 0.15)',
+    black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900',
+    blue: '#268bd2', magenta: '#d33682', cyan: '#2aa198', white: '#eee8d5',
+    brightBlack: '#586e75', brightRed: '#cb4b16', brightGreen: '#586e75', brightYellow: '#657b83',
+    brightBlue: '#839496', brightMagenta: '#6c71c4', brightCyan: '#93a1a1', brightWhite: '#fdf6e3'
+  },
+  material_ocean: {
+    id: 'material_ocean',
+    name: 'Material Ocean',
+    background: '#0f111a',
+    foreground: '#8f93a2',
+    cursor: '#ffcc00',
+    cursorAccent: '#0f111a',
+    selectionBackground: 'rgba(128, 203, 196, 0.25)',
+    black: '#000000', red: '#ff5370', green: '#c3e88d', yellow: '#ffcb6b',
+    blue: '#82aaff', magenta: '#c792ea', cyan: '#89ddff', white: '#ffffff',
+    brightBlack: '#464b5d', brightRed: '#ff5370', brightGreen: '#c3e88d', brightYellow: '#ffcb6b',
+    brightBlue: '#82aaff', brightMagenta: '#c792ea', brightCyan: '#89ddff', brightWhite: '#ffffff'
+  },
+  cobalt2: {
+    id: 'cobalt2',
+    name: 'Cobalt2',
+    background: '#193549',
+    foreground: '#ffffff',
+    cursor: '#ffc600',
+    cursorAccent: '#193549',
+    selectionBackground: 'rgba(0, 136, 255, 0.4)',
+    black: '#000000', red: '#ff0055', green: '#38de21', yellow: '#ffe50a',
+    blue: '#1478db', magenta: '#ff0055', cyan: '#00c5c7', white: '#c7c7c7',
+    brightBlack: '#686868', brightRed: '#f40e17', brightGreen: '#3bd01d', brightYellow: '#edc809',
+    brightBlue: '#5555ff', brightMagenta: '#ff55ff', brightCyan: '#6ae3fa', brightWhite: '#feffff'
+  },
+  github_dark: {
+    id: 'github_dark',
+    name: 'GitHub Dark',
+    background: '#0d1117',
+    foreground: '#c9d1d9',
+    cursor: '#58a6ff',
+    cursorAccent: '#0d1117',
+    selectionBackground: 'rgba(56, 139, 253, 0.3)',
+    black: '#161b22', red: '#ff7b72', green: '#3fb950', yellow: '#d29922',
+    blue: '#58a6ff', magenta: '#bc8cff', cyan: '#39c5cf', white: '#b1bac4',
+    brightBlack: '#6e7681', brightRed: '#ffa198', brightGreen: '#56d364', brightYellow: '#e3b341',
+    brightBlue: '#79c0ff', brightMagenta: '#d2a8ff', brightCyan: '#56d4dd', brightWhite: '#f0f6fc'
+  },
+  night_owl: {
+    id: 'night_owl',
+    name: 'Night Owl',
+    background: '#011627',
+    foreground: '#d6deeb',
+    cursor: '#7e57c2',
+    cursorAccent: '#011627',
+    selectionBackground: 'rgba(95, 126, 151, 0.35)',
+    black: '#011627', red: '#ef5350', green: '#22da6e', yellow: '#addb67',
+    blue: '#82aaff', magenta: '#c792ea', cyan: '#21c7a8', white: '#ffffff',
+    brightBlack: '#575656', brightRed: '#ef5350', brightGreen: '#22da6e', brightYellow: '#ffeb95',
+    brightBlue: '#82aaff', brightMagenta: '#c792ea', brightCyan: '#7fdbca', brightWhite: '#ffffff'
+  },
+  monokai: {
+    id: 'monokai',
+    name: 'Monokai Pro',
+    background: '#272822',
+    foreground: '#f8f8f2',
+    cursor: '#f8f8f0',
+    cursorAccent: '#272822',
+    selectionBackground: 'rgba(73, 72, 62, 0.6)',
+    black: '#272822', red: '#f92672', green: '#a6e22e', yellow: '#e6db74',
+    blue: '#66d9ef', magenta: '#ae81ff', cyan: '#a1efe4', white: '#f8f8f2',
+    brightBlack: '#75715e', brightRed: '#f92672', brightGreen: '#a6e22e', brightYellow: '#e6db74',
+    brightBlue: '#66d9ef', brightMagenta: '#ae81ff', brightCyan: '#a1efe4', brightWhite: '#f8f8f2'
+  },
+  matrix: {
+    id: 'matrix',
+    name: 'The Matrix Green',
+    background: '#080c08',
+    foreground: '#00ff66',
+    cursor: '#00ff66',
+    cursorAccent: '#080c08',
+    selectionBackground: 'rgba(0, 255, 102, 0.3)',
+    black: '#0d130e', red: '#e04040', green: '#00dd55', yellow: '#88ff00',
+    blue: '#00ccaa', magenta: '#00ff66', cyan: '#55ffaa', white: '#aaffcc',
+    brightBlack: '#142216', brightRed: '#ff6666', brightGreen: '#00ff66', brightYellow: '#bbff33',
+    brightBlue: '#33ffcc', brightMagenta: '#00ff88', brightCyan: '#88ffcc', brightWhite: '#eeffee'
+  }
+};
+window.SHELLMAN_TERMINAL_THEMES = SHELLMAN_TERMINAL_THEMES;
+window.TERMINAL_THEMES = SHELLMAN_TERMINAL_THEMES;
+
+function applyShellmanTerminalTheme(themeKey) {
+  const theme = SHELLMAN_TERMINAL_THEMES[themeKey] || SHELLMAN_TERMINAL_THEMES.shellman;
+  localStorage.setItem('shellman_terminal_theme', themeKey);
+  if (window._shellmanTerminals) {
+    window._shellmanTerminals.forEach(term => {
+      try {
+        term.options.theme = theme;
+        if (term.element) {
+          const container = term.element.closest('.terminal-app-container') || term.element.parentElement;
+          if (container) container.style.background = theme.background;
+          term.element.style.background = theme.background;
+        }
+      } catch (_) {}
+    });
+  }
+  document.querySelectorAll('[data-terminal-theme-select]').forEach(sel => {
+    sel.value = themeKey;
+  });
+}
+window.applyTerminalTheme = applyShellmanTerminalTheme;
+
 class DesktopAppsController {
   constructor() {
     this.serverId = null;
@@ -402,6 +639,22 @@ class DesktopAppsController {
   // =========================================================================
   // 1. TERMINAL APPLICATION (Multi-Tab PTY SSH)
   // =========================================================================
+  get TERMINAL_THEMES() {
+    return SHELLMAN_TERMINAL_THEMES;
+  }
+
+  static get TERMINAL_THEMES() {
+    return SHELLMAN_TERMINAL_THEMES;
+  }
+
+  applyTerminalTheme(themeKey) {
+    applyShellmanTerminalTheme(themeKey);
+  }
+
+  static applyTerminalTheme(themeKey) {
+    applyShellmanTerminalTheme(themeKey);
+  }
+
   launchTerminal(params = {}) {
     if (!params.newWindow && !params.path && !params.cwd) {
       const existing = WindowManager.getWindowByAppId('terminal');
@@ -416,6 +669,8 @@ class DesktopAppsController {
     const initialPath = params.path || params.cwd || '';
     const folderName = initialPath ? (initialPath.split('/').filter(Boolean).pop() || initialPath) : '';
     const title = params.title || (initialPath ? `Terminal: ${folderName}` : 'Terminal');
+    const savedThemeKey = localStorage.getItem('shellman_terminal_theme') || 'shellman';
+    const activeTheme = SHELLMAN_TERMINAL_THEMES[savedThemeKey] || SHELLMAN_TERMINAL_THEMES.shellman;
 
     return WindowManager.createWindow({
       appId: 'terminal',
@@ -427,7 +682,7 @@ class DesktopAppsController {
       minWidth: 420,
       minHeight: 260,
       contentHtml: `
-        <div class="terminal-app-container" style="height:100%; display:flex; flex-direction:column; background:#090d16;">
+        <div class="terminal-app-container" style="height:100%; display:flex; flex-direction:column; background:${activeTheme.background};">
           <div class="terminal-toolbar" style="height:36px; background:#0f172a; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; padding:0 0.65rem;">
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <span class="status-dot connected" id="dot_${termWinId}"></span>
@@ -436,6 +691,12 @@ class DesktopAppsController {
               <span style="color:var(--text-muted); font-size:0.7rem; font-family:var(--font-mono); margin-left:0.3rem;" id="dim_${termWinId}">80x24</span>
             </div>
             <div style="display:flex; align-items:center; gap:0.3rem;">
+              <div style="display:flex; align-items:center; gap:0.25rem; margin-right:0.2rem;">
+                <span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-mono);">Theme:</span>
+                <select class="form-control" id="theme_${termWinId}" data-terminal-theme-select style="font-size:0.68rem; height:24px; padding:0 4px; background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.1); border-radius:4px; outline:none; cursor:pointer;" title="Terminal Color Theme">
+                  ${Object.values(SHELLMAN_TERMINAL_THEMES).map(t => `<option value="${t.id}" ${savedThemeKey === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+                </select>
+              </div>
               <button class="btn btn-ghost btn-sm" id="newWin_${termWinId}" title="Open New Terminal Window">
                 <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 New
@@ -454,7 +715,7 @@ class DesktopAppsController {
               </button>
             </div>
           </div>
-          <div id="screen_${termWinId}" style="flex:1; width:100%; height:100%; overflow:hidden; padding:4px; box-sizing:border-box;"></div>
+          <div id="screen_${termWinId}" style="flex:1; width:100%; height:100%; overflow:hidden; padding:4px; box-sizing:border-box; background:${activeTheme.background};"></div>
         </div>
       `,
       onInit: (bodyEl, winObj) => {
@@ -462,6 +723,13 @@ class DesktopAppsController {
         const statusEl = bodyEl.querySelector(`#status_${termWinId}`);
         const dotEl = bodyEl.querySelector(`#dot_${termWinId}`);
         const dimEl = bodyEl.querySelector(`#dim_${termWinId}`);
+        const themeSelect = bodyEl.querySelector(`#theme_${termWinId}`);
+
+        if (themeSelect) {
+          themeSelect.addEventListener('change', (e) => {
+            applyShellmanTerminalTheme(e.target.value);
+          });
+        }
 
         const baseFontPx = parseFloat(localStorage.getItem('shellman_font_size') || '16');
         const term = new Terminal({
@@ -469,14 +737,7 @@ class DesktopAppsController {
           cursorStyle: 'bar',
           fontSize: Math.max(10, Math.round(14 * (baseFontPx / 16))),
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-          theme: {
-            background: '#090d16',
-            foreground: '#f8fafc',
-            cursor: '#38bdf8',
-            selectionBackground: 'rgba(56, 189, 248, 0.3)',
-            black: '#1e293b', red: '#f43f5e', green: '#10b981', yellow: '#f59e0b',
-            blue: '#3b82f6', magenta: '#d946ef', cyan: '#06b6d4', white: '#f8fafc'
-          },
+          theme: activeTheme,
           allowProposedApi: true,
           scrollback: 5000,
           macOptionIsMeta: true
@@ -4042,6 +4303,11 @@ class DesktopAppsController {
               <div class="code-editor-viewport" id="editorViewport_${codeId}" style="flex:1; width:100%; height:100%; overflow:hidden; position:relative;">
                 <div id="monaco_${codeId}" style="width:100%; height:100%; overflow:hidden;"></div>
                 <textarea id="fallbackTxt_${codeId}" style="width:100%; height:100%; background:#1e1e1e; color:#f8fafc; font-family:var(--font-mono); font-size:0.88rem; border:none; padding:1rem; resize:none; outline:none; display:none;"></textarea>
+                <div id="dropOverlay_${codeId}" style="display:none; position:absolute; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(4px); border:2px dashed #38bdf8; z-index:100; pointer-events:none; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem; color:#38bdf8;">
+                  <svg style="width:44px;height:44px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <div style="font-weight:700; font-size:1rem; color:#f8fafc;">Drop local file here to open in editor</div>
+                  <div style="font-size:0.75rem; color:#94a3b8;">Opens in editable tabs. Press Save to upload to remote workspace.</div>
+                </div>
               </div>
 
               <!-- Vertical Resizer for Terminal Panel -->
@@ -4117,6 +4383,43 @@ class DesktopAppsController {
         const searchInp = bodyEl.querySelector(`#searchInp_${codeId}`);
         const searchExecBtn = bodyEl.querySelector(`#searchExecBtn_${codeId}`);
         const searchResults = bodyEl.querySelector(`#searchResults_${codeId}`);
+
+        // Context Menu helpers for Code Workspace (Tree and Tabs)
+        let activeCodeCtxMenu = null;
+        const hideCodeContextMenu = () => {
+          if (activeCodeCtxMenu && activeCodeCtxMenu.parentNode) {
+            activeCodeCtxMenu.parentNode.removeChild(activeCodeCtxMenu);
+          }
+          activeCodeCtxMenu = null;
+        };
+
+        const onCodePointerDownOutside = (e) => {
+          if (activeCodeCtxMenu && !e.target.closest('.file-context-menu')) {
+            hideCodeContextMenu();
+          }
+        };
+        document.addEventListener('pointerdown', onCodePointerDownOutside);
+
+        const onCodeKeyDownEsc = (e) => {
+          if (e.key === 'Escape') hideCodeContextMenu();
+        };
+        document.addEventListener('keydown', onCodeKeyDownEsc);
+
+        const showCodeContextMenu = (x, y, itemsHtml) => {
+          hideCodeContextMenu();
+          const menu = document.createElement('div');
+          menu.className = 'file-context-menu';
+          menu.innerHTML = itemsHtml;
+          document.body.appendChild(menu);
+          activeCodeCtxMenu = menu;
+
+          const menuW = 215;
+          const menuH = menu.offsetHeight || 260;
+          const clampedX = Math.min(x, window.innerWidth - menuW - 12);
+          const clampedY = Math.min(y, window.innerHeight - menuH - 12);
+          menu.style.left = `${Math.max(10, clampedX)}px`;
+          menu.style.top = `${Math.max(10, clampedY)}px`;
+        };
 
         // Language mapper
         const getLanguageFromPath = (fpath) => {
@@ -4334,11 +4637,109 @@ class DesktopAppsController {
           }
         });
 
+        // Tabs Bar Right-Click Context Menu
+        tabsBar.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const tabEl = e.target.closest('.code-tab');
+          if (!tabEl) return;
+          const fpath = tabEl.dataset.path;
+          const tabName = fpath.split('/').pop() || fpath;
+
+          const menuHtml = `
+            <div class="file-context-header" style="padding:0.35rem 0.65rem; font-size:0.68rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              ${escapeHtml(tabName)}
+            </div>
+            <div class="file-context-item" id="tab_ctx_close">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <span>Close Tab</span>
+            </div>
+            <div class="file-context-item" id="tab_ctx_close_others">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+              <span>Close Others</span>
+            </div>
+            <div class="file-context-item" id="tab_ctx_close_all">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
+              <span>Close All</span>
+            </div>
+            <div class="file-context-separator" style="height:1px; background:rgba(255,255,255,0.06); margin:3px 0;"></div>
+            <div class="file-context-item" id="tab_ctx_save">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline></svg>
+              <span>Save File</span>
+            </div>
+            <div class="file-context-item" id="tab_ctx_copy_path">
+              <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              <span>Copy Path</span>
+            </div>
+          `;
+
+          showCodeContextMenu(e.clientX, e.clientY, menuHtml);
+
+          if (activeCodeCtxMenu.querySelector('#tab_ctx_close')) {
+            activeCodeCtxMenu.querySelector('#tab_ctx_close').onclick = () => {
+              hideCodeContextMenu();
+              closeFile(fpath);
+            };
+          }
+
+          if (activeCodeCtxMenu.querySelector('#tab_ctx_close_others')) {
+            activeCodeCtxMenu.querySelector('#tab_ctx_close_others').onclick = async () => {
+              hideCodeContextMenu();
+              for (const [key] of Array.from(openTabs.entries())) {
+                if (key !== fpath) {
+                  await closeFile(key);
+                }
+              }
+            };
+          }
+
+          if (activeCodeCtxMenu.querySelector('#tab_ctx_close_all')) {
+            activeCodeCtxMenu.querySelector('#tab_ctx_close_all').onclick = async () => {
+              hideCodeContextMenu();
+              for (const [key] of Array.from(openTabs.entries())) {
+                await closeFile(key);
+              }
+            };
+          }
+
+          if (activeCodeCtxMenu.querySelector('#tab_ctx_save')) {
+            activeCodeCtxMenu.querySelector('#tab_ctx_save').onclick = () => {
+              hideCodeContextMenu();
+              if (activePath !== fpath) openFile(fpath);
+              saveActiveFile();
+            };
+          }
+
+          if (activeCodeCtxMenu.querySelector('#tab_ctx_copy_path')) {
+            activeCodeCtxMenu.querySelector('#tab_ctx_copy_path').onclick = () => {
+              hideCodeContextMenu();
+              navigator.clipboard.writeText(fpath);
+              if (window.showToast) window.showToast(`Copied path: ${fpath}`, 'info');
+            };
+          }
+        });
+
         // Save active file
         const saveActiveFile = async () => {
           if (!activePath) return;
           const tab = openTabs.get(activePath);
           if (!tab) return;
+
+          let targetPath = activePath;
+          const isLocal = tab.isLocal || activePath.startsWith('[Local] ');
+          if (isLocal) {
+            const defaultDir = currentWorkspaceRoot === '~' ? '/root' : currentWorkspaceRoot;
+            const fileName = tab.localFileName || activePath.replace(/^\[Local\]\s*/, '');
+            const chosenPath = await DesktopModal.prompt({
+              title: 'Upload & Save to Remote Server',
+              message: `Enter destination path on ${this.serverName}:`,
+              defaultValue: `${defaultDir}/${fileName}`,
+              placeholder: '/path/to/remote/file'
+            });
+            if (!chosenPath) return;
+            targetPath = chosenPath.trim();
+          }
 
           const content = editor && tab.model ? tab.model.getValue() : fallbackTxt.value;
           saveBtn.disabled = true;
@@ -4348,16 +4749,26 @@ class DesktopAppsController {
             const resp = await fetch(`/api/servers/${this.serverId}/files/save`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ path: activePath, content })
+              body: JSON.stringify({ path: targetPath, content })
             });
             const res = await resp.json();
             saveBtn.disabled = false;
             saveBtn.innerHTML = `<svg style="width:12px;height:12px;margin-right:3px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>Save`;
 
             if (res.success) {
-              tab.dirty = false;
+              if (isLocal) {
+                const oldPath = activePath;
+                tab.isLocal = false;
+                tab.dirty = false;
+                openTabs.delete(oldPath);
+                openTabs.set(targetPath, tab);
+                activePath = targetPath;
+                if (typeof loadTree === 'function') loadTree(currentWorkspaceRoot);
+              } else {
+                tab.dirty = false;
+              }
               renderTabs();
-              if (window.showToast) window.showToast(`Saved ${activePath.split('/').pop()}`, 'success');
+              if (window.showToast) window.showToast(`Saved ${targetPath.split('/').pop()}`, 'success');
             } else {
               DesktopModal.alert({ title: 'Save Failed', message: res.error || 'Could not save file.', type: 'danger' });
             }
@@ -4464,6 +4875,535 @@ class DesktopAppsController {
             }
           } else {
             openFile(p);
+          }
+        });
+
+        // Tree context menu (Right-click on files, folders, or explorer background)
+        treeContainer.addEventListener('contextmenu', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const itemEl = e.target.closest('.code-tree-item');
+          if (itemEl) {
+            const itemPath = itemEl.dataset.path;
+            const isDir = itemEl.dataset.isDir === 'true';
+            const itemName = itemPath.split('/').filter(Boolean).pop() || itemPath;
+            const parentDir = itemPath.substring(0, itemPath.lastIndexOf('/')) || '/';
+            const relPath = itemPath.startsWith(currentWorkspaceRoot)
+              ? itemPath.substring(currentWorkspaceRoot.length).replace(/^\/+/, '')
+              : itemName;
+
+            if (isDir) {
+              // Directory Context Menu
+              showCodeContextMenu(e.clientX, e.clientY, `
+                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  ${escapeHtml(itemName)}
+                </div>
+                <div class="file-context-item" id="code_ctx_new_file">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                  <span>New File...</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_new_folder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+                  <span>New Folder...</span>
+                </div>
+                <div class="file-context-separator"></div>
+                <div class="file-context-item" id="code_ctx_term">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                  <span>Open Terminal Here</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_move">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                  <span>Move Folder to...</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_rename">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                  <span>Rename</span>
+                </div>
+                <div class="file-context-separator"></div>
+                <div class="file-context-item" id="code_ctx_copy_path">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copy Absolute Path</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_copy_rel_path">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copy Relative Path</span>
+                </div>
+                <div class="file-context-separator"></div>
+                <div class="file-context-item danger" id="code_ctx_delete">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+                  <span>Delete Folder</span>
+                </div>
+              `);
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_new_file')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_new_file').onclick = async () => {
+                  hideCodeContextMenu();
+                  const name = await DesktopModal.prompt({
+                    title: 'New File',
+                    message: `Create new file inside "${itemName}":`,
+                    placeholder: 'script.js'
+                  });
+                  if (!name) return;
+                  const targetPath = `${itemPath}/${name.trim()}`;
+                  const resp = await fetch(`/api/servers/${this.serverId}/files/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: targetPath, type: 'file' })
+                  });
+                  const res = await resp.json();
+                  if (res.success) {
+                    loadTree(currentWorkspaceRoot);
+                    openFile(targetPath);
+                  } else {
+                    DesktopModal.alert({ title: 'Creation Failed', message: res.error || 'Could not create file.', type: 'danger' });
+                  }
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_new_folder')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_new_folder').onclick = async () => {
+                  hideCodeContextMenu();
+                  const name = await DesktopModal.prompt({
+                    title: 'New Folder',
+                    message: `Create new directory inside "${itemName}":`,
+                    placeholder: 'components'
+                  });
+                  if (!name) return;
+                  const targetPath = `${itemPath}/${name.trim()}`;
+                  const resp = await fetch(`/api/servers/${this.serverId}/files/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: targetPath, type: 'dir' })
+                  });
+                  const res = await resp.json();
+                  if (res.success) {
+                    loadTree(currentWorkspaceRoot);
+                  } else {
+                    DesktopModal.alert({ title: 'Creation Failed', message: res.error || 'Could not create directory.', type: 'danger' });
+                  }
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_term')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_term').onclick = () => {
+                  hideCodeContextMenu();
+                  DesktopApps.launch('terminal', { path: itemPath, newWindow: true });
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_move')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_move').onclick = () => {
+                  hideCodeContextMenu();
+                  this.showDirectoryPicker({
+                    serverId: this.serverId,
+                    initialPath: parentDir,
+                    title: `Move "${itemName}" to Directory`,
+                    onSelect: async (destDir) => {
+                      if (!destDir || destDir === itemPath || destDir === parentDir) return;
+                      const resp = await fetch(`/api/servers/${this.serverId}/files/batch-move`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paths: [itemPath], dest_dir: destDir })
+                      });
+                      const res = await resp.json();
+                      if (res.success) {
+                        if (window.showToast) window.showToast(`Moved ${itemName} to ${destDir}`, 'success');
+                        loadTree(currentWorkspaceRoot);
+                      } else {
+                        DesktopModal.alert({ title: 'Move Failed', message: res.error || 'Failed to move folder.', type: 'danger' });
+                      }
+                    }
+                  });
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_rename')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_rename').onclick = async () => {
+                  hideCodeContextMenu();
+                  const newName = await DesktopModal.prompt({
+                    title: 'Rename Folder',
+                    message: `Enter new name for folder:`,
+                    defaultValue: itemName,
+                    placeholder: itemName
+                  });
+                  if (!newName || newName.trim() === itemName) return;
+                  const newPath = `${parentDir}/${newName.trim()}`;
+                  const resp = await fetch(`/api/servers/${this.serverId}/files/rename`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_path: itemPath, new_path: newPath })
+                  });
+                  const res = await resp.json();
+                  if (res.success) {
+                    if (window.showToast) window.showToast(`Renamed to ${newName}`, 'success');
+                    loadTree(currentWorkspaceRoot);
+                  } else {
+                    DesktopModal.alert({ title: 'Rename Failed', message: res.error || 'Failed to rename folder.', type: 'danger' });
+                  }
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_copy_path')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_copy_path').onclick = () => {
+                  hideCodeContextMenu();
+                  navigator.clipboard.writeText(itemPath);
+                  if (window.showToast) window.showToast('Copied absolute path to clipboard', 'info');
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_copy_rel_path')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_copy_rel_path').onclick = () => {
+                  hideCodeContextMenu();
+                  navigator.clipboard.writeText(relPath);
+                  if (window.showToast) window.showToast('Copied relative path to clipboard', 'info');
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_delete')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_delete').onclick = async () => {
+                  hideCodeContextMenu();
+                  const confirmed = await DesktopModal.confirm({
+                    title: 'Delete Folder',
+                    message: `Are you sure you want to permanently delete folder "${itemName}" and all its contents? This cannot be undone.`,
+                    type: 'danger',
+                    confirmText: 'Delete Folder'
+                  });
+                  if (!confirmed) return;
+                  const resp = await fetch(`/api/servers/${this.serverId}/files/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: itemPath, is_dir: true })
+                  });
+                  const res = await resp.json();
+                  if (res.success) {
+                    if (window.showToast) window.showToast(`Deleted ${itemName}`, 'success');
+                    loadTree(currentWorkspaceRoot);
+                  } else {
+                    DesktopModal.alert({ title: 'Delete Failed', message: res.error || 'Failed to delete folder.', type: 'danger' });
+                  }
+                };
+              }
+            } else {
+              // File Context Menu
+              showCodeContextMenu(e.clientX, e.clientY, `
+                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  ${escapeHtml(itemName)}
+                </div>
+                <div class="file-context-item" id="code_ctx_open">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  <span>Open in Editor</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_duplicate">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Duplicate File</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_move">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                  <span>Move File to...</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_rename">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                  <span>Rename</span>
+                </div>
+                <div class="file-context-separator"></div>
+                <div class="file-context-item" id="code_ctx_term">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                  <span>Open Terminal in Directory</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_download">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>Download File</span>
+                </div>
+                <div class="file-context-separator"></div>
+                <div class="file-context-item" id="code_ctx_copy_path">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copy Absolute Path</span>
+                </div>
+                <div class="file-context-item" id="code_ctx_copy_rel_path">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copy Relative Path</span>
+                </div>
+                <div class="file-context-separator"></div>
+                <div class="file-context-item danger" id="code_ctx_delete">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+                  <span>Delete File</span>
+                </div>
+              `);
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_open')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_open').onclick = () => {
+                  hideCodeContextMenu();
+                  openFile(itemPath);
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_duplicate')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_duplicate').onclick = async () => {
+                  hideCodeContextMenu();
+                  const dotIdx = itemName.lastIndexOf('.');
+                  const baseName = dotIdx !== -1 ? itemName.substring(0, dotIdx) : itemName;
+                  const extName = dotIdx !== -1 ? itemName.substring(dotIdx) : '';
+                  const defCopyName = `${baseName}_copy${extName}`;
+
+                  const copyName = await DesktopModal.prompt({
+                    title: 'Duplicate File',
+                    message: `Enter name for duplicated file:`,
+                    defaultValue: defCopyName,
+                    placeholder: defCopyName
+                  });
+                  if (!copyName || copyName.trim() === itemName) return;
+
+                  const resp = await fetch(`/api/servers/${this.serverId}/files/batch-copy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paths: [itemPath], dest_dir: parentDir })
+                  });
+                  const res = await resp.json();
+                  if (res.success) {
+                    const autoDestPath = `${parentDir}/${itemName}`;
+                    const targetPath = `${parentDir}/${copyName.trim()}`;
+                    if (copyName.trim() !== itemName) {
+                      await fetch(`/api/servers/${this.serverId}/files/rename`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ old_path: autoDestPath, new_path: targetPath })
+                      });
+                    }
+                    if (window.showToast) window.showToast(`Duplicated ${copyName.trim()}`, 'success');
+                    loadTree(currentWorkspaceRoot);
+                    openFile(targetPath);
+                  } else {
+                    DesktopModal.alert({ title: 'Duplicate Failed', message: res.error || 'Failed to duplicate file.', type: 'danger' });
+                  }
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_move')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_move').onclick = () => {
+                  hideCodeContextMenu();
+                  this.showDirectoryPicker({
+                    serverId: this.serverId,
+                    initialPath: parentDir,
+                    title: `Move "${itemName}" to Directory`,
+                    onSelect: async (destDir) => {
+                      if (!destDir || destDir === parentDir) return;
+                      const resp = await fetch(`/api/servers/${this.serverId}/files/batch-move`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paths: [itemPath], dest_dir: destDir })
+                      });
+                      const res = await resp.json();
+                      if (res.success) {
+                        if (window.showToast) window.showToast(`Moved ${itemName} to ${destDir}`, 'success');
+                        const newFilePath = `${destDir.replace(/\/+$/, '')}/${itemName}`;
+                        if (openTabs.has(itemPath)) {
+                          const oldTab = openTabs.get(itemPath);
+                          openTabs.delete(itemPath);
+                          openTabs.set(newFilePath, oldTab);
+                          if (activePath === itemPath) activePath = newFilePath;
+                          renderTabs();
+                        }
+                        loadTree(currentWorkspaceRoot);
+                      } else {
+                        DesktopModal.alert({ title: 'Move Failed', message: res.error || 'Failed to move file.', type: 'danger' });
+                      }
+                    }
+                  });
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_rename')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_rename').onclick = async () => {
+                  hideCodeContextMenu();
+                  const newName = await DesktopModal.prompt({
+                    title: 'Rename File',
+                    message: `Enter new name for file:`,
+                    defaultValue: itemName,
+                    placeholder: itemName
+                  });
+                  if (!newName || newName.trim() === itemName) return;
+                  const newPath = `${parentDir}/${newName.trim()}`;
+                  const resp = await fetch(`/api/servers/${this.serverId}/files/rename`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_path: itemPath, new_path: newPath })
+                  });
+                  const res = await resp.json();
+                  if (res.success) {
+                    if (window.showToast) window.showToast(`Renamed to ${newName}`, 'success');
+                    if (openTabs.has(itemPath)) {
+                      const oldTab = openTabs.get(itemPath);
+                      openTabs.delete(itemPath);
+                      openTabs.set(newPath, oldTab);
+                      if (activePath === itemPath) activePath = newPath;
+                      renderTabs();
+                    }
+                    loadTree(currentWorkspaceRoot);
+                  } else {
+                    DesktopModal.alert({ title: 'Rename Failed', message: res.error || 'Failed to rename file.', type: 'danger' });
+                  }
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_term')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_term').onclick = () => {
+                  hideCodeContextMenu();
+                  DesktopApps.launch('terminal', { path: parentDir, newWindow: true });
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_download')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_download').onclick = () => {
+                  hideCodeContextMenu();
+                  window.open(`/api/servers/${this.serverId}/files/download?path=${encodeURIComponent(itemPath)}`, '_blank');
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_copy_path')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_copy_path').onclick = () => {
+                  hideCodeContextMenu();
+                  navigator.clipboard.writeText(itemPath);
+                  if (window.showToast) window.showToast('Copied absolute path to clipboard', 'info');
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_copy_rel_path')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_copy_rel_path').onclick = () => {
+                  hideCodeContextMenu();
+                  navigator.clipboard.writeText(relPath);
+                  if (window.showToast) window.showToast('Copied relative path to clipboard', 'info');
+                };
+              }
+
+              if (activeCodeCtxMenu.querySelector('#code_ctx_delete')) {
+                activeCodeCtxMenu.querySelector('#code_ctx_delete').onclick = async () => {
+                  hideCodeContextMenu();
+                  const confirmed = await DesktopModal.confirm({
+                    title: 'Delete File',
+                    message: `Are you sure you want to delete "${itemName}"?`,
+                    type: 'danger',
+                    confirmText: 'Delete'
+                  });
+                  if (!confirmed) return;
+                  const resp = await fetch(`/api/servers/${this.serverId}/files/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: itemPath, is_dir: false })
+                  });
+                  const res = await resp.json();
+                  if (res.success) {
+                    if (window.showToast) window.showToast(`Deleted ${itemName}`, 'success');
+                    if (openTabs.has(itemPath)) {
+                      closeTab(itemPath, true);
+                    }
+                    loadTree(currentWorkspaceRoot);
+                  } else {
+                    DesktopModal.alert({ title: 'Delete Failed', message: res.error || 'Failed to delete file.', type: 'danger' });
+                  }
+                };
+              }
+            }
+          } else {
+            // Right-click on empty background of explorer tree
+            showCodeContextMenu(e.clientX, e.clientY, `
+              <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                Workspace
+              </div>
+              <div class="file-context-item" id="code_ctx_root_new_file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                <span>New File...</span>
+              </div>
+              <div class="file-context-item" id="code_ctx_root_new_folder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+                <span>New Folder...</span>
+              </div>
+              <div class="file-context-separator"></div>
+              <div class="file-context-item" id="code_ctx_root_term">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                <span>Open Terminal in Workspace</span>
+              </div>
+              <div class="file-context-item" id="code_ctx_root_copy_path">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy Workspace Path</span>
+              </div>
+              <div class="file-context-separator"></div>
+              <div class="file-context-item" id="code_ctx_root_refresh">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                <span>Refresh Explorer</span>
+              </div>
+            `);
+
+            if (activeCodeCtxMenu.querySelector('#code_ctx_root_new_file')) {
+              activeCodeCtxMenu.querySelector('#code_ctx_root_new_file').onclick = async () => {
+                hideCodeContextMenu();
+                const name = await DesktopModal.prompt({
+                  title: 'New File',
+                  message: 'Enter name for the new file:',
+                  placeholder: 'untitled.txt'
+                });
+                if (!name) return;
+                const fullPath = (currentWorkspaceRoot === '/' ? '' : currentWorkspaceRoot) + '/' + name.trim();
+                const resp = await fetch(`/api/servers/${this.serverId}/files/create`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ path: fullPath, type: 'file' })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                  loadTree(currentWorkspaceRoot);
+                  openFile(fullPath);
+                } else {
+                  DesktopModal.alert({ title: 'Creation Failed', message: res.error || 'Could not create file.', type: 'danger' });
+                }
+              };
+            }
+
+            if (activeCodeCtxMenu.querySelector('#code_ctx_root_new_folder')) {
+              activeCodeCtxMenu.querySelector('#code_ctx_root_new_folder').onclick = async () => {
+                hideCodeContextMenu();
+                const name = await DesktopModal.prompt({
+                  title: 'New Folder',
+                  message: 'Enter name for the new directory:',
+                  placeholder: 'new-directory'
+                });
+                if (!name) return;
+                const fullPath = (currentWorkspaceRoot === '/' ? '' : currentWorkspaceRoot) + '/' + name.trim();
+                const resp = await fetch(`/api/servers/${this.serverId}/files/create`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ path: fullPath, type: 'dir' })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                  loadTree(currentWorkspaceRoot);
+                } else {
+                  DesktopModal.alert({ title: 'Creation Failed', message: res.error || 'Could not create directory.', type: 'danger' });
+                }
+              };
+            }
+
+            if (activeCodeCtxMenu.querySelector('#code_ctx_root_term')) {
+              activeCodeCtxMenu.querySelector('#code_ctx_root_term').onclick = () => {
+                hideCodeContextMenu();
+                DesktopApps.launch('terminal', { path: currentWorkspaceRoot, newWindow: true });
+              };
+            }
+
+            if (activeCodeCtxMenu.querySelector('#code_ctx_root_copy_path')) {
+              activeCodeCtxMenu.querySelector('#code_ctx_root_copy_path').onclick = () => {
+                hideCodeContextMenu();
+                navigator.clipboard.writeText(currentWorkspaceRoot);
+                if (window.showToast) window.showToast('Copied workspace path to clipboard', 'info');
+              };
+            }
+
+            if (activeCodeCtxMenu.querySelector('#code_ctx_root_refresh')) {
+              activeCodeCtxMenu.querySelector('#code_ctx_root_refresh').onclick = () => {
+                hideCodeContextMenu();
+                loadTree(currentWorkspaceRoot);
+              };
+            }
           }
         });
 
@@ -4654,21 +5594,19 @@ class DesktopAppsController {
         }
 
         const initIntegratedTerminal = () => {
+          const savedThemeKey = localStorage.getItem('shellman_terminal_theme') || 'shellman';
+          const activeTheme = SHELLMAN_TERMINAL_THEMES[savedThemeKey] || SHELLMAN_TERMINAL_THEMES.shellman;
           termInstance = new Terminal({
             cursorBlink: true,
             cursorStyle: 'bar',
             fontSize: 13,
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            theme: {
-              background: '#090d16',
-              foreground: '#f8fafc',
-              cursor: '#38bdf8',
-              selectionBackground: 'rgba(56, 189, 248, 0.3)',
-              black: '#1e293b', red: '#f43f5e', green: '#10b981', yellow: '#f59e0b',
-              blue: '#3b82f6', magenta: '#d946ef', cyan: '#06b6d4', white: '#f8fafc'
-            },
+            theme: activeTheme,
             scrollback: 2000
           });
+
+          window._shellmanTerminals = window._shellmanTerminals || new Set();
+          window._shellmanTerminals.add(termInstance);
 
           termFitAddon = new FitAddon.FitAddon();
           termInstance.loadAddon(termFitAddon);
@@ -4758,6 +5696,131 @@ class DesktopAppsController {
         loadTree(initialRoot);
         initEditor();
 
+        // Drag & Drop Local Files onto Monaco Editor Viewport
+        const editorViewport = bodyEl.querySelector(`#editorViewport_${codeId}`);
+        const dropOverlay = bodyEl.querySelector(`#dropOverlay_${codeId}`);
+        let dragCounter = 0;
+
+        if (editorViewport && dropOverlay) {
+          editorViewport.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter++;
+            if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes('Files')) {
+              dropOverlay.style.display = 'flex';
+            }
+          });
+
+          editorViewport.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+          });
+
+          editorViewport.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter--;
+            if (dragCounter <= 0) {
+              dragCounter = 0;
+              dropOverlay.style.display = 'none';
+            }
+          });
+
+          editorViewport.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            dropOverlay.style.display = 'none';
+
+            const files = e.dataTransfer ? e.dataTransfer.files : null;
+            if (!files || files.length === 0) return;
+
+            for (const file of Array.from(files)) {
+              try {
+                const text = await file.text();
+                const localVirtualPath = `[Local] ${file.name}`;
+                const lang = getLanguageFromPath(file.name);
+
+                let model = null;
+                if (window.monaco && editor) {
+                  const uri = monaco.Uri.parse(`inmemory://local/${Date.now()}_${encodeURIComponent(file.name)}`);
+                  model = monaco.editor.createModel(text, lang, uri);
+                  model.onDidChangeContent(() => {
+                    const cur = openTabs.get(localVirtualPath);
+                    if (cur && !cur.dirty) {
+                      cur.dirty = true;
+                      renderTabs();
+                    }
+                  });
+                }
+
+                openTabs.set(localVirtualPath, {
+                  model,
+                  content: text,
+                  dirty: true,
+                  lang,
+                  isLocal: true,
+                  localFileName: file.name
+                });
+                activePath = localVirtualPath;
+
+                if (editor && model) {
+                  editor.setModel(model);
+                } else if (fallbackTxt) {
+                  fallbackTxt.value = text;
+                }
+                renderTabs();
+
+                if (window.showToast) {
+                  window.showToast(`Opened local file: ${file.name}. Press Save (Ctrl+S) to upload to remote workspace.`, 'info');
+                }
+              } catch (err) {
+                DesktopModal.alert({ title: 'Error Reading Local File', message: String(err), type: 'danger' });
+              }
+            }
+          });
+        }
+
+        // Drag & Drop Local Files onto Explorer Tree to Upload
+        if (treeContainer) {
+          treeContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+          });
+
+          treeContainer.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer ? e.dataTransfer.files : null;
+            if (!files || files.length === 0) return;
+
+            for (const file of Array.from(files)) {
+              try {
+                const text = await file.text();
+                const targetDir = currentWorkspaceRoot === '~' ? '/root' : currentWorkspaceRoot;
+                const targetPath = `${targetDir}/${file.name}`;
+                const resp = await fetch(`/api/servers/${this.serverId}/files/save`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ path: targetPath, content: text })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                  if (window.showToast) window.showToast(`Uploaded ${file.name} to ${targetDir}`, 'success');
+                  loadTree(currentWorkspaceRoot);
+                  openFile(targetPath);
+                } else {
+                  DesktopModal.alert({ title: 'Upload Failed', message: res.error || 'Could not save file to server.', type: 'danger' });
+                }
+              } catch (err) {
+                DesktopModal.alert({ title: 'Upload Error', message: String(err), type: 'danger' });
+              }
+            }
+          });
+        }
+
         winObj.onResize = () => {
           if (editor) editor.layout();
           if (termFitAddon && isTerminalOpen) {
@@ -4766,6 +5829,9 @@ class DesktopAppsController {
         };
 
         winObj.onClose = () => {
+          hideCodeContextMenu();
+          document.removeEventListener('pointerdown', onCodePointerDownOutside);
+          document.removeEventListener('keydown', onCodeKeyDownEsc);
           if (termSocket) termSocket.close();
           if (termInstance) termInstance.dispose();
           for (const tab of openTabs.values()) {
@@ -11398,7 +12464,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
                     ${isEdit ? 'Password (leave blank to keep current)' : 'Password *'}
                   </label>
                   <div style="display:flex; position:relative;">
-                    <input type="password" class="form-control" id="mSrvPassword_${setWinId}" placeholder="${isEdit ? '••••••••' : 'Enter SSH user password'}" style="width:100%; font-size:0.8rem; padding:0.4rem 2rem 0.4rem 0.6rem;">
+                    <input type="password" class="form-control" id="mSrvPassword_${setWinId}" placeholder="${isEdit ? '••••••••' : 'Enter SSH user password'}" style="width:100%; font-size:0.8rem; padding:0.4rem 2rem 0.4rem 0.6rem;" autocomplete="current-password">
                     <button type="button" class="btn btn-ghost btn-xs" id="mTogglePass_${setWinId}" style="position:absolute; right:4px; top:50%; transform:translateY(-50%); padding:2px 6px; display:flex; align-items:center;">
                       <svg style="width:14px;height:14px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
@@ -11415,7 +12481,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
                   <label style="display:block; font-weight:600; margin-top:0.5rem; margin-bottom:0.25rem; color:#cbd5e1;">
                     Key Passphrase (optional)
                   </label>
-                  <input type="password" class="form-control" id="mSrvPassphrase_${setWinId}" placeholder="Enter passphrase if key is encrypted" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                  <input type="password" class="form-control" id="mSrvPassphrase_${setWinId}" placeholder="Enter passphrase if key is encrypted" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="current-password">
                 </div>
 
                 <div id="mTestStatus_${setWinId}" style="display:none; padding:0.45rem 0.75rem; border-radius:4px; font-size:0.75rem;"></div>
@@ -11601,17 +12667,17 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
                 <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:440px;">
                   <div>
                     <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:#cbd5e1;">Current Password *</label>
-                    <input type="password" class="form-control" id="admCurPass_${setWinId}" placeholder="Enter current password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                    <input type="password" class="form-control" id="admCurPass_${setWinId}" placeholder="Enter current password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="current-password">
                   </div>
 
                   <div>
                     <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:#cbd5e1;">New Password (min 6 characters) *</label>
-                    <input type="password" class="form-control" id="admNewPass_${setWinId}" placeholder="Enter new strong password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                    <input type="password" class="form-control" id="admNewPass_${setWinId}" placeholder="Enter new strong password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="new-password">
                   </div>
 
                   <div>
                     <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:#cbd5e1;">Confirm New Password *</label>
-                    <input type="password" class="form-control" id="admConfPass_${setWinId}" placeholder="Confirm new password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                    <input type="password" class="form-control" id="admConfPass_${setWinId}" placeholder="Confirm new password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="new-password">
                   </div>
 
                   <div id="admPassStatus_${setWinId}" style="display:none; padding:0.45rem 0.75rem; border-radius:4px; font-size:0.75rem;"></div>
@@ -11718,7 +12784,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
 
                     <div id="disable2FAForm_${setWinId}" style="display:none; margin-top:0.5rem; max-width:380px; padding:0.75rem; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:6px;">
                       <label style="display:block; font-size:0.75rem; font-weight:600; color:#cbd5e1; margin-bottom:0.3rem;">Confirm Master Password to Disable</label>
-                      <input type="password" id="disable2FAPass_${setWinId}" class="form-control" placeholder="Current master password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; margin-bottom:0.5rem;">
+                      <input type="password" id="disable2FAPass_${setWinId}" class="form-control" placeholder="Current master password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; margin-bottom:0.5rem;" autocomplete="current-password">
                       <div id="disable2FAStatus_${setWinId}" style="display:none; font-size:0.72rem; margin-bottom:0.4rem;"></div>
                       <div style="display:flex; gap:0.5rem;">
                         <button class="btn btn-danger btn-xs" id="btnConfirmDisable2FA_${setWinId}">Confirm & Disable</button>
@@ -11912,6 +12978,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
                             <label style="font-size:0.78rem; font-weight:700; color:#f8fafc;">3. Verify Authenticator Code</label>
                             <div style="display:flex; gap:0.5rem;">
                               <input type="text" id="inpVerifyCode_${setWinId}" maxlength="6" class="form-control" placeholder="123456"
+                                     autocomplete="one-time-code"
                                      style="width:130px; font-size:1.1rem; letter-spacing:0.2em; text-align:center; font-family:monospace; font-weight:700;">
                               <button class="btn btn-primary btn-sm" id="btnConfirm2FA_${setWinId}">Verify & Enable</button>
                               <button class="btn btn-secondary btn-sm" id="btnCancel2FA_${setWinId}">Cancel</button>
@@ -12066,6 +13133,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
         const renderAppearanceTab = () => {
           const currentFontPx = parseInt(localStorage.getItem('shellman_font_size') || '16', 10);
           const currentFontPct = Math.round((currentFontPx / 16) * 100);
+          const currentTermTheme = localStorage.getItem('shellman_terminal_theme') || 'shellman';
 
           contentPane.innerHTML = `
             <div>
@@ -12119,6 +13187,19 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
                       <button class="btn btn-secondary btn-xs" style="pointer-events:none; padding:2px 8px;">Sample Button</button>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- 2. Terminal Color Theme Card -->
+              <div class="settings-card" style="margin-bottom:1.25rem;">
+                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc; margin-bottom:0.25rem;">Terminal Color Theme</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.85rem;">
+                  Choose the color theme for all SSH terminal instances and the integrated code terminal.
+                </div>
+                <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+                  <select class="form-control" id="settingsTermTheme_${setWinId}" data-terminal-theme-select style="max-width:320px; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                    ${Object.values(SHELLMAN_TERMINAL_THEMES).map(t => `<option value="${t.id}" ${currentTermTheme === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+                  </select>
                 </div>
               </div>
 
@@ -12196,6 +13277,15 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           const resetFontBtn = contentPane.querySelector(`#resetFontBtn_${setWinId}`);
           if (resetFontBtn) {
             resetFontBtn.onclick = () => applyFontSize(16);
+          }
+
+          const settingsTermTheme = contentPane.querySelector(`#settingsTermTheme_${setWinId}`);
+          if (settingsTermTheme) {
+            settingsTermTheme.onchange = (e) => {
+              applyShellmanTerminalTheme(e.target.value);
+              const themeName = (SHELLMAN_TERMINAL_THEMES[e.target.value] || {}).name || e.target.value;
+              if (window.showToast) window.showToast(`Terminal theme set to ${themeName}`, 'success');
+            };
           }
 
           const applyWall = (url) => {
