@@ -48,6 +48,10 @@ def create_app(config_class=Config):
     from routes.cron import cron_bp
     from routes.git import git_bp
     from routes.domains import domains_bp
+    from routes.ssh_diag import ssh_diag_bp
+    from routes.docker import docker_bp
+    from routes.database import database_bp
+    from routes.firewall import firewall_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -67,6 +71,10 @@ def create_app(config_class=Config):
     app.register_blueprint(cron_bp)
     app.register_blueprint(git_bp)
     app.register_blueprint(domains_bp)
+    app.register_blueprint(ssh_diag_bp)
+    app.register_blueprint(docker_bp)
+    app.register_blueprint(database_bp)
+    app.register_blueprint(firewall_bp)
 
     # Register terminal websocket handler
     register_terminal_sock(sock)

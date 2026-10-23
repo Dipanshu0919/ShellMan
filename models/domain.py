@@ -37,6 +37,14 @@ class CloudflareSetting(db.Model):
         except Exception:
             return ''
 
+    @property
+    def token(self) -> str:
+        return self.get_token()
+
+    @token.setter
+    def token(self, value: str):
+        self.set_token(value)
+
     def to_dict(self):
         """Never expose token or encrypted_token in API responses or diagnostics."""
         return {

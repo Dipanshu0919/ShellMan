@@ -103,6 +103,10 @@
             </span>
             <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
+          <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); DesktopApps.launch('ssh_diag')" title="SSH Connection Diagnostics (Cipher, Latency, Protocol)" style="display:inline-flex; align-items:center; gap:4px; padding:0.35rem 0.65rem; background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:20px; font-size:0.72rem; color:#38bdf8; font-weight:600; cursor:pointer;">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 6v6l4 2"></path></svg>
+            <span>Diagnostics</span>
+          </button>
           {% else %}
           <button class="desktop-server-switcher-pill" id="serverSelectorPill" onclick="toggleServerMenu(event)" title="No Server Selected - Click to Connect">
             <span class="status-dot disconnected" id="topServerDot"></span>
@@ -200,6 +204,24 @@
             <div class="widget-progress-fill disk-fill" id="wgtDiskBar" style="width: 0%;"></div>
           </div>
           <div class="widget-metric-sub" id="wgtDiskDetail">-- / -- GB (/)</div>
+        </div>
+
+        <!-- Network Upload / Download Speed Meter -->
+        <div class="widget-metric-row" style="margin-top:0.45rem;">
+          <div class="widget-metric-info">
+            <span class="metric-label">NETWORK SPEED</span>
+            <span class="metric-value" id="wgtNetIface" style="font-size:0.68rem; font-family:var(--font-mono); color:#94a3b8;">eth0</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:0.75rem; margin-top:3px; padding:0.25rem 0.5rem; background:rgba(0,0,0,0.22); border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
+            <span style="color:#34d399; display:flex; align-items:center; gap:3px;">
+              <span style="font-weight:700;">&#8595;</span>
+              <span id="wgtNetRx">0 KB/s</span>
+            </span>
+            <span style="color:#38bdf8; display:flex; align-items:center; gap:3px;">
+              <span style="font-weight:700;">&#8593;</span>
+              <span id="wgtNetTx">0 KB/s</span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -335,6 +357,22 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
       <span>Cloudflare Domains &amp; DNS</span>
     </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('firewall'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+      <span>Firewall &amp; Shield (UFW)</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('docker'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0ea5e9"><rect x="3" y="11" width="3" height="3"></rect><rect x="7" y="11" width="3" height="3"></rect><rect x="11" y="11" width="3" height="3"></rect><path d="M2 14c1.5 4 5 6 10 6s9-3 10-6"></path></svg>
+      <span>Docker &amp; Containers</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('database'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#10b981"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+      <span>Database &amp; .db Explorer</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('ssh_diag'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#6366f1"><circle cx="12" cy="12" r="9"></circle><path d="M12 6v6l4 2"></path></svg>
+      <span>SSH Session Diagnostics</span>
+    </div>
     <div class="ctx-item" onclick="DesktopApps.launch('sync'); toggleStartMenu();">
       <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
       <span>File Sync (Rsync over SSH)</span>
@@ -392,11 +430,12 @@
 <!-- Desktop OS JavaScript Modules -->
 <script src="{{ url_for('static', filename='js/modal.js') }}?v=4.0"></script>
 <script src="{{ url_for('static', filename='js/desktop/pwa.js') }}?v=1.9"></script>
-<script src="{{ url_for('static', filename='js/desktop/wm.js') }}?v=4.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/dock.js') }}?v=3.9"></script>
-<script src="{{ url_for('static', filename='js/desktop/menu.js') }}?v=3.9"></script>
-<script src="{{ url_for('static', filename='js/desktop/apps.js') }}?v=4.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=3.9"></script>
+<script src="{{ url_for('static', filename='js/desktop/wm.js') }}?v=4.1"></script>
+<script src="{{ url_for('static', filename='js/desktop/dock.js') }}?v=4.1"></script>
+<script src="{{ url_for('static', filename='js/desktop/menu.js') }}?v=4.1"></script>
+<script src="{{ url_for('static', filename='js/desktop/apps.js') }}?v=4.3"></script>
+<script src="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=1.3"></script>
+<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=4.2"></script>
 
 </body>
 </html>

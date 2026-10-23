@@ -144,107 +144,65 @@ function renderDesktopIcons() {
   const container = document.getElementById('desktopIcons');
   if (!container) return;
 
-  const desktopShortcuts = [
-    {
-      id: 'terminal',
-      title: 'SSH Terminal',
-      gradient: 'linear-gradient(135deg, #090d16, #1e293b)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="4" width="19" height="16" rx="3" fill="#090d16" stroke="#38bdf8" stroke-width="1.5"/><path d="M6.5 9l3.5 3-3.5 3" stroke="#22d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="16.5" y2="15" stroke="#34d399" stroke-width="2" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'files',
-      title: 'Files (SFTP)',
-      gradient: 'linear-gradient(135deg, #2563eb, #0284c7)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M3 6a2 2 0 0 1 2-2h4.5l2 2H19a2 2 0 0 1 2 2v2H3V6z" fill="rgba(255,255,255,0.35)"/><path d="M2.5 10h19l-1.5 9a2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2l-1.5-9z" fill="#ffffff" fill-opacity="0.95"/><path d="M8 14h8M8 17h5" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'code',
-      title: 'Code Workspace',
-      gradient: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M8.5 9.5L5.5 12l3 2.5" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.5 9.5l3 2.5-3 2.5" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="13" y1="8" x2="11" y2="16" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'overview',
-      title: 'Overview',
-      gradient: 'linear-gradient(135deg, #0284c7, #0d9488)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="7" rx="2" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><rect x="3" y="14" width="18" height="7" rx="2" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><circle cx="6.5" cy="6.5" r="1.2" fill="#38bdf8"/><circle cx="9.5" cy="6.5" r="1.2" fill="#34d399"/><circle cx="6.5" cy="17.5" r="1.2" fill="#38bdf8"/><circle cx="9.5" cy="17.5" r="1.2" fill="#34d399"/><path d="M15 6.5h3M15 17.5h3" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'processes',
-      title: 'Processes',
-      gradient: 'linear-gradient(135deg, #059669, #10b981)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M6 12h3l2-4 3 8 2-4h2" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    },
-    {
-      id: 'services',
-      title: 'Services',
-      gradient: 'linear-gradient(135deg, #ea580c, #f97316)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.5" fill="rgba(255,255,255,0.25)" stroke="#ffffff" stroke-width="1.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'logs',
-      title: 'Logs',
-      gradient: 'linear-gradient(135deg, #e11d48, #c026d3)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="3" width="16" height="18" rx="2" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><line x1="7.5" y1="7.5" x2="16.5" y2="7.5" stroke="#fcd34d" stroke-width="1.7" stroke-linecap="round"/><line x1="7.5" y1="12" x2="14.5" y2="12" stroke="#38bdf8" stroke-width="1.7" stroke-linecap="round"/><line x1="7.5" y1="16.5" x2="12" y2="16.5" stroke="#34d399" stroke-width="1.7" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'hardware',
-      title: 'Hardware',
-      gradient: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="5" width="14" height="14" rx="2" fill="rgba(255,255,255,0.2)" stroke="#ffffff" stroke-width="1.5"/><rect x="8.5" y="8.5" width="7" height="7" rx="1" fill="#c084fc"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'network',
-      title: 'Network',
-      gradient: 'linear-gradient(135deg, #0284c7, #3b82f6)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="9" stroke="#ffffff" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke="#38bdf8" stroke-width="1.5"/></svg>'
-    },
-    {
-      id: 'nginx',
-      title: 'Nginx Hosts',
-      gradient: 'linear-gradient(135deg, #059669, #0d9488)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3.5" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M7 16V8l5 8V8M16 8v8" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    },
-    {
-      id: 'domains',
-      title: 'Cloudflare',
-      gradient: 'linear-gradient(135deg, #d97706, #f59e0b)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="1.8"/><line x1="2" y1="12" x2="22" y2="12" stroke="#ffffff" stroke-width="1.8"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#ffffff" stroke-width="1.8"/></svg>'
-    },
-    {
-      id: 'sync',
-      title: 'File Sync',
-      gradient: 'linear-gradient(135deg, #0284c7, #0369a1)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    },
-    {
-      id: 'cron',
-      title: 'Cron Jobs',
-      gradient: 'linear-gradient(135deg, #d97706, #f59e0b)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><polyline points="12 6 12 12 16 14" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg>'
-    },
-    {
-      id: 'git',
-      title: 'Git Deploy',
-      gradient: 'linear-gradient(135deg, #e11d48, #f43f5e)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><circle cx="18" cy="18" r="3" stroke="#ffffff" stroke-width="1.8"/><circle cx="6" cy="6" r="3" stroke="#ffffff" stroke-width="1.8"/><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12" stroke="#ffffff" stroke-width="1.8"/></svg>'
-    },
-    {
-      id: 'settings',
-      title: 'Settings',
-      gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-      icon: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="#ffffff" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    }
-  ];
+  const shortcuts = window.DesktopCustomizer 
+    ? window.DesktopCustomizer.getDesktopApps() 
+    : (window.SHELLMAN_APPS || []);
 
-  container.innerHTML = desktopShortcuts.map(sc => `
-    <div class="desktop-icon" data-app="${sc.id}" onclick="handleDesktopIconClick(this, '${sc.id}')">
+  const size = window.DesktopCustomizer 
+    ? window.DesktopCustomizer.getDesktopIconSize() 
+    : 'normal';
+
+  container.className = `desktop-icons-container size-${size}`;
+
+  container.innerHTML = shortcuts.map(sc => `
+    <div class="desktop-icon" data-app="${sc.id}" onclick="handleDesktopIconClick(this, '${sc.id}')" oncontextmenu="handleDesktopIconContextMenu(event, '${sc.id}')">
       <div class="desktop-icon-tile" style="background: ${sc.gradient};">
         ${sc.icon}
       </div>
       <span class="desktop-icon-label">${sc.title}</span>
     </div>
   `).join('');
+}
+
+function handleDesktopIconContextMenu(e, appId) {
+  e.preventDefault();
+  e.stopPropagation();
+  const app = window.DesktopCustomizer ? window.DesktopCustomizer.getApp(appId) : null;
+  if (!app) return;
+  const isPinned = window.DesktopCustomizer ? window.DesktopCustomizer.isAppInDock(appId) : true;
+  const items = [
+    {
+      label: `Open ${app.shortTitle || app.title}`,
+      icon: app.icon,
+      action: () => DesktopApps.launch(appId)
+    },
+    'separator',
+    {
+      label: isPinned ? 'Unpin from Dock' : 'Pin to Dock',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="16" width="18" height="4" rx="1"></rect><circle cx="12" cy="10" r="4"></circle></svg>',
+      action: () => {
+        if (window.DesktopCustomizer) window.DesktopCustomizer.toggleDockApp(appId, !isPinned);
+      }
+    },
+    {
+      label: 'Remove from Desktop',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+      action: () => {
+        if (window.DesktopCustomizer) window.DesktopCustomizer.toggleDesktopApp(appId, false);
+      }
+    },
+    'separator',
+    {
+      label: 'Customize Desktop & Dock...',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
+      action: () => {
+        if (window.DesktopCustomizer) window.DesktopCustomizer.openCustomizerModal();
+      }
+    }
+  ];
+  if (window.DesktopMenus && typeof window.DesktopMenus.showCustomMenu === 'function') {
+    window.DesktopMenus.showCustomMenu(e, items);
+  }
 }
 
 function handleDesktopIconClick(el, appId) {
@@ -503,6 +461,16 @@ function updateDesktopWidgets(metrics) {
   if (wgtOs && metrics.os) {
     wgtOs.textContent = metrics.os.length > 20 ? metrics.os.substring(0, 18) + '..' : metrics.os;
   }
+
+  // Network Throughput (Upload & Download Speed)
+  if (metrics.network) {
+    const wgtNetRx = document.getElementById('wgtNetRx');
+    const wgtNetTx = document.getElementById('wgtNetTx');
+    const wgtNetIface = document.getElementById('wgtNetIface');
+    if (wgtNetRx) wgtNetRx.textContent = metrics.network.rx_rate_human || '0 KB/s';
+    if (wgtNetTx) wgtNetTx.textContent = metrics.network.tx_rate_human || '0 KB/s';
+    if (wgtNetIface) wgtNetIface.textContent = metrics.network.interface || 'eth0';
+  }
 }
 
 async function pollMicroTelemetry(serverId) {
@@ -515,6 +483,11 @@ async function pollMicroTelemetry(serverId) {
 
 function handleDesktopContextMenu(e) {
   if (e.target.closest('.desktop-window') || e.target.closest('.desktop-dock') || e.target.closest('.desktop-top-bar')) {
+    return;
+  }
+  const icon = e.target.closest('.desktop-icon');
+  if (icon && icon.dataset.app) {
+    handleDesktopIconContextMenu(e, icon.dataset.app);
     return;
   }
   DesktopMenusInstance.showContextMenu(e);
