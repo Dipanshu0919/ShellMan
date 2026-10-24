@@ -1,7 +1,12 @@
-from flask import Blueprint, render_template, request, jsonify, send_file, Response, redirect, url_for
+from flask import Blueprint, request, jsonify, Response, redirect, url_for, stream_with_context
 from models.server import Server
 from routes.auth_helpers import login_required
 from services.sftp import SFTPService
+from services.progress_tracker import ProgressTracker
+import time
+import json
+import os
+import mimetypes
 
 files_bp = Blueprint('files', __name__)
 
@@ -82,12 +87,10 @@ def create_item(server_id):
     item_type = data.get('type', 'file')
     if not path:
         return jsonify({'success': False, 'error': 'Path required'}), 400
-    
-    if item_type in ('dir', 'directory'):
+    if item_type == 'dir':
         ok, msg = SFTPService.create_dir(server, path)
     else:
         ok, msg = SFTPService.create_file(server, path)
-
     if not ok:
         return jsonify({'success': False, 'error': msg}), 400
     return jsonify({'success': True, 'message': msg})
@@ -140,9 +143,10 @@ def batch_move(server_id):
     data = request.json or {}
     paths = data.get('paths', [])
     dest_dir = data.get('dest_dir')
+    task_id = data.get('task_id')
     if not paths or not dest_dir:
         return jsonify({'success': False, 'error': 'Paths and destination directory are required'}), 400
-    ok, msg = SFTPService.move_multiple(server, paths, dest_dir)
+    ok, msg = SFTPService.move_multiple(server, paths, dest_dir, task_id=task_id)
     if not ok:
         return jsonify({'success': False, 'error': msg}), 400
     return jsonify({'success': True, 'message': msg})
@@ -154,9 +158,10 @@ def batch_copy(server_id):
     data = request.json or {}
     paths = data.get('paths', [])
     dest_dir = data.get('dest_dir')
+    task_id = data.get('task_id')
     if not paths or not dest_dir:
         return jsonify({'success': False, 'error': 'Paths and destination directory are required'}), 400
-    ok, msg = SFTPService.copy_multiple(server, paths, dest_dir)
+    ok, msg = SFTPService.copy_multiple(server, paths, dest_dir, task_id=task_id)
     if not ok:
         return jsonify({'success': False, 'error': msg}), 400
     return jsonify({'success': True, 'message': msg})
@@ -184,9 +189,10 @@ def batch_archive(server_id):
     paths = data.get('paths', [])
     dest_dir = data.get('dest_dir')
     archive_name = data.get('archive_name')
+    task_id = data.get('task_id')
     if not paths or not dest_dir:
         return jsonify({'success': False, 'error': 'Paths and destination directory are required'}), 400
-    ok, msg = SFTPService.archive_multiple(server, paths, dest_dir, archive_name)
+    ok, msg = SFTPService.archive_multiple(server, paths, dest_dir, archive_name, task_id=task_id)
     if not ok:
         return jsonify({'success': False, 'error': msg}), 400
     return jsonify({'success': True, 'message': msg})
@@ -205,36 +211,39 @@ def extract_archive(server_id):
         return jsonify({'success': False, 'error': msg}), 400
     return jsonify({'success': True, 'message': msg})
 
-# In-memory progress tracking dict for active uploads: { upload_id: { 'transferred': N, 'total': N, 'done': bool, 'error': str } }
-upload_progress_tracker = {}
-
-@files_bp.route('/api/servers/<int:server_id>/files/upload-progress/<upload_id>')
+# ─────────────────────────────────────────────────────────────
+# ★ REAL PROGRESS: SSE endpoint used by all frontend operations
+# ─────────────────────────────────────────────────────────────
+@files_bp.route('/api/tasks/<task_id>/progress')
 @login_required
-def upload_progress_stream(server_id, upload_id):
-    """Server-Sent Events (SSE) stream for exact byte-by-byte remote upload progress."""
+def stream_task_progress(task_id):
+    """
+    Real-time SSE endpoint streaming byte-accurate progress for
+    uploads, copies, moves, archives, and any other tracked task.
+    """
     def event_generator():
-        import time
-        import json
-        last_data = None
+        last_payload = None
         start_time = time.time()
+
         while True:
-            # 10 min overall timeout safeguard
+            # Safety: hard 10 minute timeout per stream
             if time.time() - start_time > 600:
                 break
 
-            info = upload_progress_tracker.get(upload_id)
-            if info:
-                payload = json.dumps(info)
-                if payload != last_data:
-                    yield f"data: {payload}\n\n"
-                    last_data = payload
-                if info.get('done') or info.get('error'):
+            task = ProgressTracker.get(task_id)
+            if task:
+                current_payload = json.dumps(task)
+                if current_payload != last_payload:
+                    yield f"data: {current_payload}\n\n"
+                    last_payload = current_payload
+
+                if task['status'] in ('done', 'error', 'cancelled'):
+                    ProgressTracker.cleanup(task_id)
                     break
             else:
-                yield f"data: {json.dumps({'transferred': 0, 'total': 0, 'status': 'waiting'})}\n\n"
+                yield f"data: {json.dumps({'status': 'waiting', 'transferred': 0, 'total': 0})}\n\n"
+
             time.sleep(0.15)
-        # Clean up tracker after finish
-        upload_progress_tracker.pop(upload_id, None)
 
     return Response(event_generator(), mimetype='text/event-stream')
 
@@ -244,14 +253,12 @@ def upload_file(server_id):
     server = Server.query.get_or_404(server_id)
     dest_dir = request.form.get('dest_dir', '/')
     overwrite = request.form.get('overwrite', 'true').lower() in ('true', '1', 'yes')
-    upload_id = request.form.get('upload_id')
-    
-    # Support multiple files (e.g. input name="files") or fallback to single "file"
+    task_id = request.form.get('task_id')
+
     uploaded_files = request.files.getlist('files')
     if not uploaded_files and 'file' in request.files:
         uploaded_files = [request.files['file']]
 
-    # Filter out empty entries
     uploaded_files = [f for f in uploaded_files if f and f.filename]
     if not uploaded_files:
         return jsonify({'success': False, 'error': 'No files selected for upload'}), 400
@@ -262,22 +269,7 @@ def upload_file(server_id):
     errors = []
 
     for index, file in enumerate(uploaded_files):
-        curr_idx = index + 1
         rel_path = relative_paths[index] if (relative_paths and index < len(relative_paths) and relative_paths[index]) else file.filename
-        curr_fname = rel_path
-
-        def make_progress_cb(f_idx, f_name):
-            def progress_callback(transferred, total):
-                if upload_id:
-                    upload_progress_tracker[upload_id] = {
-                        'transferred': transferred,
-                        'total': total,
-                        'file_index': f_idx,
-                        'total_files': total_files,
-                        'current_file': f_name,
-                        'done': False
-                    }
-            return progress_callback
 
         ok, msg = SFTPService.upload_file(
             server,
@@ -285,7 +277,7 @@ def upload_file(server_id):
             rel_path,
             file.stream,
             overwrite=overwrite,
-            progress_callback=make_progress_cb(curr_idx, curr_fname)
+            task_id=task_id if total_files == 1 else f"{task_id}_{index}"
         )
         if ok:
             uploaded_count += 1
@@ -293,16 +285,6 @@ def upload_file(server_id):
             errors.append(f"{file.filename}: {msg}")
 
     all_ok = (len(errors) == 0)
-    if upload_id:
-        upload_progress_tracker[upload_id] = {
-            'transferred': 1,
-            'total': 1,
-            'file_index': total_files,
-            'total_files': total_files,
-            'done': True,
-            'error': None if all_ok else "; ".join(errors)
-        }
-
     if not all_ok:
         return jsonify({
             'success': False,
@@ -323,9 +305,12 @@ def download_file(server_id):
     path = request.args.get('path')
     if not path:
         return "Path required", 400
+
     try:
         remote_file = SFTPService.download_file(server, path)
-        import os, mimetypes
+        attr = remote_file.stat()
+        file_size = attr.st_size
+
         filename = os.path.basename(path)
         mime, _ = mimetypes.guess_type(filename)
         mime = mime or "application/octet-stream"
@@ -346,9 +331,12 @@ def download_file(server_id):
                     pass
 
         return Response(
-            generate(),
+            stream_with_context(generate()),
             mimetype=mime,
-            headers={"Content-Disposition": disposition}
+            headers={
+                "Content-Disposition": disposition,
+                "Content-Length": str(file_size)  # ← enables native browser download bar
+            }
         )
     except Exception as e:
         return f"Download failed: {str(e)}", 400

@@ -12,6 +12,7 @@ class SSHConnectionManager:
     """
     Thread-safe connection manager for persistent & on-demand SSH clients.
     Avoids reconnect overhead while enforcing timeouts and clean pool lifecycle.
+    Also keeps ONE shared SFTP session per server (no channel leak per call).
     """
     _instance = None
     _lock = threading.Lock()
@@ -23,6 +24,7 @@ class SSHConnectionManager:
                 cls._instance._clients: Dict[int, Tuple[paramiko.SSHClient, float]] = {}
                 cls._instance._client_lock = threading.Lock()
                 cls._instance._server_locks: Dict[int, threading.Lock] = {}
+                cls._instance._sftp: Dict[int, Tuple[paramiko.SSHClient, paramiko.SFTPClient]] = {}
             return cls._instance
 
     def _get_server_lock(self, server_id: int) -> threading.Lock:
@@ -32,9 +34,6 @@ class SSHConnectionManager:
             return self._server_locks[server_id]
 
     def _create_client(self, server) -> paramiko.SSHClient:
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
         connect_kwargs = {
             'hostname': server.host,
             'port': server.port,
@@ -73,7 +72,7 @@ class SSHConnectionManager:
         else:
             connect_kwargs['password'] = server.password
 
-        # Attempt connection with resilience against transient SSH banner drops / connection resets (e.g. OpenSSH MaxStartups or cloud rate limits)
+        # Attempt connection with resilience against transient SSH banner drops / connection resets
         for attempt in range(1, 3):
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -122,10 +121,12 @@ class SSHConnectionManager:
                     except Exception:
                         pass
                     del self._clients[server.id]
+                    self._sftp.pop(server.id, None)
 
             # Connect new
             client = self._create_client(server)
             self._clients[server.id] = (client, time.time())
+            self._sftp.pop(server.id, None)
             return client
 
     def _run_cmd(self, client: paramiko.SSHClient, command: str, timeout: int, get_pty: bool) -> Tuple[int, str, str]:
@@ -202,14 +203,9 @@ class SSHConnectionManager:
         channel = transport.open_session()
 
         # Terminal modes per RFC 4254 Section 8:
-        # Opcode 53 = ECHO (1 = enable echoing of typed characters)
-        # Opcode 54 = ECHOE (1 = visually erase character on backspace)
-        # Opcode 55 = ECHOK (1 = kill character discards current line)
-        # Opcode 51 = ICANON (1 = canonical line editing)
-        # Opcode 50 = ISIG (1 = enable signals like INTR, QUIT, SUSP)
+        # Opcode 53 = ECHO, 54 = ECHOE, 55 = ECHOK, 51 = ICANON, 50 = ISIG
         # Opcode 38 = IXON (0 = disable output flow control so Ctrl+S doesn't freeze terminal)
         # Opcode 0  = TTY_OP_END
-        # Format: opcode (1 byte) + uint32 argument (4 bytes, big-endian) ... + end opcode 0 (1 byte)
         modes = bytes([
             53, 0, 0, 0, 1,  # ECHO = 1
             54, 0, 0, 0, 1,  # ECHOE = 1
@@ -244,14 +240,39 @@ class SSHConnectionManager:
 
     def open_sftp(self, server) -> Tuple[paramiko.SSHClient, paramiko.SFTPClient]:
         """
-        Opens an SFTP client session.
+        Returns the pooled client plus ONE shared SFTP session per server.
+        Reusing the session avoids leaking a channel + remote sftp-server
+        process on every file-manager call. Do NOT close the returned sftp
+        in callers; use SFTPService._open_fast_sftp for dedicated channels.
         """
         client = self.get_client(server)
-        sftp = client.open_sftp()
-        return client, sftp
+        with self._client_lock:
+            entry = self._sftp.get(server.id)
+            if entry:
+                cached_client, cached_sftp = entry
+                try:
+                    alive = (
+                        cached_client is client
+                        and cached_sftp.sock is not None
+                        and not cached_sftp.sock.closed
+                    )
+                except Exception:
+                    alive = False
+                if alive:
+                    return client, cached_sftp
+                try:
+                    cached_sftp.close()
+                except Exception:
+                    pass
+                self._sftp.pop(server.id, None)
+
+            sftp = client.open_sftp()
+            self._sftp[server.id] = (client, sftp)
+            return client, sftp
 
     def disconnect(self, server_id: int):
         with self._client_lock:
+            self._sftp.pop(server_id, None)
             if server_id in self._clients:
                 client, _ = self._clients.pop(server_id)
                 try:

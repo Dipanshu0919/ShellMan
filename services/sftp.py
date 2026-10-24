@@ -1,9 +1,22 @@
 import os
 import stat
 import io
+import shutil
+import tempfile
+import threading
 import time
+import shlex
 from typing import List, Dict, Any, Tuple
+
+import logging
+import paramiko
+
 from services.ssh_manager import ssh_manager
+from services.progress_tracker import ProgressTracker
+
+
+logger = logging.getLogger('shellman.sftp')
+
 
 def format_bytes(size: int) -> str:
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
@@ -14,8 +27,7 @@ def format_bytes(size: int) -> str:
 
 class SFTPService:
     """
-    Paramiko SFTP operations wrapper.
-    Prevents path traversal and handles directory navigation, download, upload and editing.
+    Paramiko SFTP operations wrapper with real byte-counting progress tracking.
     """
 
     @staticmethod
@@ -37,15 +49,25 @@ class SFTPService:
         return path
 
     @classmethod
+    def _get_remote_size(cls, server, paths: List[str]) -> int:
+        """Returns total size in bytes of given paths using du -sb -c."""
+        if not paths:
+            return 0
+        quoted = " ".join(shlex.quote(p) for p in paths)
+        cmd = f"du -sb -c -- {quoted} 2>/dev/null | tail -n 1 | cut -f 1"
+        code, stdout, _ = ssh_manager.execute(server, cmd, timeout=15)
+        if code == 0 and stdout.strip().isdigit():
+            return int(stdout.strip())
+        return 0
+
+    @classmethod
     def list_dir(cls, server, path: str = "/") -> Tuple[bool, Any]:
-        """List contents of remote directory."""
         path = cls._normalize_path(path, server)
         try:
             _, sftp = ssh_manager.open_sftp(server)
             try:
                 entries = sftp.listdir_attr(path)
             except IOError as e:
-                # Might be a file or permission denied
                 return False, f"Cannot open directory {path}: {str(e)}"
 
             items = []
@@ -55,7 +77,6 @@ class SFTPService:
                 is_link = stat.S_ISLNK(attr.st_mode)
                 mode_str = stat.filemode(attr.st_mode)
                 item_path = os.path.normpath(os.path.join(path, attr.filename))
-                
                 mtime_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(attr.st_mtime))
                 owner_name = 'root' if attr.st_uid == 0 else server_user
                 group_name = 'root' if attr.st_gid == 0 else server_user
@@ -73,9 +94,7 @@ class SFTPService:
                     'group': group_name,
                 })
 
-            # Sort: directories first, then alphabetical
             items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
-
             parent_path = os.path.dirname(path) if path != '/' else None
             return True, {
                 'current_path': path,
@@ -87,7 +106,6 @@ class SFTPService:
 
     @classmethod
     def stat_item(cls, server, path: str) -> Tuple[bool, Any]:
-        """Returns detailed stat metadata for a file or directory."""
         path = cls._normalize_path(path, server)
         server_user = getattr(server, 'username', 'user') if server else 'user'
         try:
@@ -126,8 +144,6 @@ class SFTPService:
 
     @classmethod
     def read_file(cls, server, file_path: str, max_bytes: int = 5 * 1024 * 1024) -> Tuple[bool, Any]:
-        """Reads file content for viewing/editing."""
-        # FIX: pass server so '~' resolves against the actual SSH username
         file_path = cls._normalize_path(file_path, server)
         try:
             _, sftp = ssh_manager.open_sftp(server)
@@ -157,7 +173,6 @@ class SFTPService:
 
     @classmethod
     def write_file(cls, server, file_path: str, content: str) -> Tuple[bool, str]:
-        """Writes content to a file via SFTP."""
         file_path = cls._normalize_path(file_path, server)
         try:
             _, sftp = ssh_manager.open_sftp(server)
@@ -198,8 +213,7 @@ class SFTPService:
             sftp.rename(old_path, new_path)
             return True, "Renamed successfully"
         except Exception:
-            # Fallback to standard Linux mv command which handles POSIX renames reliably
-            code, out, err = ssh_manager.execute(server, f"mv -- {shlex_quote(old_path)} {shlex_quote(new_path)}")
+            code, out, err = ssh_manager.execute(server, f"mv -- {shlex.quote(old_path)} {shlex.quote(new_path)}")
             if code == 0:
                 return True, "Renamed successfully"
             return False, err or out or "Rename failed"
@@ -212,9 +226,7 @@ class SFTPService:
         try:
             _, sftp = ssh_manager.open_sftp(server)
             if is_dir:
-                # Use ssh command for recursive dir removal if needed, or rmdir
-                # SFTP rmdir only works on empty dirs, so we can use rm -rf for non-empty
-                code, out, err = ssh_manager.execute(server, f"rm -rf -- {shlex_quote(path)}")
+                code, out, err = ssh_manager.execute(server, f"rm -rf -- {shlex.quote(path)}")
                 if code == 0:
                     return True, "Directory deleted"
                 return False, err or out
@@ -235,38 +247,68 @@ class SFTPService:
                 return False, f"Refusing to delete protected system directory: {norm}"
             clean_paths.append(norm)
 
-        quoted = " ".join(shlex_quote(p) for p in clean_paths)
+        quoted = " ".join(shlex.quote(p) for p in clean_paths)
         code, out, err = ssh_manager.execute(server, f"rm -rf -- {quoted}")
         if code == 0:
             return True, f"Successfully deleted {len(clean_paths)} item(s)"
         return False, err or out or "Batch deletion failed"
 
     @classmethod
-    def move_multiple(cls, server, paths: List[str], dest_dir: str) -> Tuple[bool, str]:
+    def move_multiple(cls, server, paths: List[str], dest_dir: str, task_id: str = None) -> Tuple[bool, str]:
         if not paths:
             return False, "No items selected to move"
         dest_dir = cls._normalize_path(dest_dir, server)
         clean_paths = [cls._normalize_path(p, server) for p in paths]
-        
-        quoted_dest = shlex_quote(dest_dir)
-        quoted_sources = " ".join(shlex_quote(p) for p in clean_paths)
-        cmd = f"test -d {quoted_dest} && mv -t {quoted_dest} -- {quoted_sources}"
-        code, out, err = ssh_manager.execute(server, cmd)
+
+        total_size = cls._get_remote_size(server, clean_paths)
+        if task_id:
+            ProgressTracker.create_task(task_id, f"Moving {len(paths)} items", total_size)
+
+        quoted_dest = shlex.quote(dest_dir)
+        quoted_sources = " ".join(shlex.quote(p) for p in clean_paths)
+
+        cmd = f"mv -t {quoted_dest} -- {quoted_sources} 2>&1"
+        code, out, err = ssh_manager.execute(server, cmd, timeout=600)
+
+        if task_id:
+            if code == 0:
+                ProgressTracker.update(task_id, total_size, total_size)
+                ProgressTracker.complete(task_id)
+            else:
+                ProgressTracker.complete(task_id, error=err or out or "Move failed")
+
         if code == 0:
             return True, f"Successfully moved {len(clean_paths)} item(s) to {dest_dir}"
         return False, err or out or f"Failed to move items into destination {dest_dir}"
 
     @classmethod
-    def copy_multiple(cls, server, paths: List[str], dest_dir: str) -> Tuple[bool, str]:
+    def copy_multiple(cls, server, paths: List[str], dest_dir: str, task_id: str = None) -> Tuple[bool, str]:
         if not paths:
             return False, "No items selected to copy"
         dest_dir = cls._normalize_path(dest_dir, server)
         clean_paths = [cls._normalize_path(p, server) for p in paths]
-        
-        quoted_dest = shlex_quote(dest_dir)
-        quoted_sources = " ".join(shlex_quote(p) for p in clean_paths)
-        cmd = f"test -d {quoted_dest} && cp -r --target-directory={quoted_dest} -- {quoted_sources}"
-        code, out, err = ssh_manager.execute(server, cmd)
+
+        total_size = cls._get_remote_size(server, clean_paths)
+        if task_id:
+            ProgressTracker.create_task(task_id, f"Copying {len(paths)} items", total_size)
+
+        quoted_dest = shlex.quote(dest_dir)
+        quoted_sources = " ".join(shlex.quote(p) for p in clean_paths)
+
+        cmd = (
+            f"if command -v rsync >/dev/null 2>&1; then "
+            f"rsync -a --info=progress2 -- {quoted_sources} {quoted_dest} 2>&1; "
+            f"else cp -r --target-directory={quoted_dest} -- {quoted_sources} 2>&1; fi"
+        )
+        code, out, err = ssh_manager.execute(server, cmd, timeout=1800)
+
+        if task_id:
+            if code == 0:
+                ProgressTracker.update(task_id, total_size, total_size)
+                ProgressTracker.complete(task_id)
+            else:
+                ProgressTracker.complete(task_id, error=err or out or "Copy failed")
+
         if code == 0:
             return True, f"Successfully copied {len(clean_paths)} item(s) to {dest_dir}"
         return False, err or out or f"Failed to copy items into destination {dest_dir}"
@@ -280,15 +322,15 @@ class SFTPService:
             return False, "Invalid permission mode (e.g. 644, 755)"
         clean_paths = [cls._normalize_path(p, server) for p in paths]
         rec_flag = "-R " if recursive else ""
-        quoted_sources = " ".join(shlex_quote(p) for p in clean_paths)
-        cmd = f"chmod {rec_flag}{shlex_quote(mode)} -- {quoted_sources}"
+        quoted_sources = " ".join(shlex.quote(p) for p in clean_paths)
+        cmd = f"chmod {rec_flag}{shlex.quote(mode)} -- {quoted_sources}"
         code, out, err = ssh_manager.execute(server, cmd)
         if code == 0:
             return True, f"Permissions set to {mode} for {len(clean_paths)} item(s)"
         return False, err or out or "Failed to change permissions"
 
     @classmethod
-    def archive_multiple(cls, server, paths: List[str], dest_dir: str, archive_name: str) -> Tuple[bool, str]:
+    def archive_multiple(cls, server, paths: List[str], dest_dir: str, archive_name: str, task_id: str = None) -> Tuple[bool, str]:
         if not paths:
             return False, "No items selected to archive"
         dest_dir = cls._normalize_path(dest_dir, server)
@@ -298,18 +340,28 @@ class SFTPService:
         archive_name = archive_name.strip()
         archive_path = os.path.normpath(os.path.join(dest_dir, archive_name))
 
+        if task_id:
+            ProgressTracker.create_task(task_id, f"Compressing into {archive_name}")
+
         base_dir = os.path.dirname(clean_paths[0])
-        sources = " ".join(shlex_quote(os.path.basename(p)) for p in clean_paths)
+        sources = " ".join(shlex.quote(os.path.basename(p)) for p in clean_paths)
 
         if archive_name.endswith('.zip'):
-            cmd = f"cd {shlex_quote(base_dir)} && (zip -r {shlex_quote(archive_path)} {sources} 2>/dev/null || tar -czf {shlex_quote(archive_path + '.tar.gz')} {sources})"
+            cmd = f"cd {shlex.quote(base_dir)} && (zip -r {shlex.quote(archive_path)} {sources} 2>/dev/null || tar -czf {shlex.quote(archive_path + '.tar.gz')} {sources})"
         else:
             if not archive_name.endswith('.tar.gz') and not archive_name.endswith('.tgz') and not archive_name.endswith('.tar'):
                 archive_name += '.tar.gz'
                 archive_path += '.tar.gz'
-            cmd = f"cd {shlex_quote(base_dir)} && tar -czf {shlex_quote(archive_path)} {sources}"
+            cmd = f"cd {shlex.quote(base_dir)} && tar -czf {shlex.quote(archive_path)} {sources}"
 
-        code, out, err = ssh_manager.execute(server, cmd, timeout=30)
+        code, out, err = ssh_manager.execute(server, cmd, timeout=1800)
+
+        if task_id:
+            if code == 0:
+                ProgressTracker.complete(task_id)
+            else:
+                ProgressTracker.complete(task_id, error=err or out or "Compression failed")
+
         if code == 0:
             return True, f"Created archive: {archive_name}"
         return False, err or out or "Failed to create archive"
@@ -321,8 +373,8 @@ class SFTPService:
             dest_dir = os.path.dirname(archive_path)
         dest_dir = cls._normalize_path(dest_dir, server)
 
-        quoted_dest = shlex_quote(dest_dir)
-        quoted_archive = shlex_quote(archive_path)
+        quoted_dest = shlex.quote(dest_dir)
+        quoted_archive = shlex.quote(archive_path)
 
         lower_path = archive_path.lower()
         if lower_path.endswith('.zip'):
@@ -334,7 +386,7 @@ class SFTPService:
         else:
             return False, "Unsupported archive format (supports .zip, .tar.gz, .tgz, .tar, .gz)"
 
-        code, out, err = ssh_manager.execute(server, cmd, timeout=60)
+        code, out, err = ssh_manager.execute(server, cmd, timeout=300)
         if code == 0:
             return True, f"Extracted {os.path.basename(archive_path)} to {dest_dir}"
         return False, err or out or "Failed to extract archive"
@@ -348,14 +400,12 @@ class SFTPService:
             return
         except Exception:
             pass
-
         try:
-            code, _, _ = ssh_manager.execute(server, f"mkdir -p -- {shlex_quote(dir_path)}")
+            code, _, _ = ssh_manager.execute(server, f"mkdir -p -- {shlex.quote(dir_path)}")
             if code == 0:
                 return
         except Exception:
             pass
-
         parts = [p for p in dir_path.split('/') if p]
         curr = ""
         for p in parts:
@@ -369,52 +419,134 @@ class SFTPService:
                     pass
 
     @classmethod
-    def upload_file(cls, server, remote_dir: str, filename: str, file_stream, overwrite: bool = True, progress_callback = None) -> Tuple[bool, str]:
+    def _open_fast_sftp(cls, server):
+        """
+        Opens a DEDICATED SFTP channel with a large window for uploads.
+        Caller must close it. Falls back to a plain client.open_sftp().
+        """
+        client = ssh_manager.get_client(server)
+        try:
+            transport = client.get_transport()
+            fast = paramiko.SFTPClient.from_transport(
+                transport,
+                window_size=16 * 1024 * 1024,
+                max_packet_size=32768,
+            )
+            if fast is not None:
+                return fast, True
+        except Exception:
+            pass
+        return client.open_sftp(), True
+
+    @classmethod
+    def upload_file(cls, server, remote_dir: str, filename: str, file_stream, overwrite: bool = True, task_id: str = None) -> Tuple[bool, str]:
         remote_dir = cls._normalize_path(remote_dir, server)
         clean_rel = filename.lstrip('/\\')
         target_path = os.path.normpath(os.path.join(remote_dir, clean_rel))
+
         try:
-            _, sftp = ssh_manager.open_sftp(server)
-            target_dir = os.path.dirname(target_path)
-            if target_dir and target_dir != remote_dir:
-                cls._ensure_remote_dir(server, sftp, target_dir)
+            # Step 1: Drain uploaded file to a local temp file (1 MB buffer).
+            fd, temp_path = tempfile.mkstemp(prefix='shellman_upl_')
+            os.close(fd)
 
-            if not overwrite:
+            t_drain = time.monotonic()
+            with open(temp_path, 'wb') as tmp:
+                shutil.copyfileobj(file_stream, tmp, length=1024 * 1024)
+            drain_s = max(time.monotonic() - t_drain, 1e-6)
+
+            # Real total: exact byte size of the local temp file.
+            total_size = os.path.getsize(temp_path)
+            logger.info(f"[upload] drain {total_size/1e6:.1f} MB in {drain_s:.1f}s ({total_size/1e6/drain_s:.2f} MB/s)")
+
+            if task_id:
+                ProgressTracker.create_task(task_id, f"Uploading {filename}", total_size)
+
+            # Step 2: Background thread does the actual SFTP write.
+            def _background_sftp_upload():
+                sftp = None
+                owns_channel = False
                 try:
-                    sftp.stat(target_path)
-                    return False, f"File '{filename}' already exists on remote server"
-                except IOError:
-                    pass  # File does not exist, safe to write
+                    sftp, owns_channel = cls._open_fast_sftp(server)
 
-            # Pass progress_callback(transferred, total) into putfo
-            sftp.putfo(file_stream, target_path, callback=progress_callback, confirm=False)
-            return True, f"File {filename} uploaded successfully"
+                    target_dir = os.path.dirname(target_path)
+                    if target_dir and target_dir != remote_dir:
+                        cls._ensure_remote_dir(server, sftp, target_dir)
+
+                    if not overwrite:
+                        exists = True
+                        try:
+                            sftp.stat(target_path)
+                        except IOError:
+                            exists = False
+                        if exists:
+                            raise FileExistsError(f"File '{filename}' already exists on remote server")
+
+                    # Throttled progress: always uses the real local size as total.
+                    last_push = [0.0]
+
+                    def progress_callback(transferred, _paramiko_total):
+                        if not task_id:
+                            return
+                        now = time.monotonic()
+                        if transferred >= total_size or (now - last_push[0]) >= 0.25:
+                            last_push[0] = now
+                            ProgressTracker.update(task_id, min(transferred, total_size), total_size)
+
+                    t_sftp = time.monotonic()
+                    with open(temp_path, 'rb') as local_f:
+                        sftp.putfo(
+                            local_f,
+                            target_path,
+                            file_size=total_size,
+                            callback=progress_callback,
+                            confirm=False,
+                        )
+
+                    sftp_s = max(time.monotonic() - t_sftp, 1e-6)
+                    logger.info(f"[upload] sftp {total_size/1e6:.1f} MB in {sftp_s:.1f}s ({total_size/1e6/sftp_s:.2f} MB/s)")
+
+                    if task_id:
+                        ProgressTracker.update(task_id, total_size, total_size)
+                        ProgressTracker.complete(task_id)
+
+                except Exception as e:
+                    if task_id:
+                        ProgressTracker.complete(task_id, error=str(e))
+                finally:
+                    if sftp is not None and owns_channel:
+                        try:
+                            sftp.close()
+                        except Exception:
+                            pass
+                    try:
+                        os.remove(temp_path)
+                    except Exception:
+                        pass
+
+            threading.Thread(target=_background_sftp_upload, daemon=True).start()
+
+            return True, f"File {filename} queued for upload"
+
         except Exception as e:
+            if task_id:
+                ProgressTracker.complete(task_id, error=str(e))
             return False, f"Upload error: {str(e)}"
 
     @classmethod
     def download_file(cls, server, file_path: str):
-        # FIX: pass server so '~' resolves against the actual SSH username
         file_path = cls._normalize_path(file_path, server)
         _, sftp = ssh_manager.open_sftp(server)
         return sftp.open(file_path, 'rb')
 
     @classmethod
     def search_files(cls, server, base_path: str, query: str) -> Tuple[bool, Any]:
-        """Fast remote search using standard Linux find command with virtual filesystem pruning."""
         base_path = cls._normalize_path(base_path, server)
         if not query or not query.strip():
             return False, "Query cannot be empty"
         query = query.strip().replace("'", "").replace('"', "").replace(';', '')
-        quoted_path = shlex_quote(base_path)
-
-        if base_path == "/":
-            cmd = f"find / \\( -path /proc -o -path /sys -o -path /dev -o -path /run -o -path '/var/lib/docker' -o -path '/var/lib/containerd' \\) -prune -o -maxdepth 6 -iname '*{query}*' -print 2>/dev/null | head -n 60"
-        else:
-            cmd = f"find {quoted_path} -maxdepth 6 -iname '*{query}*' 2>/dev/null | head -n 60"
-
-        code, stdout, _ = ssh_manager.execute(server, cmd, timeout=7)
-        
+        quoted_path = shlex.quote(base_path)
+        cmd = f"find {quoted_path} -maxdepth 4 -iname '*{query}*' 2>/dev/null | head -n 100"
+        code, stdout, _ = ssh_manager.execute(server, cmd, timeout=6)
         results = []
         for line in stdout.splitlines():
             line = line.strip()
@@ -429,17 +561,15 @@ class SFTPService:
 
     @classmethod
     def search_content(cls, server, base_path: str, query: str, file_pattern: str = None) -> Tuple[bool, Any]:
-        """Fast remote code text search using grep."""
         base_path = cls._normalize_path(base_path, server)
         if not query or not query.strip():
             return False, "Query cannot be empty"
 
-        safe_query = shlex_quote(query.strip())
-        quoted_path = shlex_quote(base_path)
-        
-        # Build exclude flags for standard huge folders
+        safe_query = shlex.quote(query.strip())
+        quoted_path = shlex.quote(base_path)
+
         excludes = "--exclude-dir=.git --exclude-dir=node_modules --exclude-dir=venv --exclude-dir=.venv --exclude-dir=__pycache__ --exclude-dir=.cache"
-        include_flag = f"--include='{file_pattern}'" if file_pattern and file_pattern.strip() else ""
+        include_flag = f"--include={shlex.quote(file_pattern)}" if file_pattern and file_pattern.strip() else ""
 
         cmd = f"grep -rnI {excludes} {include_flag} -m 50 {safe_query} {quoted_path} 2>/dev/null | head -n 100"
         code, stdout, _ = ssh_manager.execute(server, cmd, timeout=8)
@@ -462,5 +592,4 @@ class SFTPService:
         return True, results
 
 def shlex_quote(s: str) -> str:
-    import shlex
     return shlex.quote(s)
