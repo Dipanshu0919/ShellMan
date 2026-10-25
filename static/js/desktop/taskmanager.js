@@ -182,9 +182,9 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
                 <!-- RAM -->
                 <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);" title="Total Host Memory Usage">
                   <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700;">RAM:</span>
-                  <span id="procMetricMemVal" style="color:#38bdf8; font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
+                  <span id="procMetricMemVal" style="color:var(--sm-accent); font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
                   <div style="width:32px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
-                    <div id="procMetricMemBar" style="width:0%; height:100%; background:#38bdf8; transition:width 0.3s ease;"></div>
+                    <div id="procMetricMemBar" style="width:0%; height:100%; background:var(--sm-accent); transition:width 0.3s ease;"></div>
                   </div>
                 </div>
 
@@ -653,7 +653,7 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
               cells.push(`<td style="padding:0.45rem 0.65rem; color:${memColor}; font-weight:600; font-family:var(--font-mono); font-size:0.75rem;" title="Physical RSS: ${rssDisplay}">${p.mem}%</td>`);
             }
             if (visibleCols.rss) {
-              cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.73rem; color:#38bdf8;" title="Resident Physical Memory (RSS): ${p.rss} KB">${rssDisplay}</td>`);
+              cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.73rem; color:var(--sm-accent);" title="Resident Physical Memory (RSS): ${p.rss} KB">${rssDisplay}</td>`);
             }
             if (visibleCols.pss) {
               cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.73rem; color:#a78bfa;" title="Proportional Set Size (PSS): ${p.pss !== null && p.pss !== undefined ? p.pss + ' KB' : 'Unavailable'}">${pssDisplay}</td>`);
@@ -901,7 +901,7 @@ DesktopAppsController.prototype.launchLogs = function (params = {}) {
                 <button class="btn btn-secondary btn-xs active log-lvl-btn" data-lvl="all" id="lvlAll_${logWinId}" style="padding:2px 7px; font-size:0.7rem;">All <span id="cntAll_${logWinId}">0</span></button>
                 <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="error" id="lvlErr_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:#f87171;">Errors <span id="cntErr_${logWinId}">0</span></button>
                 <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="warn" id="lvlWarn_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:#fbbf24;">Warn <span id="cntWarn_${logWinId}">0</span></button>
-                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="info" id="lvlInfo_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:#38bdf8;">Info <span id="cntInfo_${logWinId}">0</span></button>
+                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="info" id="lvlInfo_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:var(--sm-accent);">Info <span id="cntInfo_${logWinId}">0</span></button>
               </div>
             </div>
 
@@ -1208,7 +1208,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
             <div style="display:flex; gap:0.35rem; align-items:center;">
               <button class="btn btn-secondary btn-xs net-tab-btn active" data-tab="connections" id="tabConn_${netWinId}" style="font-size:0.75rem;">
                 Active Connections
-                <span class="badge" id="netConnCountBadge_${netWinId}" style="margin-left:4px; background:rgba(56,189,248,0.2); color:#38bdf8;">--</span>
+                <span class="badge" id="netConnCountBadge_${netWinId}" style="margin-left:4px; background:color-mix(in srgb, var(--sm-accent) 20%, transparent); color:var(--sm-accent);">--</span>
               </button>
               <button class="btn btn-ghost btn-xs net-tab-btn" data-tab="ports" id="tabPorts_${netWinId}" style="font-size:0.75rem;">
                 Listening Ports
@@ -1247,7 +1247,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
               </div>
               <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
                 <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">SYN_RECV (SYN Flood)</div>
-                <div id="mStatSyn_${netWinId}" style="font-size:1.15rem; font-weight:700; color:#38bdf8; margin-top:2px;">--</div>
+                <div id="mStatSyn_${netWinId}" style="font-size:1.15rem; font-weight:700; color:var(--sm-accent); margin-top:2px;">--</div>
               </div>
               <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
                 <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Time Wait / Closed</div>
@@ -1385,7 +1385,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
               <td><code style="font-size:0.75rem;">${c.local_addr}</code></td>
               <td>
                 <div style="display:flex; align-items:center; gap:0.35rem;">
-                  <code style="font-size:0.75rem; color:#38bdf8;">${c.remote_addr}</code>
+                  <code style="font-size:0.75rem; color:var(--sm-accent);">${c.remote_addr}</code>
                   <button type="button" class="btn btn-ghost btn-xs btn-copy-ip" data-ip="${c.remote_ip}" style="padding:0 3px; font-size:0.65rem;" title="Copy IP">&copy;</button>
                   ${c.remote_ip && c.remote_ip !== '0.0.0.0' && c.remote_ip !== '127.0.0.1' && c.remote_ip !== '::1' && c.remote_ip !== '*' ? `
                     <button type="button" class="btn btn-ghost btn-xs btn-ban-ip" data-ip="${c.remote_ip}" style="padding:0 4px; font-size:0.65rem; color:#f87171;" title="Block ${c.remote_ip} in Firewall">Ban</button>

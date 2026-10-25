@@ -130,7 +130,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                     <div>
                       <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span style="font-weight:600; font-size:0.85rem; color:#f8fafc;">${escapeHtml(s.name)}</span>
-                        ${isCurrent ? '<span style="font-size:0.68rem; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">ACTIVE NODE</span>' : ''}
+                        ${isCurrent ? '<span style="font-size:0.68rem; background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent); border:1px solid color-mix(in srgb, var(--sm-accent) 30%, transparent); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">ACTIVE NODE</span>' : ''}
                       </div>
                       <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
                         <span>${escapeHtml(s.username)}@${escapeHtml(s.host)}:${s.port}</span>
@@ -466,7 +466,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <!-- Profile Details Card -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
                 <div style="display:flex; align-items:center; gap:1rem;">
-                  <div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, #0284c7, #38bdf8); display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:700; font-size:1.2rem; flex-shrink:0;">
+                  <div style="width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg, color-mix(in srgb, var(--sm-accent) 78%, #000), var(--sm-accent)); display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:700; font-size:1.2rem; flex-shrink:0;">
                     A
                   </div>
                   <div style="min-width:0; flex:1;">
@@ -516,7 +516,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <div class="settings-card" style="margin-top:1.25rem;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.35rem;">
                   <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
-                    <svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <svg style="width:15px;height:15px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                     Two-Factor Authentication (TOTP)
                   </div>
                   <span id="totpBadge_${setWinId}" style="font-size:0.68rem; font-weight:700; padding:0.12rem 0.5rem; border-radius:4px; background:rgba(148,163,184,0.15); color:#94a3b8;">
@@ -578,7 +578,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       Two-factor authentication is currently active on your administrator account.
                     </div>
                     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                      <button class="btn btn-secondary btn-sm" id="btnToggleBackupCodes_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem; color:#38bdf8; border-color:rgba(56,189,248,0.3);">
+                      <button class="btn btn-secondary btn-sm" id="btnToggleBackupCodes_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem; color:var(--sm-accent); border-color:color-mix(in srgb, var(--sm-accent) 30%, transparent);">
                         <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                         View Backup Recovery Codes
                       </button>
@@ -588,10 +588,10 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                     </div>
 
                     <!-- Backup Codes Container -->
-                    <div id="backupCodesBox_${setWinId}" style="display:none; margin-top:0.25rem; padding:0.85rem; background:rgba(2,132,199,0.06); border:1px solid rgba(56,189,248,0.25); border-radius:6px;">
+                    <div id="backupCodesBox_${setWinId}" style="display:none; margin-top:0.25rem; padding:0.85rem; background:color-mix(in srgb, var(--sm-accent) 6%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); border-radius:6px;">
                       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.5rem;">
                         <div>
-                          <div style="font-size:0.78rem; font-weight:700; color:#38bdf8;">Your Emergency Backup Recovery Codes</div>
+                          <div style="font-size:0.78rem; font-weight:700; color:var(--sm-accent);">Your Emergency Backup Recovery Codes</div>
                           <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Each code can be entered once if you lose access to your authenticator app.</div>
                         </div>
                         <div style="display:flex; gap:0.4rem;">
@@ -631,7 +631,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                     return;
                   }
                   codesGrid.innerHTML = activeCodesList.map(c => `
-                    <code style="background:rgba(0,0,0,0.35); padding:0.35rem 0.5rem; border-radius:4px; font-size:0.8rem; text-align:center; color:#38bdf8; font-family:monospace; border:1px solid rgba(56,189,248,0.2); user-select:all; display:block;">${c}</code>
+                    <code style="background:rgba(0,0,0,0.35); padding:0.35rem 0.5rem; border-radius:4px; font-size:0.8rem; text-align:center; color:var(--sm-accent); font-family:monospace; border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); user-select:all; display:block;">${c}</code>
                   `).join('');
                 };
 
@@ -775,16 +775,16 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                               </p>
                               <div style="font-size:0.72rem; color:#94a3b8; margin-bottom:0.25rem;">Manual Entry Secret Key:</div>
                               <div style="display:flex; align-items:center; gap:0.4rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:6px; padding:0.35rem 0.6rem;">
-                                <code style="font-size:0.8rem; font-family:monospace; color:#38bdf8; flex:1; letter-spacing:0.05em;">${sRes.secret}</code>
+                                <code style="font-size:0.8rem; font-family:monospace; color:var(--sm-accent); flex:1; letter-spacing:0.05em;">${sRes.secret}</code>
                                 <button class="btn btn-secondary btn-xs" id="btnCopySecret_${setWinId}" style="padding:0.2rem 0.5rem; font-size:0.7rem;">Copy</button>
                               </div>
                             </div>
                           </div>
 
                           <!-- One-time backup recovery codes -->
-                          <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.25); border-radius:6px; padding:0.75rem;">
+                          <div style="background:color-mix(in srgb, var(--sm-accent) 8%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); border-radius:6px; padding:0.75rem;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                              <span style="font-size:0.78rem; font-weight:700; color:#38bdf8;">2. Emergency Backup Recovery Codes</span>
+                              <span style="font-size:0.78rem; font-weight:700; color:var(--sm-accent);">2. Emergency Backup Recovery Codes</span>
                               <button class="btn btn-secondary btn-xs" id="btnCopyCodes_${setWinId}" style="font-size:0.7rem; padding:0.15rem 0.5rem;">Copy All Codes</button>
                             </div>
                             <p style="font-size:0.72rem; color:var(--text-muted); margin-bottom:0.6rem;">
@@ -1002,7 +1002,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       Applies globally across all windows, Task Manager, File Manager, Nginx editor, headers, and menus.
                     </div>
                   </div>
-                  <span id="fontScaleBadge_${setWinId}" style="font-family:var(--font-mono); font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:12px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">
+                  <span id="fontScaleBadge_${setWinId}" style="font-family:var(--font-mono); font-size:0.75rem; font-weight:700; padding:3px 10px; border-radius:12px; background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent); border:1px solid color-mix(in srgb, var(--sm-accent) 30%, transparent);">
                     ${currentFontPx}px (${currentFontPct}%${currentFontPx === 16 ? ' Default' : ''})
                   </span>
                 </div>
@@ -1021,7 +1021,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 <!-- Range Slider -->
                 <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem;">
                   <span style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">12px</span>
-                  <input type="range" class="form-range" id="fontSizeSlider_${setWinId}" min="12" max="24" step="1" value="${currentFontPx}" style="flex:1; accent-color:#38bdf8; cursor:pointer;">
+                  <input type="range" class="form-range" id="fontSizeSlider_${setWinId}" min="12" max="24" step="1" value="${currentFontPx}" style="flex:1; accent-color:var(--sm-accent); cursor:pointer;">
                   <span style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">24px</span>
                   <button class="btn btn-ghost btn-xs" id="resetFontBtn_${setWinId}" title="Reset to standard 16px font size">Reset</button>
                 </div>
@@ -1036,7 +1036,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <span style="display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:12px; background:rgba(52,211,153,0.14); color:#34d399; font-size:0.72rem; font-weight:600;">
                         <span style="width:6px; height:6px; border-radius:50%; background:#34d399;"></span>Active
                       </span>
-                      <span style="font-family:var(--font-mono); font-size:0.72rem; color:#38bdf8;">/var/www/site/app.py</span>
+                      <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--sm-accent);">/var/www/site/app.py</span>
                       <button class="btn btn-secondary btn-xs" style="pointer-events:none; padding:2px 8px;">Sample Button</button>
                     </div>
                   </div>
@@ -1060,7 +1060,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <div class="settings-card" style="margin-bottom:1.25rem;">
                 <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.75rem;">Preset Wallpapers</div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.85rem;">
-                  <div class="wallpaper-card" data-url="/static/images/wallpaper.jpg" style="border:2px solid #38bdf8; border-radius:6px; overflow:hidden; cursor:pointer; background:#070b14;">
+                  <div class="wallpaper-card" data-url="/static/images/wallpaper.jpg" style="border:2px solid var(--sm-accent); border-radius:6px; overflow:hidden; cursor:pointer; background:#070b14;">
                     <div style="height:95px; background:url('/static/images/wallpaper.jpg') center/cover; position:relative;">
                       <span style="position:absolute; bottom:4px; left:4px; font-size:0.68rem; background:rgba(0,0,0,0.7); color:#f8fafc; padding:2px 6px; border-radius:3px;">Default Studio</span>
                     </div>
@@ -1272,7 +1272,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">%</span>
                     </div>
                     <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
-                      ${['60','70','80','85','90','95'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-cpu" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentCpuThresh === v ? 'border-color:#38bdf8; color:#38bdf8;' : ''}">${v}%</button>`).join('')}
+                      ${['60','70','80','85','90','95'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-cpu" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentCpuThresh === v ? 'border-color:var(--sm-accent); color:var(--sm-accent);' : ''}">${v}%</button>`).join('')}
                     </div>
                   </div>
 
@@ -1286,7 +1286,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">%</span>
                     </div>
                     <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
-                      ${['60','70','80','85','90','95'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-ram" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentRamThresh === v ? 'border-color:#38bdf8; color:#38bdf8;' : ''}">${v}%</button>`).join('')}
+                      ${['60','70','80','85','90','95'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-ram" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentRamThresh === v ? 'border-color:var(--sm-accent); color:var(--sm-accent);' : ''}">${v}%</button>`).join('')}
                     </div>
                   </div>
 
@@ -1300,7 +1300,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">mins</span>
                     </div>
                     <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
-                      ${['1','2','3','5','10'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-dur" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentDuration === v ? 'border-color:#38bdf8; color:#38bdf8;' : ''}">${v}m</button>`).join('')}
+                      ${['1','2','3','5','10'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-dur" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentDuration === v ? 'border-color:var(--sm-accent); color:var(--sm-accent);' : ''}">${v}m</button>`).join('')}
                     </div>
                   </div>
                 </div>
@@ -1455,7 +1455,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <div class="settings-card">
                 <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Import Configuration Archive</div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4;">
-                  Restore server nodes, custom actions, and desktop preferences from a previously exported <code style="color:#38bdf8;">shellman_backup_*.json</code> file. Existing nodes and actions will be merged seamlessly.
+                  Restore server nodes, custom actions, and desktop preferences from a previously exported <code style="color:var(--sm-accent);">shellman_backup_*.json</code> file. Existing nodes and actions will be merged seamlessly.
                 </p>
 
                 <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:440px;">
@@ -1602,11 +1602,11 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           contentPane.innerHTML = `
             <div>
               <div class="settings-card" style="text-align:center; padding:2.5rem 1.5rem; margin-bottom:1.25rem;">
-                <div style="width:72px; height:72px; margin:0 auto 1rem; filter: drop-shadow(0 10px 24px rgba(14, 165, 233, 0.45));">
+                <div style="width:72px; height:72px; margin:0 auto 1rem; filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--sm-accent) 45%, transparent));">
                   <img src="/static/images/logo.png" alt="ShellMan Logo" style="width:100%; height:100%; object-fit:contain;">
                 </div>
                 <h2 style="font-size:1.4rem; font-weight:800; color:#f8fafc; margin-bottom:0.25rem; letter-spacing:0.04em;">SHELLMAN OS</h2>
-                <div style="font-size:0.75rem; font-family:var(--font-mono); color:#38bdf8; margin-bottom:0.75rem;">Version 1.0.0 Production Release</div>
+                <div style="font-size:0.75rem; font-family:var(--font-mono); color:var(--sm-accent); margin-bottom:0.75rem;">Version 1.0.0 Production Release</div>
                 <p style="font-size:0.8rem; color:var(--text-secondary); max-width:480px; margin:0 auto; line-height:1.5;">
                   Modern, agentless, high-performance Linux remote infrastructure desktop environment.
                 </p>
@@ -1658,7 +1658,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <div class="settings-card" style="margin-bottom:1.25rem;">
                 <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
                   <div style="display:flex; align-items:center; gap:1rem;">
-                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #0ea5e9, #6366f1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, color-mix(in srgb, var(--sm-accent) 78%, #000), #6366f1); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>

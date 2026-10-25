@@ -41,7 +41,7 @@
       <div class="sys-left">
         <!-- ShellMan Brand Mark -->
         <a href="{{ url_for('dashboard.index', server_id=selected_server.id if selected_server else None) }}" class="sys-brand" style="display:inline-flex; align-items:center; gap:0.5rem;">
-          <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ShellMan Logo" style="width: 22px; height: 22px; filter: drop-shadow(0 2px 6px rgba(14, 165, 233, 0.45));">
+          <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ShellMan Logo" style="width: 22px; height: 22px; filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--sm-accent) 45%, transparent));">
           <span class="sys-brand-name">SHELLMAN</span>
           <span class="sys-badge">OS</span>
         </a>

@@ -30,7 +30,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
           <!-- Top Utility Toolbar -->
           <div style="height:38px; background:var(--bg-surface); border-bottom:1px solid var(--border-subtle); padding:0 0.75rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:0.35rem;">
-              <button type="button" class="btn btn-secondary btn-xs sync-mode-tab active" id="tabLocalRemote_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; font-weight:600; font-size:0.75rem; border-color:#38bdf8; color:#38bdf8; background:rgba(2,132,199,0.15);">
+              <button type="button" class="btn btn-secondary btn-xs sync-mode-tab active" id="tabLocalRemote_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; font-weight:600; font-size:0.75rem; border-color:var(--sm-accent); color:var(--sm-accent); background:color-mix(in srgb, var(--sm-accent) 15%, transparent);">
                 <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/><circle cx="12" cy="12" r="3"/></svg>
                 Local &harr; Remote Sync
               </button>
@@ -56,7 +56,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                 <div>
                   <label style="display:block; font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:0.35rem; letter-spacing:0.04em;">Transfer Direction</label>
                   <div style="display:flex; gap:0.4rem;">
-                    <button type="button" class="btn btn-secondary btn-xs sync-dir-btn active" id="btnDirPush_${syncWinId}" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.4rem 0.5rem; font-size:0.74rem; font-weight:600; border-color:#38bdf8; color:#38bdf8; background:rgba(2,132,199,0.15);">
+                    <button type="button" class="btn btn-secondary btn-xs sync-dir-btn active" id="btnDirPush_${syncWinId}" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.4rem 0.5rem; font-size:0.74rem; font-weight:600; border-color:var(--sm-accent); color:var(--sm-accent); background:color-mix(in srgb, var(--sm-accent) 15%, transparent);">
                       <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                       Push: Local &rarr; Server
                     </button>
@@ -71,7 +71,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                 <div>
                   <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
                     <span style="display:flex; align-items:center; gap:0.35rem;">
-                      <svg style="width:13px;height:13px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                      <svg style="width:13px;height:13px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                       <span id="lblLocal_${syncWinId}">Local Machine Directory (Source)</span>
                     </span>
                   </label>
@@ -122,7 +122,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                 <div>
                   <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
                     <span style="display:flex; align-items:center; gap:0.35rem;">
-                      <svg style="width:13px;height:13px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      <svg style="width:13px;height:13px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       Source Directory on Server
                     </span>
                   </label>
@@ -145,7 +145,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                 <!-- Server Direction Divider -->
                 <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin:0.1rem 0;">
                   <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
-                  <div style="padding:0.2rem 0.6rem; border-radius:12px; background:rgba(2,132,199,0.1); border:1px solid rgba(2,132,199,0.25); color:#38bdf8; display:flex; align-items:center; gap:0.35rem; font-weight:600; font-size:0.7rem;">
+                  <div style="padding:0.2rem 0.6rem; border-radius:12px; background:color-mix(in srgb, var(--sm-accent) 10%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); color:var(--sm-accent); display:flex; align-items:center; gap:0.35rem; font-weight:600; font-size:0.7rem;">
                     <span>Replicates to Target</span>
                     <svg style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </div>
@@ -182,11 +182,11 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                 <div style="display:flex; flex-direction:column; gap:0.45rem; font-size:0.75rem;">
                   <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                     <input type="checkbox" id="chkArchive_${syncWinId}" checked>
-                    <span>Archive mode (<code style="color:#38bdf8;">-a</code>: preserve permissions &amp; dates)</span>
+                    <span>Archive mode (<code style="color:var(--sm-accent);">-a</code>: preserve permissions &amp; dates)</span>
                   </label>
                   <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                     <input type="checkbox" id="chkCompress_${syncWinId}" checked>
-                    <span>Compression (<code style="color:#38bdf8;">-z</code>: gzip transfer stream)</span>
+                    <span>Compression (<code style="color:var(--sm-accent);">-z</code>: gzip transfer stream)</span>
                   </label>
                   <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                     <input type="checkbox" id="chkDelete_${syncWinId}">

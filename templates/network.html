@@ -42,7 +42,7 @@
     </div>
     <div class="card" style="padding: 1rem;">
       <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">SYN_RECV (SYN Flood Check)</span>
-      <div id="statSyn" style="font-size: 1.6rem; font-weight: 700; color: #38bdf8; margin-top: 0.3rem;">--</div>
+      <div id="statSyn" style="font-size: 1.6rem; font-weight: 700; color: var(--sm-accent); margin-top: 0.3rem;">--</div>
     </div>
     <div class="card" style="padding: 1rem;">
       <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Time Wait / Closed</span>
@@ -66,7 +66,7 @@
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
         <span class="card-title" style="margin: 0;">Active Socket Connections</span>
-        <span class="badge" id="connCountBadge" style="background: rgba(56,189,248,0.15); color: #38bdf8;">0</span>
+        <span class="badge" id="connCountBadge" style="background: color-mix(in srgb, var(--sm-accent) 15%, transparent); color: var(--sm-accent);">0</span>
       </div>
       <div style="display: flex; gap: 0.5rem; align-items: center;">
         <input type="text" id="connSearchInp" placeholder="Search IP, port, process..." class="form-control" style="font-size: 0.78rem; padding: 0.3rem 0.6rem; width: 220px;" oninput="renderConnections()">
@@ -174,7 +174,7 @@
         <td><code style="font-size:0.76rem;">${c.local_addr}</code></td>
         <td>
           <div style="display:flex; align-items:center; gap:0.4rem;">
-            <code style="font-size:0.76rem; color:#38bdf8;">${c.remote_addr}</code>
+            <code style="font-size:0.76rem; color:var(--sm-accent);">${c.remote_addr}</code>
             <button class="btn btn-ghost btn-xs" style="padding:0 4px; font-size:0.68rem;" title="Copy IP" onclick="navigator.clipboard.writeText('${c.remote_ip}')">&copy;</button>
           </div>
         </td>

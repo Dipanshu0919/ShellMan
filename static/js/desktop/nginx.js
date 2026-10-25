@@ -318,7 +318,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
 
             const isProxy = site.site_type === 'proxy' || Boolean(site.proxy_pass);
             const targetBadge = isProxy
-              ? `<span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.22); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); font-size:0.72rem; display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(site.proxy_pass)}">Proxy &rarr; ${escapeHtml(site.proxy_pass || 'Port Routing')}</span>`
+              ? `<span style="background:color-mix(in srgb, var(--sm-accent) 12%, transparent); color:var(--sm-accent); border:1px solid color-mix(in srgb, var(--sm-accent) 22%, transparent); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); font-size:0.72rem; display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(site.proxy_pass)}">Proxy &rarr; ${escapeHtml(site.proxy_pass || 'Port Routing')}</span>`
               : `<span style="background:rgba(203,213,225,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.12); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); font-size:0.72rem; display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(site.root)}">Static &rarr; ${escapeHtml(site.root || '/var/www')}</span>`;
 
             const portsBadges = (site.ports && site.ports.length > 0)
@@ -758,7 +758,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             }
 
             const domainsBadges = (c.domains && c.domains.length > 0)
-              ? c.domains.map(d => `<span style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.2); padding:1px 6px; border-radius:3px; font-family:var(--font-mono); font-size:0.7rem; margin-right:3px;">${escapeHtml(d)}</span>`).join('')
+              ? c.domains.map(d => `<span style="background:color-mix(in srgb, var(--sm-accent) 10%, transparent); color:var(--sm-accent); border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); padding:1px 6px; border-radius:3px; font-family:var(--font-mono); font-size:0.7rem; margin-right:3px;">${escapeHtml(d)}</span>`).join('')
               : '<span style="color:var(--text-muted);">-</span>';
 
             return `
@@ -984,7 +984,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             statusBox.style.display = 'block';
             statusBox.style.background = 'rgba(56,189,248,0.1)';
             statusBox.style.color = '#38bdf8';
-            statusBox.style.border = '1px solid rgba(56,189,248,0.2)';
+            statusBox.style.border = '1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent)';
             statusBox.textContent = enableSsl
               ? 'Creating Nginx configuration, testing syntax, and obtaining Let\'s Encrypt SSL certificate...'
               : 'Creating Nginx configuration and reloading service...';
@@ -1087,7 +1087,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             statusBox.style.display = 'block';
             statusBox.style.background = 'rgba(56,189,248,0.1)';
             statusBox.style.color = '#38bdf8';
-            statusBox.style.border = '1px solid rgba(56,189,248,0.2)';
+            statusBox.style.border = '1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent)';
             statusBox.textContent = 'Requesting certificate from Let\'s Encrypt and updating Nginx configuration...';
 
             try {

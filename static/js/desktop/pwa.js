@@ -121,7 +121,7 @@ const PwaManager = {
         <div class="desktop-modal-box" style="max-width: 480px; text-align: left;">
           <div class="desktop-modal-header">
             <div style="display:flex;align-items:center;gap:0.6rem;">
-              <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg, #0ea5e9, #38bdf8);display:flex;align-items:center;justify-content:center;">
+              <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg, color-mix(in srgb, var(--sm-accent) 78%, #000), var(--sm-accent));display:flex;align-items:center;justify-content:center;">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>

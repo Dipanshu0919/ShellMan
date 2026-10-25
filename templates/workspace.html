@@ -194,7 +194,7 @@
 <div id="wsUploadToast" style="display:none; position: fixed; bottom: 35px; right: 24px; z-index: 1000; background: #252526; border: 1px solid #3c3c3c; box-shadow: 0 4px 16px rgba(0,0,0,0.6); border-radius: 6px; padding: 0.75rem 1rem; width: 340px; color: #cccccc; font-size: 0.82rem;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
     <span id="wsUploadToastTitle" style="font-weight: 600; color: #ffffff;">Uploading...</span>
-    <span id="wsUploadToastPercent" style="font-weight: 600; color: #38bdf8;">0%</span>
+    <span id="wsUploadToastPercent" style="font-weight: 600; color: var(--sm-accent);">0%</span>
   </div>
   <div style="height: 5px; background: #333333; border-radius: 3px; overflow: hidden; margin-bottom: 0.4rem;">
     <div id="wsUploadToastBar" style="height: 100%; width: 0%; background: #007acc; transition: width 0.15s ease;"></div>
@@ -433,7 +433,7 @@
             <div class="tree-item-group" data-path="${item.path}">
               <div class="tree-node" onclick="toggleTreeNode('${id}', '${item.path}')" oncontextmenu="showContextMenu(event, '${item.path}', true)">
                 <span class="tree-arrow" id="arrow_${id}">▶</span>
-                <svg style="width:14px;height:14px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <svg style="width:14px;height:14px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                 <span>${item.name}</span>
               </div>
               <div class="tree-children" id="${id}" style="padding-left: 14px;"></div>
@@ -666,7 +666,7 @@
 
       container.innerHTML = res.results.map(r => `
         <div style="padding: 0.35rem 0.5rem; cursor: pointer; border-bottom: 1px solid #2d2d2d;" onclick="openFileInWorkspace('${r.path}')">
-          <div style="font-weight: 500; font-size: 0.8rem; color: #38bdf8;">${r.path.split('/').pop()} <span style="font-size:0.7rem;color:#858585;">Line ${r.line}</span></div>
+          <div style="font-weight: 500; font-size: 0.8rem; color: var(--sm-accent);">${r.path.split('/').pop()} <span style="font-size:0.7rem;color:#858585;">Line ${r.line}</span></div>
           <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #cccccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${r.text}</div>
         </div>
       `).join('');

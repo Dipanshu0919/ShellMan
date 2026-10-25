@@ -30,10 +30,10 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
       toast.innerHTML = `
         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
           <span style="font-weight:600; font-size:0.8rem; color:#f8fafc;">${title}</span>
-          <span class="sse-percent" style="font-family:var(--font-mono); font-size:0.75rem; color:#38bdf8;">0%</span>
+          <span class="sse-percent" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--sm-accent);">0%</span>
         </div>
         <div style="width:100%; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
-          <div class="sse-bar" style="width:0%; height:100%; background:#0284c7; transition:width 0.2s ease;"></div>
+          <div class="sse-bar" style="width:0%; height:100%; background:color-mix(in srgb, var(--sm-accent) 78%, #000); transition:width 0.2s ease;"></div>
         </div>
         <div class="sse-status" style="font-family:var(--font-mono); font-size:0.68rem; color:#94a3b8; width:100%; text-align:right;">Connecting...</div>
       `;
@@ -196,7 +196,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             <aside class="files-places-sidebar" style="width:170px; background:var(--bg-surface); border-right:1px solid var(--border-subtle); display:flex; flex-direction:column; overflow-y:auto; flex-shrink:0;">
               <div class="places-section" style="padding:0.5rem 0.4rem;">
                 <div class="places-title" style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); padding:0.25rem 0.5rem;">Favorites</div>
-                <div class="places-item" data-path="~" style="display:flex; align-items:center; gap:0.45rem; padding:0.35rem 0.5rem; font-size:0.75rem; border-radius:var(--radius-xs); cursor:pointer; color:var(--text-secondary);"><svg style="width:13px;height:13px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home (~)</div>
+                <div class="places-item" data-path="~" style="display:flex; align-items:center; gap:0.45rem; padding:0.35rem 0.5rem; font-size:0.75rem; border-radius:var(--radius-xs); cursor:pointer; color:var(--text-secondary);"><svg style="width:13px;height:13px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home (~)</div>
                 <div class="places-item" data-path="/" style="display:flex; align-items:center; gap:0.45rem; padding:0.35rem 0.5rem; font-size:0.75rem; border-radius:var(--radius-xs); cursor:pointer; color:var(--text-secondary);"><svg style="width:13px;height:13px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Root (/)</div>
                 <div class="places-item" data-path="/var/www" style="display:flex; align-items:center; gap:0.45rem; padding:0.35rem 0.5rem; font-size:0.75rem; border-radius:var(--radius-xs); cursor:pointer; color:var(--text-secondary);"><svg style="width:13px;height:13px;color:#10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>Web (/var/www)</div>
                 <div class="places-item" data-path="/etc" style="display:flex; align-items:center; gap:0.45rem; padding:0.35rem 0.5rem; font-size:0.75rem; border-radius:var(--radius-xs); cursor:pointer; color:var(--text-secondary);"><svg style="width:13px;height:13px;color:#f59e0b;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path></svg>Config (/etc)</div>
@@ -209,8 +209,8 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             <!-- Main File Viewport (List + Grid Container) -->
             <div class="files-viewport" id="vp_${fileWinId}" style="flex:1; overflow-y:auto; position:relative; background:var(--bg-canvas);">
               <!-- Drag and drop overlay -->
-              <div id="dropOverlay_${fileWinId}" style="display:none; position:absolute; inset:0; background:rgba(14, 165, 233, 0.16); border:2px dashed #0284c7; z-index:40; align-items:center; justify-content:center; backdrop-filter:blur(3px); pointer-events:none;">
-                <div style="background:var(--bg-surface); padding:1rem 2rem; border-radius:var(--radius-md); border:1px solid var(--border-active); font-weight:600; color:#38bdf8; display:flex; align-items:center; gap:0.6rem; box-shadow:0 12px 32px rgba(0,0,0,0.6);">
+              <div id="dropOverlay_${fileWinId}" style="display:none; position:absolute; inset:0; background:color-mix(in srgb, var(--sm-accent) 16%, transparent); border:2px dashed color-mix(in srgb, var(--sm-accent) 78%, #000); z-index:40; align-items:center; justify-content:center; backdrop-filter:blur(3px); pointer-events:none;">
+                <div style="background:var(--bg-surface); padding:1rem 2rem; border-radius:var(--radius-md); border:1px solid var(--border-active); font-weight:600; color:var(--sm-accent); display:flex; align-items:center; gap:0.6rem; box-shadow:0 12px 32px rgba(0,0,0,0.6);">
                   <svg style="width:22px;height:22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                   <span id="dropOverlayText_${fileWinId}">Drop files or folders to upload here</span>
                 </div>
@@ -299,9 +299,9 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               <span id="stSelected_${fileWinId}" style="color:var(--accent-primary); display:none;">0 selected</span>
             </div>
             <div id="uploadProgressBox_${fileWinId}" style="display:none; align-items:center; gap:0.5rem;">
-              <span id="uploadStatusText_${fileWinId}" style="font-family:var(--font-mono); color:#38bdf8;">Uploading...</span>
+              <span id="uploadStatusText_${fileWinId}" style="font-family:var(--font-mono); color:var(--sm-accent);">Uploading...</span>
               <div style="width:100px; height:6px; background:#1e293b; border-radius:3px; overflow:hidden;">
-                <div id="uploadProgressBar_${fileWinId}" style="width:0%; height:100%; background:#0284c7; transition:width 0.2s;"></div>
+                <div id="uploadProgressBar_${fileWinId}" style="width:0%; height:100%; background:color-mix(in srgb, var(--sm-accent) 78%, #000); transition:width 0.2s;"></div>
               </div>
             </div>
             <span id="stPath_${fileWinId}" style="font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; max-width:320px; white-space:nowrap;">/</span>
@@ -500,7 +500,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             case 'checksum':
               return `<svg style="width:15px;height:15px;color:#eab308;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="9" x2="20" y2="9"></line><line x1="4" y1="15" x2="20" y2="15"></line><line x1="10" y1="3" x2="8" y2="21"></line><line x1="16" y1="3" x2="14" y2="21"></line></svg>`;
             case 'archive':
-              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>`;
+              return `<svg style="width:15px;height:15px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>`;
             case 'file-text':
               return `<svg style="width:15px;height:15px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>`;
             case 'file':
@@ -510,7 +510,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             case 'database':
               return `<svg style="width:15px;height:15px;color:#06b6d4;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`;
             case 'server':
-              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>`;
+              return `<svg style="width:15px;height:15px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>`;
             case 'cpu':
               return `<svg style="width:15px;height:15px;color:#f97316;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>`;
             case 'cloud':
@@ -518,7 +518,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             case 'download':
               return `<svg style="width:15px;height:15px;color:#10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`;
             case 'upload':
-              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`;
+              return `<svg style="width:15px;height:15px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`;
             case 'refresh':
               return `<svg style="width:15px;height:15px;color:#06b6d4;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>`;
             case 'trash':
@@ -528,7 +528,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             case 'zap':
               return `<svg style="width:15px;height:15px;color:#eab308;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
             case 'search':
-              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
+              return `<svg style="width:15px;height:15px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
             case 'bell':
               return `<svg style="width:15px;height:15px;color:#f59e0b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`;
             case 'code':
@@ -544,7 +544,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             case 'git':
               return `<svg style="width:15px;height:15px;color:#f97316;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="6" y1="9" x2="6" y2="15"></line><path d="M18 15a9 9 0 0 0-9-9"></path></svg>`;
             case 'docker':
-              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M6 7V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v3"></path><line x1="10" y1="11" x2="14" y2="11"></line></svg>`;
+              return `<svg style="width:15px;height:15px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M6 7V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v3"></path><line x1="10" y1="11" x2="14" y2="11"></line></svg>`;
             case 'globe':
               return `<svg style="width:15px;height:15px;color:#3b82f6;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
             case 'link':
@@ -553,7 +553,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               return `<svg style="width:15px;height:15px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
             case 'terminal':
             default:
-              return `<svg style="width:15px;height:15px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
+              return `<svg style="width:15px;height:15px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>`;
           }
         };
 
@@ -564,7 +564,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               <div style="font-size:0.78rem; display:flex; flex-direction:column; gap:0.75rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.08);">
                   <span style="color:var(--text-muted);">Target Server:</span>
-                  <strong style="color:#38bdf8; font-family:var(--font-mono);">${escapeHtml(preview.server_name)} (${escapeHtml(preview.server_host)})</strong>
+                  <strong style="color:var(--sm-accent); font-family:var(--font-mono);">${escapeHtml(preview.server_name)} (${escapeHtml(preview.server_host)})</strong>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.08);">
                   <span style="color:var(--text-muted); flex-shrink:0;">Selected Path:</span>
@@ -572,7 +572,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 </div>
                 <div>
                   <div style="color:var(--text-muted); font-size:0.72rem; margin-bottom:0.35rem;">Command Preview:</div>
-                  <div style="background:#050810; border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:0.65rem; font-family:var(--font-mono); font-size:0.74rem; color:#38bdf8; white-space:pre-wrap; word-break:break-all; max-height:160px; overflow-y:auto;">${escapeHtml(preview.resolved_command)}</div>
+                  <div style="background:#050810; border:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); border-radius:6px; padding:0.65rem; font-family:var(--font-mono); font-size:0.74rem; color:var(--sm-accent); white-space:pre-wrap; word-break:break-all; max-height:160px; overflow-y:auto;">${escapeHtml(preview.resolved_command)}</div>
                 </div>
                 <div style="font-size:0.7rem; color:var(--text-muted);">
                   This custom action will be executed securely on the remote host via your active SSH connection.
@@ -599,14 +599,14 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               <div class="file-modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.95rem; border-bottom:1px solid rgba(255,255,255,0.08); background:#111827;">
                 <div style="display:flex; align-items:center; gap:0.6rem; min-width:0;">
                   <span style="font-weight:700; font-size:0.85rem; color:#f8fafc;">${escapeHtml(action.name)}</span>
-                  <span id="stBadge_${outModalId}" style="font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:12px; background:rgba(56,189,248,0.15); color:#38bdf8;">Running...</span>
+                  <span id="stBadge_${outModalId}" style="font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:12px; background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);">Running...</span>
                   <span id="durBadge_${outModalId}" style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-muted);"></span>
                 </div>
                 <button class="win-btn win-close" id="closeBtn_${outModalId}">×</button>
               </div>
               <div style="padding:0.5rem 0.95rem; background:#0b101b; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.72rem; display:flex; justify-content:space-between; align-items:center;">
                 <span id="cmdPreviewText_${outModalId}" style="color:var(--text-muted); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:550px;">$ ${escapeHtml(initialCmd || action.command)}</span>
-                <span style="color:#38bdf8; font-weight:600;">${escapeHtml(this.serverName)}</span>
+                <span style="color:var(--sm-accent); font-weight:600;">${escapeHtml(this.serverName)}</span>
               </div>
               <div style="flex:1; overflow:auto; padding:0.85rem; background:#050810; min-height:280px; max-height:calc(82vh - 120px);">
                 <pre class="action-output-box" id="consoleEl_${outModalId}" style="margin:0; border:none; background:transparent; padding:0; min-height:100%; color:#cbd5e1;">Executing action on remote host via SSH...</pre>
@@ -621,7 +621,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                     <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                     Re-run
                   </button>
-                  <button class="btn btn-ghost btn-xs" id="termHandoffBtn_${outModalId}" style="color:#38bdf8;">
+                  <button class="btn btn-ghost btn-xs" id="termHandoffBtn_${outModalId}" style="color:var(--sm-accent);">
                     Run in Terminal
                   </button>
                 </div>
@@ -837,7 +837,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                       </div>
                       <div id="bIconGrid_${bModalId}" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px;">
                         ${ACTION_ICONS.map(opt => `
-                          <div class="custom-action-icon-opt" data-icon-val="${opt.id}" data-icon-label="${opt.label.toLowerCase()}" style="display:flex; align-items:center; gap:0.45rem; padding:0.38rem 0.5rem; border-radius:5px; cursor:pointer; font-size:0.73rem; color:#cbd5e1; border:1px solid ${opt.id === selectedIconObj.id ? 'rgba(56,189,248,0.45)' : 'rgba(255,255,255,0.06)'}; ${opt.id === selectedIconObj.id ? 'background:rgba(56,189,248,0.15); color:#38bdf8;' : 'background:rgba(255,255,255,0.02);'}">
+                          <div class="custom-action-icon-opt" data-icon-val="${opt.id}" data-icon-label="${opt.label.toLowerCase()}" style="display:flex; align-items:center; gap:0.45rem; padding:0.38rem 0.5rem; border-radius:5px; cursor:pointer; font-size:0.73rem; color:#cbd5e1; border:1px solid ${opt.id === selectedIconObj.id ? 'rgba(56,189,248,0.45)' : 'rgba(255,255,255,0.06)'}; ${opt.id === selectedIconObj.id ? 'background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);' : 'background:rgba(255,255,255,0.02);'}">
                             <span style="display:flex; align-items:center; flex-shrink:0;">${getActionIconSvg(opt.id)}</span>
                             <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${opt.label}</span>
                           </div>
@@ -1275,7 +1275,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
                   <span style="color:#64748b; flex-shrink:0; width:75px;">Permissions</span>
-                  <span style="color:#38bdf8; font-family:var(--font-mono); font-size:0.7rem;">${escapeHtml(item.permissions || '-')}</span>
+                  <span style="color:var(--sm-accent); font-family:var(--font-mono); font-size:0.7rem;">${escapeHtml(item.permissions || '-')}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem;">
                   <span style="color:#64748b; flex-shrink:0; width:75px;">Owner</span>
@@ -1326,7 +1326,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                     </button>
                   ` : `
                     ${isImg ? `
-                      <button class="props-action-btn" id="propBtn_preview_${fileWinId}" style="color:#38bdf8;">
+                      <button class="props-action-btn" id="propBtn_preview_${fileWinId}" style="color:var(--sm-accent);">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         <span>Preview Image</span>
                       </button>
@@ -1382,7 +1382,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   <div style="font-size:0.7rem; color:#64748b; padding:0.25rem 0;">Loading actions...</div>
                 </div>
                 <button class="add-custom-action-card" id="addCustomActionBtn_${fileWinId}" style="margin-top:0.4rem; width:100%;">
-                  <div style="display:flex; align-items:center; gap:0.5rem; color:#38bdf8; font-size:0.75rem; font-weight:600;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; color:var(--sm-accent); font-size:0.75rem; font-weight:600;">
                     <svg style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <span>+ Add Custom Action</span>
                   </div>
@@ -1447,8 +1447,8 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
               <div class="file-action-selected-pill">
                 <div style="display:flex; align-items:center; gap:0.6rem; min-width:0; flex:1;">
-                  <div style="width:34px; height:34px; border-radius:6px; background:rgba(56,189,248,0.12); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                    <svg style="width:18px; height:18px; color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  <div style="width:34px; height:34px; border-radius:6px; background:color-mix(in srgb, var(--sm-accent) 12%, transparent); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg style="width:18px; height:18px; color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                   </div>
                   <div style="min-width:0; flex:1;">
                     <div style="font-size:0.78rem; font-weight:700; color:#f8fafc;">${count} Items Selected</div>
@@ -1523,7 +1523,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   <div style="font-size:0.7rem; color:#64748b; padding:0.25rem 0;">Loading actions...</div>
                 </div>
                 <button class="add-custom-action-card" id="addCustomActionBtn_${fileWinId}" style="margin-top:0.4rem; width:100%;">
-                  <div style="display:flex; align-items:center; gap:0.5rem; color:#38bdf8; font-size:0.75rem; font-weight:600;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; color:var(--sm-accent); font-size:0.75rem; font-weight:600;">
                     <svg style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <span>+ Add Custom Action</span>
                   </div>
@@ -1640,7 +1640,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   <div style="font-size:0.7rem; color:#64748b; padding:0.25rem 0;">Loading actions...</div>
                 </div>
                 <button class="add-custom-action-card" id="addCustomActionBtn_${fileWinId}" style="margin-top:0.4rem; width:100%;">
-                  <div style="display:flex; align-items:center; gap:0.5rem; color:#38bdf8; font-size:0.75rem; font-weight:600;">
+                  <div style="display:flex; align-items:center; gap:0.5rem; color:var(--sm-accent); font-size:0.75rem; font-weight:600;">
                     <svg style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <span>+ Add Custom Action</span>
                   </div>
@@ -2196,7 +2196,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               const count = selectedPaths.size;
 
               showContextMenu(e.clientX, e.clientY, `
-                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06);">
                   ${count} Items Selected
                 </div>
                 <div class="file-context-item" id="ctx_multi_code">
@@ -2384,7 +2384,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               const image = isImage(item.name);
               showContextMenu(e.clientX, e.clientY, `
                 ${image ? `
-                  <div class="file-context-item" id="ctx_preview_image" style="color:#38bdf8; font-weight:600;">
+                  <div class="file-context-item" id="ctx_preview_image" style="color:var(--sm-accent); font-weight:600;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     <span>Preview Image</span>
                   </div>
@@ -2595,10 +2595,10 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             <div class="file-modal-box image-preview-modal-box" style="max-width:88vw; width:820px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden;">
               <div class="file-modal-header" style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.9rem; border-bottom:1px solid rgba(255,255,255,0.08); background:#111827;">
                 <div style="display:flex; align-items:center; gap:0.6rem; min-width:0;">
-                  <svg style="width:16px;height:16px;color:#38bdf8;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <svg style="width:16px;height:16px;color:var(--sm-accent);flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                   <span style="font-weight:600; font-size:0.82rem; color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.name.replace(/</g, '&lt;')}</span>
                   <span style="font-family:var(--font-mono); font-size:0.72rem; color:#94a3b8; background:rgba(255,255,255,0.06); padding:0.15rem 0.45rem; border-radius:4px;">${item.size_formatted}</span>
-                  <span id="imgDimensions_${fileWinId}" style="font-family:var(--font-mono); font-size:0.72rem; color:#38bdf8; display:none; background:rgba(56,189,248,0.1); padding:0.15rem 0.45rem; border-radius:4px;"></span>
+                  <span id="imgDimensions_${fileWinId}" style="font-family:var(--font-mono); font-size:0.72rem; color:var(--sm-accent); display:none; background:color-mix(in srgb, var(--sm-accent) 10%, transparent); padding:0.15rem 0.45rem; border-radius:4px;"></span>
                 </div>
                 <div style="display:flex; align-items:center; gap:0.4rem;">
                   <a href="${downloadUrl}" class="btn btn-ghost btn-xs" title="Download Image" style="display:inline-flex; align-items:center; gap:4px;">
@@ -3148,7 +3148,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               </div>
               <div class="file-modal-body">
                 <p style="margin:0; font-size:0.78rem;">The following file(s) already exist in this folder:</p>
-                <div style="max-height:120px; overflow-y:auto; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:var(--radius-xs); font-family:var(--font-mono); font-size:0.72rem; color:#38bdf8;">
+                <div style="max-height:120px; overflow-y:auto; background:rgba(0,0,0,0.3); padding:0.5rem; border-radius:var(--radius-xs); font-family:var(--font-mono); font-size:0.72rem; color:var(--sm-accent);">
                   ${conflicts.map(c => `<div>• ${c}</div>`).join('')}
                 </div>
                 <p style="margin:0; font-size:0.74rem; color:var(--text-muted);">How would you like to handle this conflict?</p>

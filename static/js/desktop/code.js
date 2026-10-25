@@ -1,3 +1,123 @@
+/* ShellMan — CodeLoader: visible loading state for the Code Workspace (premium.css has the styles) */
+(function () {
+  if (window.CodeLoader) return;
+
+  const fmtBytes = (n) => {
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1048576).toFixed(1) + ' MB';
+  };
+  const fmtTime = (s) => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  window.CodeLoader = {
+    /** viewportEl = the editor viewport (position:relative). statusEl = status bar text node (optional). */
+    mount(viewportEl, statusEl) {
+      const el = document.createElement('div');
+      el.className = 'code-loading';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      el.innerHTML = `
+        <div class="code-loading-card">
+          <svg class="code-loading-ring" viewBox="0 0 48 48" aria-hidden="true">
+            <circle class="cl-track" cx="24" cy="24" r="19"></circle>
+            <circle class="cl-arc" cx="24" cy="24" r="19"></circle>
+          </svg>
+          <div class="code-loading-name"></div>
+          <div class="code-loading-dir"></div>
+          <div class="code-loading-bar"><span></span></div>
+          <div class="code-loading-meta"><span class="cl-stage"></span><span class="cl-time">00:00</span></div>
+          <div class="code-loading-bytes"></div>
+          <div class="code-loading-hint"></div>
+          <button type="button" class="btn btn-secondary btn-sm cl-cancel">Cancel</button>
+        </div>`;
+      viewportEl.appendChild(el);
+
+      const $ = (s) => el.querySelector(s);
+      const nameEl = $('.code-loading-name'), dirEl = $('.code-loading-dir'), bar = $('.code-loading-bar'),
+        fill = bar.firstElementChild, stageEl = $('.cl-stage'), timeEl = $('.cl-time'),
+        bytesEl = $('.code-loading-bytes'), hintEl = $('.code-loading-hint'), cancelBtn = $('.cl-cancel');
+
+      let ctl = null, showTimer = null, tick = null, t0 = 0, path = '';
+
+      const setStatus = (txt) => { if (statusEl) statusEl.textContent = txt; };
+
+      const stop = () => {
+        clearTimeout(showTimer); clearInterval(tick);
+        el.classList.remove('show');
+        ctl = null;
+      };
+
+      cancelBtn.onclick = () => { if (ctl) ctl.abort(); };
+
+      const api = {
+        /** Begin loading a file. Returns an AbortController (superseded loads are aborted silently). */
+        start(fpath) {
+          if (ctl) { ctl.superseded = true; ctl.abort(); }
+          stop();
+          ctl = new AbortController();
+          path = fpath;
+          const i = fpath.lastIndexOf('/');
+          nameEl.textContent = fpath.slice(i + 1) || fpath;
+          dirEl.textContent = i > 0 ? fpath.slice(0, i) : '/';
+          bar.classList.add('indeterminate'); fill.style.width = '';
+          bytesEl.textContent = ''; hintEl.textContent = '';
+          stageEl.textContent = 'Reading file on the server…';
+          timeEl.textContent = '00:00';
+          t0 = Date.now();
+          setStatus(`Loading ${path}…`);
+          // don't flash the overlay for fast loads
+          showTimer = setTimeout(() => el.classList.add('show'), 250);
+          tick = setInterval(() => {
+            const s = Math.floor((Date.now() - t0) / 1000);
+            timeEl.textContent = fmtTime(s);
+            if (s >= 15) hintEl.textContent = 'Still working — this file is big. You can cancel and open it in the terminal (less / tail) instead.';
+            else if (s >= 4) hintEl.textContent = 'Large files take a while over SSH. You can keep working in other tabs.';
+            setStatus(`Loading ${path}… ${s}s`);
+          }, 250);
+          return ctl;
+        },
+
+        stage(txt) { stageEl.textContent = txt; },
+
+        progress(got, total) {
+          bytesEl.textContent = total ? `${fmtBytes(got)} of ${fmtBytes(total)}` : `${fmtBytes(got)} received`;
+          if (total) { bar.classList.remove('indeterminate'); fill.style.width = Math.min(100, (got / total) * 100) + '%'; }
+        },
+
+        /** fetch + parse JSON while reporting download progress. Throws AbortError if cancelled. */
+        async fetchJson(url, c) {
+          const resp = await fetch(url, { signal: c.signal });
+          api.stage('Downloading…');
+          const total = parseInt(resp.headers.get('Content-Length') || '0', 10);
+          if (!resp.body || !resp.body.getReader) return resp.json();
+          const reader = resp.body.getReader();
+          const chunks = []; let got = 0;
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value); got += value.length;
+            api.progress(got, total);
+          }
+          const all = new Uint8Array(got); let off = 0;
+          chunks.forEach((ch) => { all.set(ch, off); off += ch.length; });
+          return JSON.parse(new TextDecoder().decode(all));
+        },
+
+        /** Let the browser paint "Preparing editor…" before heavy model creation. */
+        async preparing() {
+          api.stage('Preparing editor…');
+          bar.classList.remove('indeterminate'); fill.style.width = '100%';
+          await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+        },
+
+        done() { stop(); },
+      };
+      return api;
+    },
+  };
+})();
+
 /**
  * ShellMan OS: Monaco Code Workspace (code.js)
  */
@@ -48,7 +168,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
                 <svg style="width:14px;height:14px;color:#818cf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                 Workspace:
               </span>
-              <span id="wsRootLabel_${codeId}" style="font-family:var(--font-mono); font-size:0.74rem; color:#38bdf8; background:rgba(56,189,248,0.1); padding:0.15rem 0.5rem; border-radius:var(--radius-xs);">~</span>
+              <span id="wsRootLabel_${codeId}" style="font-family:var(--font-mono); font-size:0.74rem; color:var(--sm-accent); background:color-mix(in srgb, var(--sm-accent) 10%, transparent); padding:0.15rem 0.5rem; border-radius:var(--radius-xs);">~</span>
             </div>
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <button class="btn btn-primary btn-sm" id="saveCodeBtn_${codeId}" title="Save File (Ctrl+S)">
@@ -125,7 +245,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
               <div class="code-editor-viewport" id="editorViewport_${codeId}" style="flex:1; width:100%; height:100%; overflow:hidden; position:relative;">
                 <div id="monaco_${codeId}" style="width:100%; height:100%; overflow:hidden;"></div>
                 <textarea id="fallbackTxt_${codeId}" style="width:100%; height:100%; background:#1e1e1e; color:#f8fafc; font-family:var(--font-mono); font-size:0.88rem; border:none; padding:1rem; resize:none; outline:none; display:none;"></textarea>
-                <div id="dropOverlay_${codeId}" style="display:none; position:absolute; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(4px); border:2px dashed #38bdf8; z-index:100; pointer-events:none; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem; color:#38bdf8;">
+                <div id="dropOverlay_${codeId}" style="display:none; position:absolute; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(4px); border:2px dashed var(--sm-accent); z-index:100; pointer-events:none; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem; color:var(--sm-accent);">
                   <svg style="width:44px;height:44px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                   <div style="font-weight:700; font-size:1rem; color:#f8fafc;">Drop local file here to open in editor</div>
                   <div style="font-size:0.75rem; color:#94a3b8;">Opens in editable tabs. Press Save to upload to remote workspace.</div>
@@ -136,7 +256,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
               <div class="code-terminal-resizer" id="termResizer_${codeId}" style="height:5px; cursor:row-resize; background:rgba(255,255,255,0.06); display:none; flex-shrink:0;" title="Drag to resize terminal"></div>
 
               <!-- Collapsible Bottom Terminal Panel -->
-              <div class="code-terminal-panel" id="termPanel_${codeId}" style="height:190px; min-height:120px; display:none; flex-direction:column; background:#090d16; border-top:1px solid rgba(56,189,248,0.25); flex-shrink:0;">
+              <div class="code-terminal-panel" id="termPanel_${codeId}" style="height:190px; min-height:120px; display:none; flex-direction:column; background:#090d16; border-top:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); flex-shrink:0;">
                 <div class="code-term-header" style="height:28px; background:#0f1522; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 0.65rem;">
                   <div style="display:flex; align-items:center; gap:0.4rem;">
                     <span class="status-dot connected"></span>
@@ -154,12 +274,12 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
               <footer class="code-statusbar" style="height:24px; background:#0d121c; border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem; font-size:0.68rem; color:#64748b; font-family:var(--font-mono); flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:0.6rem;">
                   <span id="stFilePath_${codeId}" style="color:#94a3b8;">Ready</span>
-                  <span id="stDirty_${codeId}" style="color:#38bdf8; display:none;">• Modified</span>
+                  <span id="stDirty_${codeId}" style="color:var(--sm-accent); display:none;">• Modified</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:0.8rem;">
                   <span id="stCursor_${codeId}">Ln 1, Col 1</span>
                   <span>UTF-8</span>
-                  <span id="stLang_${codeId}" style="color:#38bdf8; font-weight:500;">Plain Text</span>
+                  <span id="stLang_${codeId}" style="color:var(--sm-accent); font-weight:500;">Plain Text</span>
                 </div>
               </footer>
             </div>
@@ -324,7 +444,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             html += `
               <div class="code-tab ${isActive ? 'active' : ''} ${tab.dirty ? 'dirty' : ''}" data-path="${fpath}" style="height:100%; padding:0 0.75rem; display:inline-flex; align-items:center; gap:0.45rem; background:${isActive ? '#1e1e1e' : '#141926'}; border-right:1px solid rgba(255,255,255,0.06); border-top:2px solid ${isActive ? '#38bdf8' : 'transparent'}; color:${isActive ? '#ffffff' : '#94a3b8'}; font-size:0.74rem; cursor:pointer; user-select:none; white-space:nowrap;">
                 <span>${fileName}</span>
-                <span class="code-tab-dirty" style="width:6px; height:6px; border-radius:50%; background:#38bdf8; display:${tab.dirty ? 'inline-block' : 'none'};"></span>
+                <span class="code-tab-dirty" style="width:6px; height:6px; border-radius:50%; background:var(--sm-accent); display:${tab.dirty ? 'inline-block' : 'none'};"></span>
                 <span class="code-tab-close" data-close-path="${fpath}" style="font-size:12px; margin-left:2px; opacity:0.6; padding:0 2px; border-radius:2px;" title="Close">×</span>
               </div>
             `;
@@ -341,6 +461,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
         };
 
         // Open File in Tab
+        const codeLoader = CodeLoader.mount(bodyEl.querySelector(`#editorViewport_${codeId}`), stFilePath);
         const openFile = async (fpath, lineToJump = null) => {
           try {
             if (openTabs.has(fpath)) {
@@ -359,10 +480,20 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
               return;
             }
 
-            stFilePath.textContent = `Loading ${fpath}...`;
-            const resp = await fetch(`/api/servers/${this.serverId}/files/read?path=${encodeURIComponent(fpath)}`);
-            const res = await resp.json();
+            const loadCtl = codeLoader.start(fpath);
+            let res;
+            try {
+              res = await codeLoader.fetchJson(`/api/servers/${this.serverId}/files/read?path=${encodeURIComponent(fpath)}`, loadCtl);
+            } catch (loadErr) {
+              if (loadErr && loadErr.name === 'AbortError') {
+                if (!loadCtl.superseded) { codeLoader.done(); stFilePath.textContent = 'Cancelled'; }
+                return;
+              }
+              throw loadErr;
+            }
+            await codeLoader.preparing();
             if (!res.success) {
+              codeLoader.done();
               DesktopModal.alert({ title: 'Open File Failed', message: res.error || 'Could not open file.', type: 'danger' });
               stFilePath.textContent = 'Error opening file';
               return;
@@ -403,7 +534,9 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             }
 
             renderTabs();
+            codeLoader.done();
           } catch (e) {
+            codeLoader.done();
             DesktopModal.alert({ title: 'Open Error', message: String(e), type: 'danger' });
           }
         };
@@ -470,7 +603,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           const tabName = fpath.split('/').pop() || fpath;
 
           const menuHtml = `
-            <div class="file-context-header" style="padding:0.35rem 0.65rem; font-size:0.68rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <div class="file-context-header" style="padding:0.35rem 0.65rem; font-size:0.68rem; font-weight:700; color:var(--sm-accent); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
               ${escapeHtml(tabName)}
             </div>
             <div class="file-context-item" id="tab_ctx_close">
@@ -655,7 +788,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             const indent = depth * 14 + 8;
             const arrow = item.is_dir ? `<span class="code-tree-arrow" style="width:12px; height:12px; display:inline-flex; align-items:center; justify-content:center; color:#64748b; margin-right:2px; font-size:9px;">▶</span>` : `<span style="width:14px; display:inline-block;"></span>`;
             const icon = item.is_dir
-              ? `<svg style="width:13px;height:13px;color:#38bdf8;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`
+              ? `<svg style="width:13px;height:13px;color:var(--sm-accent);flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`
               : `<svg style="width:13px;height:13px;color:#94a3b8;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>`;
 
             return `
@@ -723,7 +856,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             if (isDir) {
               // Directory Context Menu
               showCodeContextMenu(e.clientX, e.clientY, `
-                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                   ${escapeHtml(itemName)}
                 </div>
                 <div class="file-context-item" id="code_ctx_new_file">
@@ -914,7 +1047,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             } else {
               // File Context Menu
               showCodeContextMenu(e.clientX, e.clientY, `
-                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                   ${escapeHtml(itemName)}
                 </div>
                 <div class="file-context-item" id="code_ctx_open">
@@ -1134,7 +1267,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           } else {
             // Right-click on empty background of explorer tree
             showCodeContextMenu(e.clientX, e.clientY, `
-              <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06);">
                 Workspace
               </div>
               <div class="file-context-item" id="code_ctx_root_new_file">
@@ -1315,7 +1448,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             }
             searchResults.innerHTML = list.map(item => `
               <div class="search-result-item" data-path="${item.file}" data-line="${item.line}" style="padding:0.35rem 0.5rem; border-radius:var(--radius-xs); cursor:pointer; margin-bottom:0.3rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05);">
-                <div style="font-size:0.74rem; font-weight:600; color:#38bdf8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <div style="font-size:0.74rem; font-weight:600; color:var(--sm-accent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                   ${item.file.split('/').pop()} <span style="color:var(--text-muted); font-size:0.68rem; font-weight:normal;">:${item.line}</span>
                 </div>
                 <div style="font-size:0.7rem; color:var(--text-secondary); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px;">

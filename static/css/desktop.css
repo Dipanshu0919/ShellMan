@@ -82,7 +82,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.25));
+  filter: drop-shadow(0 0 16px color-mix(in srgb, var(--sm-accent) 25%, transparent));
   opacity: 0.85;
 }
 .desktop-logo-mark svg {
@@ -140,9 +140,9 @@ html, body {
 
 .desktop-server-switcher-pill:hover {
   background: rgba(18, 26, 44, 0.92);
-  border-color: rgba(56, 189, 248, 0.55);
+  border-color: color-mix(in srgb, var(--sm-accent) 55%, transparent);
   color: #f8fafc;
-  box-shadow: 0 6px 24px rgba(14, 165, 233, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--sm-accent) 20%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -155,7 +155,7 @@ html, body {
 
 .desktop-server-switcher-pill .switcher-name {
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--sm-accent);
   font-size: 0.75rem;
 }
 
@@ -186,16 +186,16 @@ html, body {
 }
 
 .ip-mask-toggle:hover {
-  background: rgba(56, 189, 248, 0.16);
-  border-color: rgba(56, 189, 248, 0.45);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--sm-accent) 45%, transparent);
+  color: var(--sm-accent);
   transform: scale(1.08);
 }
 
 .ip-mask-toggle.active {
-  background: rgba(56, 189, 248, 0.22);
-  border-color: rgba(56, 189, 248, 0.6);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--sm-accent) 60%, transparent);
+  color: var(--sm-accent);
 }
 
 .ip-mask-toggle .ip-eye-icon {
@@ -212,7 +212,7 @@ html, body {
 }
 
 .desktop-server-switcher-pill:hover .chevron-icon {
-  stroke: #38bdf8;
+  stroke: var(--sm-accent);
   transform: translateY(1px);
 }
 
@@ -257,8 +257,8 @@ html, body {
 .server-dropdown-header .server-count {
   font-family: var(--font-mono);
   font-size: 0.62rem;
-  color: #0ea5e9;
-  background: rgba(14, 165, 233, 0.12);
+  color: color-mix(in srgb, var(--sm-accent) 78%, #000);
+  background: color-mix(in srgb, var(--sm-accent) 12%, transparent);
   padding: 0.1rem 0.4rem;
   border-radius: 9999px;
 }
@@ -284,15 +284,15 @@ html, body {
 }
 
 .server-dropdown-item:hover {
-  background: rgba(56, 189, 248, 0.14);
+  background: color-mix(in srgb, var(--sm-accent) 14%, transparent);
   color: #ffffff;
 }
 
 .server-dropdown-item.active {
-  background: rgba(56, 189, 248, 0.16);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 16%, transparent);
+  color: var(--sm-accent);
   font-weight: 600;
-  border-left: 2px solid #38bdf8;
+  border-left: 2px solid var(--sm-accent);
 }
 
 .server-dropdown-left {
@@ -324,9 +324,9 @@ html, body {
   gap: 0.55rem;
   padding: 0.48rem 0.65rem;
   border-radius: 5px;
-  color: #38bdf8 !important;
-  background: rgba(56, 189, 248, 0.08) !important;
-  border: 1px solid rgba(56, 189, 248, 0.18) !important;
+  color: var(--sm-accent) !important;
+  background: color-mix(in srgb, var(--sm-accent) 8%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--sm-accent) 18%, transparent) !important;
   width: 100%;
   cursor: pointer;
   text-align: left;
@@ -344,19 +344,19 @@ html, body {
   max-width: 14px;
   max-height: 14px;
   flex-shrink: 0;
-  stroke: #38bdf8;
+  stroke: var(--sm-accent);
 }
 
 .server-dropdown-add:hover,
 .server-dropdown-action-item:hover {
-  background: rgba(56, 189, 248, 0.18) !important;
-  border-color: rgba(56, 189, 248, 0.4) !important;
-  color: #7dd3fc !important;
+  background: color-mix(in srgb, var(--sm-accent) 18%, transparent) !important;
+  border-color: color-mix(in srgb, var(--sm-accent) 40%, transparent) !important;
+  color: color-mix(in srgb, var(--sm-accent) 55%, #fff) !important;
 }
 
 .server-dropdown-add:hover svg,
 .server-dropdown-action-item:hover svg {
-  stroke: #7dd3fc;
+  stroke: color-mix(in srgb, var(--sm-accent) 55%, #fff);
 }
 
 /* ==========================================================================
@@ -800,8 +800,8 @@ html, body {
 }
 
 .desktop-window.active {
-  border-color: rgba(56, 189, 248, 0.4);
-  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(56, 189, 248, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: color-mix(in srgb, var(--sm-accent) 40%, transparent);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.8), 0 0 0 1px color-mix(in srgb, var(--sm-accent) 20%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .desktop-window.maximized {
@@ -819,10 +819,10 @@ html, body {
   position: absolute;
   pointer-events: none;
   z-index: 99998;
-  background: rgba(56, 189, 248, 0.14);
-  border: 2px solid rgba(56, 189, 248, 0.65);
+  background: color-mix(in srgb, var(--sm-accent) 14%, transparent);
+  border: 2px solid color-mix(in srgb, var(--sm-accent) 65%, transparent);
   border-radius: var(--radius-md);
-  box-shadow: 0 0 40px rgba(56, 189, 248, 0.35), inset 0 0 24px rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--sm-accent) 35%, transparent), inset 0 0 24px color-mix(in srgb, var(--sm-accent) 12%, transparent);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   transition: all 0.14s cubic-bezier(0.16, 1, 0.3, 1);
@@ -898,8 +898,8 @@ html, body {
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
 .log-token-info {
-  background: rgba(56, 189, 248, 0.16);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 16%, transparent);
+  color: var(--sm-accent);
   font-weight: 600;
   padding: 0.5px 5px;
   border-radius: 3px;
@@ -1241,7 +1241,7 @@ body.window-dragging * {
 }
 
 .ctx-item:hover {
-  background: rgba(56, 189, 248, 0.15);
+  background: color-mix(in srgb, var(--sm-accent) 15%, transparent);
   color: var(--accent-cyan);
 }
 
@@ -1343,8 +1343,8 @@ body.window-dragging * {
 
 .alt-tab-card.selected {
   border-color: var(--accent-cyan);
-  background: rgba(56, 189, 248, 0.12);
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+  background: color-mix(in srgb, var(--sm-accent) 12%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--sm-accent) 25%, transparent);
 }
 
 .alt-tab-card svg {
@@ -2215,7 +2215,7 @@ input[type="file"]::file-selector-button:hover {
 .widget-time-sec {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #38bdf8;
+  color: var(--sm-accent);
   font-family: var(--font-mono);
   letter-spacing: -0.02em;
 }
@@ -2260,7 +2260,7 @@ input[type="file"]::file-selector-button:hover {
 .widget-header-left svg {
   width: 14px;
   height: 14px;
-  color: #38bdf8;
+  color: var(--sm-accent);
 }
 
 .widget-live-pill {
@@ -2319,8 +2319,8 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .widget-progress-fill.cpu-fill {
-  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--sm-accent) 78%, #000) 0%, var(--sm-accent) 100%);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--sm-accent) 35%, transparent);
 }
 
 .widget-progress-fill.mem-fill {
@@ -2427,8 +2427,8 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .places-item.active {
-  background: rgba(14, 165, 233, 0.15) !important;
-  color: #38bdf8 !important;
+  background: color-mix(in srgb, var(--sm-accent) 15%, transparent) !important;
+  color: var(--sm-accent) !important;
   font-weight: 600 !important;
 }
 
@@ -2469,29 +2469,29 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .files-viewport tbody tr.file-row.selected {
-  background: rgba(14, 165, 233, 0.14) !important;
-  box-shadow: inset 3px 0 0 #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 14%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--sm-accent);
 }
 
 /* Drag and Drop Target Folder Highlight */
 .files-viewport tbody tr.file-row.drop-target-folder {
-  background: rgba(14, 165, 233, 0.25) !important;
-  outline: 2px dashed #38bdf8 !important;
+  background: color-mix(in srgb, var(--sm-accent) 25%, transparent) !important;
+  outline: 2px dashed var(--sm-accent) !important;
   outline-offset: -2px;
 }
 
 .files-grid-item.drop-target-folder {
-  background: rgba(14, 165, 233, 0.25) !important;
-  border-color: #38bdf8 !important;
-  outline: 2px dashed #38bdf8 !important;
+  background: color-mix(in srgb, var(--sm-accent) 25%, transparent) !important;
+  border-color: var(--sm-accent) !important;
+  outline: 2px dashed var(--sm-accent) !important;
   outline-offset: -2px;
   transform: scale(1.02);
 }
 
 .places-item.drop-target-folder {
-  background: rgba(14, 165, 233, 0.25) !important;
-  color: #38bdf8 !important;
-  outline: 2px dashed #38bdf8 !important;
+  background: color-mix(in srgb, var(--sm-accent) 25%, transparent) !important;
+  color: var(--sm-accent) !important;
+  outline: 2px dashed var(--sm-accent) !important;
   outline-offset: -1px;
 }
 
@@ -2558,16 +2558,16 @@ input[type="file"]::file-selector-button:hover {
 
 /* Primary Upload Button in Files Toolbar */
 .files-toolbar .btn-primary {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--sm-accent) 78%, #000) 0%, color-mix(in srgb, var(--sm-accent) 78%, #000) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.18) !important;
   color: #ffffff !important;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35) !important;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--sm-accent) 35%, transparent) !important;
   font-weight: 600;
 }
 
 .files-toolbar .btn-primary:hover {
-  background: linear-gradient(135deg, #0369a1 0%, #075985 100%) !important;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--sm-accent) 78%, #000) 0%, #075985 100%) !important;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--sm-accent) 45%, transparent) !important;
 }
 
 /* Image Preview Modal & Destination Chips */
@@ -2599,9 +2599,9 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .file-action-btn.preview-img-btn:hover {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: rgba(56, 189, 248, 0.3);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 15%, transparent);
+  border-color: color-mix(in srgb, var(--sm-accent) 30%, transparent);
+  color: var(--sm-accent);
 }
 
 /* File Manager Right-Side Properties Panel */
@@ -2645,13 +2645,13 @@ input[type="file"]::file-selector-button:hover {
 
 .files-props-resizer:hover::after,
 .files-props-resizer.is-resizing::after {
-  background: #38bdf8;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
+  background: var(--sm-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--sm-accent) 80%, transparent);
 }
 
 .files-props-resizer:hover,
 .files-props-resizer.is-resizing {
-  background: rgba(56, 189, 248, 0.12);
+  background: color-mix(in srgb, var(--sm-accent) 12%, transparent);
 }
 
 .props-action-btn {
@@ -2745,9 +2745,9 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .settings-nav-item.active {
-  background: rgba(14, 165, 233, 0.15);
-  border-color: rgba(14, 165, 233, 0.3);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 15%, transparent);
+  border-color: color-mix(in srgb, var(--sm-accent) 30%, transparent);
+  color: var(--sm-accent);
   font-weight: 600;
 }
 
@@ -2825,12 +2825,12 @@ input[type="file"]::file-selector-button:hover {
   align-items: center;
   gap: 0.45rem;
   padding: 0.35rem 0.85rem;
-  background: rgba(14, 165, 233, 0.14);
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: color-mix(in srgb, var(--sm-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sm-accent) 40%, transparent);
   border-radius: 9999px;
   font-size: 0.7rem;
   font-family: var(--font-mono);
-  color: #38bdf8;
+  color: var(--sm-accent);
   backdrop-filter: blur(12px);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2838,10 +2838,10 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .pwa-install-pill:hover {
-  background: rgba(14, 165, 233, 0.25);
-  border-color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 25%, transparent);
+  border-color: var(--sm-accent);
   color: #ffffff;
-  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.35);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--sm-accent) 35%, transparent);
   transform: translateY(-1px);
 }
 
@@ -2868,9 +2868,9 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .pwa-badge.ready {
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sm-accent) 30%, transparent);
+  color: var(--sm-accent);
 }
 
 .pwa-feature-item {
@@ -2887,8 +2887,8 @@ input[type="file"]::file-selector-button:hover {
   width: 28px;
   height: 28px;
   border-radius: 6px;
-  background: rgba(56, 189, 248, 0.12);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 12%, transparent);
+  color: var(--sm-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2904,7 +2904,7 @@ input[type="file"]::file-selector-button:hover {
   justify-content: space-between;
   padding: 0.65rem 0.75rem;
   background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(56, 189, 248, 0.16);
+  border: 1px solid color-mix(in srgb, var(--sm-accent) 16%, transparent);
   border-radius: 8px;
   margin-bottom: 0.45rem;
   cursor: pointer;
@@ -2915,7 +2915,7 @@ input[type="file"]::file-selector-button:hover {
 
 .custom-action-card:hover {
   background: rgba(30, 41, 59, 0.85);
-  border-color: rgba(56, 189, 248, 0.42);
+  border-color: color-mix(in srgb, var(--sm-accent) 42%, transparent);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
@@ -3000,8 +3000,8 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .custom-action-card:hover .custom-action-run-btn {
-  background: #0284c7;
-  border-color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 78%, #000);
+  border-color: var(--sm-accent);
   color: #ffffff;
   transform: scale(1.08);
 }
@@ -3025,8 +3025,8 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .add-custom-action-card:hover {
-  border-color: #38bdf8;
-  background: rgba(56, 189, 248, 0.08);
+  border-color: var(--sm-accent);
+  background: color-mix(in srgb, var(--sm-accent) 8%, transparent);
 }
 
 .custom-action-pill-var {
@@ -3034,9 +3034,9 @@ input[type="file"]::file-selector-button:hover {
   align-items: center;
   padding: 2px 7px;
   border-radius: 4px;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent);
+  color: var(--sm-accent);
   font-family: var(--font-mono);
   font-size: 0.68rem;
   cursor: pointer;
@@ -3045,9 +3045,9 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .custom-action-pill-var:hover {
-  background: #0284c7;
+  background: color-mix(in srgb, var(--sm-accent) 78%, #000);
   color: #ffffff;
-  border-color: #38bdf8;
+  border-color: var(--sm-accent);
 }
 
 .action-output-box {
@@ -3080,9 +3080,9 @@ input[type="file"]::file-selector-button:hover {
   font-size: 0.65rem;
   font-weight: 600;
   padding: 2px 7px;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--sm-accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sm-accent) 30%, transparent);
+  color: var(--sm-accent);
   border-radius: 12px;
   flex-shrink: 0;
 }

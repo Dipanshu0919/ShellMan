@@ -30,7 +30,12 @@ class TerminalSession:
         self.client = None
         self.channel = None
         self.alive = True
+        self._send_lock = threading.Lock()
         self.thread = None
+
+    def _send(self, payload):
+        with self._send_lock:
+            self.ws.send(payload)
 
     def start(self):
         try:
@@ -69,7 +74,7 @@ class TerminalSession:
         except Exception as e:
             logger.error(f"Failed to open PTY shell: {e}")
             try:
-                self.ws.send(json.dumps({'type': 'error', 'data': f"SSH connection failed: {str(e)}\r\n"}))
+                self._send(json.dumps({'type': 'error', 'data': f"SSH connection failed: {str(e)}\r\n"}))
             except Exception:
                 pass
             self.close()
@@ -90,7 +95,7 @@ class TerminalSession:
                         break
                     try:
                         payload = json.dumps({'type': 'data', 'data': data.decode('utf-8', errors='replace')})
-                        self.ws.send(payload)
+                        self._send(payload)
                     except Exception as e:
                         logger.debug(f"WS send error: {e}")
                         break
@@ -105,7 +110,7 @@ class TerminalSession:
         finally:
             if self.alive:
                 try:
-                    self.ws.send(json.dumps({'type': 'closed', 'data': '\r\n[ShellMan session terminated]\r\n'}))
+                    self._send(json.dumps({'type': 'closed', 'data': '\r\n[ShellMan session terminated]\r\n'}))
                 except Exception:
                     pass
             self.close()
@@ -138,7 +143,7 @@ class TerminalSession:
                         logger.debug(f"Failed to resize PTY: {err}")
 
             elif mtype == 'ping':
-                self.ws.send(json.dumps({'type': 'pong'}))
+                self._send(json.dumps({'type': 'pong'}))
 
         except json.JSONDecodeError:
             # Fallback if raw text sent

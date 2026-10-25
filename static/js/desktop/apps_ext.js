@@ -39,7 +39,7 @@
             <div style="display:flex; align-items:center; gap:0.55rem;">
               <span class="status-dot connected" id="diagDot_${diagWinId}"></span>
               <span style="font-size:0.82rem; font-weight:700; color:#f8fafc;">SSH Session Diagnostics</span>
-              <span class="badge" id="diagNodeBadge_${diagWinId}" style="background:rgba(56,189,248,0.15); color:#38bdf8; font-family:var(--font-mono); font-size:0.7rem;">${escapeHtml(this.serverName)}</span>
+              <span class="badge" id="diagNodeBadge_${diagWinId}" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent); font-family:var(--font-mono); font-size:0.7rem;">${escapeHtml(this.serverName)}</span>
             </div>
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <button class="btn btn-secondary btn-xs" id="btnTestPing_${diagWinId}" style="font-size:0.72rem; padding:0.25rem 0.6rem;">
@@ -56,7 +56,7 @@
               <div>
                 <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em;">Raw SSH Round-Trip Latency</div>
                 <div style="display:flex; align-items:baseline; gap:0.5rem; margin-top:0.35rem;">
-                  <span style="font-size:2.2rem; font-weight:800; font-family:var(--font-mono); color:#38bdf8;" id="txtDiagLatency_${diagWinId}">--</span>
+                  <span style="font-size:2.2rem; font-weight:800; font-family:var(--font-mono); color:var(--sm-accent);" id="txtDiagLatency_${diagWinId}">--</span>
                   <span style="font-size:1.1rem; color:var(--text-secondary);">ms</span>
                   <span id="badgeDiagRating_${diagWinId}" class="badge" style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.5rem; margin-left:0.5rem; background:rgba(255,255,255,0.06); color:#94a3b8;">Testing...</span>
                 </div>
@@ -72,10 +72,10 @@
             <!-- Network Throughput (Upload & Download Speed) Meter -->
             <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.15rem 1.4rem; display:flex; flex-direction:column; gap:0.85rem;">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-                <div style="display:flex; align-items:center; gap:0.55rem; font-size:0.82rem; font-weight:700; color:#38bdf8;">
+                <div style="display:flex; align-items:center; gap:0.55rem; font-size:0.82rem; font-weight:700; color:var(--sm-accent);">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                   <span>Network Throughput (Upload &amp; Download Speed)</span>
-                  <span class="badge" id="txtNetIface_${diagWinId}" style="background:rgba(56,189,248,0.12); color:#38bdf8; font-family:var(--font-mono); font-size:0.68rem;">eth0</span>
+                  <span class="badge" id="txtNetIface_${diagWinId}" style="background:color-mix(in srgb, var(--sm-accent) 12%, transparent); color:var(--sm-accent); font-family:var(--font-mono); font-size:0.68rem;">eth0</span>
                 </div>
                 <button class="btn btn-secondary btn-xs" id="btnBenchmarkThroughput_${diagWinId}" style="display:flex; align-items:center; gap:4px; font-size:0.72rem; padding:0.25rem 0.65rem;">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
@@ -97,21 +97,21 @@
                 </div>
 
                 <!-- Upload Rate (Tx) -->
-                <div style="background:rgba(0,0,0,0.22); border:1px solid rgba(56,189,248,0.2); border-radius:6px; padding:0.85rem 1rem;">
+                <div style="background:rgba(0,0,0,0.22); border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); border-radius:6px; padding:0.85rem 1rem;">
                   <div style="display:flex; align-items:center; justify-content:space-between;">
                     <span style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Upload Speed (Outgoing Tx)</span>
-                    <span style="font-size:0.75rem; color:#38bdf8; font-weight:700;">&#8593; Tx</span>
+                    <span style="font-size:0.75rem; color:var(--sm-accent); font-weight:700;">&#8593; Tx</span>
                   </div>
                   <div style="display:flex; align-items:baseline; gap:0.4rem; margin-top:0.35rem;">
-                    <span style="font-size:1.8rem; font-weight:800; font-family:var(--font-mono); color:#38bdf8;" id="txtNetTxRate_${diagWinId}">0 KB/s</span>
+                    <span style="font-size:1.8rem; font-weight:800; font-family:var(--font-mono); color:var(--sm-accent);" id="txtNetTxRate_${diagWinId}">0 KB/s</span>
                   </div>
                   <div style="font-size:0.7rem; color:var(--text-muted); margin-top:3px;">Total Transmitted: <span id="txtNetTxTotal_${diagWinId}" style="font-family:var(--font-mono); color:#cbd5e1;">--</span></div>
                 </div>
               </div>
 
               <!-- Active Benchmark Result Strip -->
-              <div id="boxBenchmarkResults_${diagWinId}" style="display:none; padding:0.55rem 0.9rem; border-radius:6px; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); font-size:0.75rem; font-family:var(--font-mono); color:#f8fafc; align-items:center; justify-content:space-between;">
-                <span>SSH Tunnel Speed: <strong id="txtBenchDown_${diagWinId}" style="color:#34d399;">-- MB/s</strong> download, <strong id="txtBenchUp_${diagWinId}" style="color:#38bdf8;">-- MB/s</strong> upload</span>
+              <div id="boxBenchmarkResults_${diagWinId}" style="display:none; padding:0.55rem 0.9rem; border-radius:6px; background:color-mix(in srgb, var(--sm-accent) 8%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); font-size:0.75rem; font-family:var(--font-mono); color:#f8fafc; align-items:center; justify-content:space-between;">
+                <span>SSH Tunnel Speed: <strong id="txtBenchDown_${diagWinId}" style="color:#34d399;">-- MB/s</strong> download, <strong id="txtBenchUp_${diagWinId}" style="color:var(--sm-accent);">-- MB/s</strong> upload</span>
                 <span id="txtBenchLatency_${diagWinId}" style="color:var(--text-muted); font-size:0.7rem;">Tested in -- ms</span>
               </div>
             </div>
@@ -120,7 +120,7 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.15rem;">
               <!-- Cryptographic Suite Card -->
               <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.1rem; display:flex; flex-direction:column; gap:0.75rem;">
-                <div style="font-size:0.78rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:0.4rem;">
+                <div style="font-size:0.78rem; font-weight:700; color:var(--sm-accent); display:flex; align-items:center; gap:0.4rem;">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                   Negotiated Cryptographic Suite
                 </div>
@@ -148,7 +148,7 @@
 
               <!-- Host Key & Authentication Card -->
               <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.1rem; display:flex; flex-direction:column; gap:0.75rem;">
-                <div style="font-size:0.78rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:0.4rem;">
+                <div style="font-size:0.78rem; font-weight:700; color:var(--sm-accent); display:flex; align-items:center; gap:0.4rem;">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-2-2l2 2"></path><circle cx="10" cy="14" r="5"></circle><path d="M19 5l-5 5"></path><path d="M14 10l1.5 1.5"></path></svg>
                   Host Key &amp; Server Identity
                 </div>
@@ -180,7 +180,7 @@
 
             <!-- Server Version & Protocol Banner Details -->
             <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.1rem; display:flex; flex-direction:column; gap:0.65rem;">
-              <div style="font-size:0.78rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:0.4rem;">
+              <div style="font-size:0.78rem; font-weight:700; color:var(--sm-accent); display:flex; align-items:center; gap:0.4rem;">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                 Remote Protocol &amp; Socket Transport
               </div>
@@ -471,7 +471,7 @@
                   <div style="font-size:0.68rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(c.status)}</div>
                 </td>
                 <td style="vertical-align:middle;">
-                  <span style="font-family:var(--font-mono); font-size:0.72rem; color:#38bdf8;">${escapeHtml(c.ports || '-')}</span>
+                  <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--sm-accent);">${escapeHtml(c.ports || '-')}</span>
                 </td>
                 <td style="vertical-align:middle; font-size:0.72rem; color:var(--text-muted);">
                   ${escapeHtml(c.created)}
@@ -811,7 +811,7 @@
 
             tablesListEl.innerHTML = res.tables.map(tbl => `
               <div class="db-table-row" data-table="${escapeHtml(tbl)}" style="padding:0.35rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.74rem; font-family:var(--font-mono); color:#cbd5e1; display:flex; align-items:center; gap:0.4rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; color:#38bdf8;"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; color:var(--sm-accent);"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 <span style="overflow:hidden; text-overflow:ellipsis;">${escapeHtml(tbl)}</span>
               </div>
             `).join('');
@@ -1068,7 +1068,7 @@
             <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.15rem; margin-bottom:1rem;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
                 <span style="font-size:0.85rem; font-weight:700; color:#f8fafc;" id="txtFbStatus_${fwWinId}">Fail2Ban Service</span>
-                <span class="badge" id="badgeFbActiveJails_${fwWinId}" style="background:rgba(56,189,248,0.15); color:#38bdf8;">--</span>
+                <span class="badge" id="badgeFbActiveJails_${fwWinId}" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);">--</span>
               </div>
               <p style="font-size:0.74rem; color:var(--text-secondary); margin:0;">Fail2Ban inspects auth logs for brute-force patterns and dynamically updates firewall drop rules.</p>
             </div>
@@ -1216,7 +1216,7 @@
             fbTbody.innerHTML = banned.map(b => `
               <tr>
                 <td style="font-family:var(--font-mono); font-weight:700; color:#f8fafc;">${escapeHtml(b.ip)}</td>
-                <td><span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8;">${escapeHtml(b.jail)}</span></td>
+                <td><span class="badge" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);">${escapeHtml(b.jail)}</span></td>
                 <td style="text-align:right;">
                   <button class="btn btn-secondary btn-xs btn-unban-ip" data-jail="${escapeHtml(b.jail)}" data-ip="${escapeHtml(b.ip)}">Unban</button>
                 </td>
@@ -1395,7 +1395,7 @@
             <input type="text" id="dbPickerSearchInput" placeholder="Filter databases by filename or directory path..." style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-sans); font-size: 0.78rem; color: #f8fafc;">
           </div>
           <button class="btn btn-secondary btn-xs" id="dbPickerBrowseSftpBtn" style="display: flex; align-items: center; gap: 4px; padding: 0.3rem 0.65rem;" title="Browse Server Folders with SFTP File Picker">
-            <svg style="width: 13px; height: 13px; color: #38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <svg style="width: 13px; height: 13px; color: var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
             Browse Server (SFTP)...
           </button>
           <button class="btn btn-secondary btn-xs" id="dbPickerRefreshBtn" style="padding: 0.3rem 0.55rem;" title="Rescan /home, /var/www, /opt, /tmp">
@@ -1489,7 +1489,7 @@
               <div style="min-width:0; overflow:hidden;">
                 <div style="display:flex; align-items:center; gap:0.4rem;">
                   <span style="font-weight:600; font-size:0.82rem; color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.name)}</span>
-                  ${f.size ? `<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; font-family:var(--font-mono); font-size:0.66rem;">${escapeHtml(f.size)}</span>` : ''}
+                  ${f.size ? `<span class="badge" style="background:color-mix(in srgb, var(--sm-accent) 12%, transparent); color:var(--sm-accent); font-family:var(--font-mono); font-size:0.66rem;">${escapeHtml(f.size)}</span>` : ''}
                 </div>
                 <div style="font-family:var(--font-mono); font-size:0.71rem; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.path)}</div>
               </div>

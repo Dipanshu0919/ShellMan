@@ -75,7 +75,7 @@ DesktopAppsController.prototype.launchCron = function (params = {}) {
                 <div>
                   <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Cron Schedule Expression</label>
                   <input type="text" id="cronExprInp_${cronWinId}" value="0 0 * * *" class="form-control" style="width:100%; font-family:monospace; font-size:0.9rem; padding:0.4rem 0.6rem;" placeholder="* * * * *">
-                  <div id="cronHumanDesc_${cronWinId}" style="font-size:0.72rem; color:#38bdf8; margin-top:0.3rem;">Daily at midnight (00:00)</div>
+                  <div id="cronHumanDesc_${cronWinId}" style="font-size:0.72rem; color:var(--sm-accent); margin-top:0.3rem;">Daily at midnight (00:00)</div>
                 </div>
 
                 <div>
@@ -160,7 +160,7 @@ DesktopAppsController.prototype.launchCron = function (params = {}) {
                 <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; opacity:${j.is_enabled ? '1' : '0.6'};">
                   <div style="flex:1; min-width:0;">
                     <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; flex-wrap:wrap;">
-                      <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); padding:0.15rem 0.5rem; border-radius:4px; color:#38bdf8; font-family:monospace; font-weight:700;">${j.schedule}</code>
+                      <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); padding:0.15rem 0.5rem; border-radius:4px; color:var(--sm-accent); font-family:monospace; font-weight:700;">${j.schedule}</code>
                       <span style="font-size:0.75rem; font-weight:600; color:#cbd5e1;">${j.human}</span>
                       <span style="font-size:0.65rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; ${j.is_enabled ? 'background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(148,163,184,0.15); color:#94a3b8; border:1px solid rgba(148,163,184,0.3);'}">
                         ${j.is_enabled ? 'ACTIVE' : 'DISABLED'}

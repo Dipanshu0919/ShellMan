@@ -353,7 +353,7 @@ const DesktopCustomizer = {
         <!-- Header -->
         <div style="height: 46px; padding: 0 1.1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; font-size: 0.9rem; color: #f8fafc;">
-            <svg style="width: 18px; height: 18px; color: #38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            <svg style="width: 18px; height: 18px; color: var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
             <span>Customize Desktop Shortcuts &amp; Floating Dock</span>
           </div>
           <button class="btn btn-secondary btn-xs" id="customizerCloseBtn" style="padding: 0.15rem 0.45rem;">&times;</button>
@@ -444,11 +444,11 @@ const DesktopCustomizer = {
             <!-- Right: Checkbox Toggles -->
             <div style="display:flex; align-items:center; gap:1.1rem; flex-shrink:0;">
               <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.75rem; user-select:none;">
-                <input type="checkbox" class="chk-desktop" data-id="${app.id}" ${onDesktop ? 'checked' : ''} style="cursor:pointer; width:14px; height:14px; accent-color:#0284c7;">
+                <input type="checkbox" class="chk-desktop" data-id="${app.id}" ${onDesktop ? 'checked' : ''} style="cursor:pointer; width:14px; height:14px; accent-color:color-mix(in srgb, var(--sm-accent) 78%, #000);">
                 <span style="color:${onDesktop ? '#f8fafc' : 'var(--text-muted)'}; font-weight:${onDesktop ? '600' : '400'};">Desktop</span>
               </label>
               <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.75rem; user-select:none;">
-                <input type="checkbox" class="chk-dock" data-id="${app.id}" ${inDock ? 'checked' : ''} style="cursor:pointer; width:14px; height:14px; accent-color:#38bdf8;">
+                <input type="checkbox" class="chk-dock" data-id="${app.id}" ${inDock ? 'checked' : ''} style="cursor:pointer; width:14px; height:14px; accent-color:var(--sm-accent);">
                 <span style="color:${inDock ? '#f8fafc' : 'var(--text-muted)'}; font-weight:${inDock ? '600' : '400'};">Dock</span>
               </label>
             </div>

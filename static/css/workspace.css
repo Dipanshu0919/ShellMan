@@ -39,7 +39,7 @@
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 0.75rem;
-  color: #38bdf8;
+  color: var(--sm-accent);
   cursor: pointer;
 }
 .ws-folder-badge:hover {
@@ -227,7 +227,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #38bdf8;
+  background-color: var(--sm-accent);
   display: none;
 }
 .ws-tab.dirty .tab-dirty-dot {

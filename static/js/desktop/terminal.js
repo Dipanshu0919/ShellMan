@@ -34,7 +34,7 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <span class="status-dot connected" id="dot_${termWinId}"></span>
               <span style="font-family:var(--font-mono); font-size:0.74rem; color:var(--text-secondary);" id="status_${termWinId}">PTY Active</span>
-              ${initialPath ? `<span style="font-family:var(--font-mono); font-size:0.7rem; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.2); padding:1px 6px; border-radius:3px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(initialPath)}">${escapeHtml(folderName || initialPath)}</span>` : ''}
+              ${initialPath ? `<span style="font-family:var(--font-mono); font-size:0.7rem; color:var(--sm-accent); background:color-mix(in srgb, var(--sm-accent) 12%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); padding:1px 6px; border-radius:3px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(initialPath)}">${escapeHtml(folderName || initialPath)}</span>` : ''}
               <span style="color:var(--text-muted); font-size:0.7rem; font-family:var(--font-mono); margin-left:0.3rem;" id="dim_${termWinId}">80x24</span>
             </div>
             <div style="display:flex; align-items:center; gap:0.3rem;">

@@ -77,7 +77,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
           const s = (st || 'unknown').toLowerCase();
           if (s === 'active') return '<span class="badge" style="background:rgba(16,185,129,0.15); color:#34d399; font-weight:700;">Active</span>';
           if (s === 'pending') return '<span class="badge" style="background:rgba(245,158,11,0.2); color:#fbbf24; font-weight:700;">Pending Nameservers</span>';
-          if (s === 'initializing') return '<span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8;">Initializing</span>';
+          if (s === 'initializing') return '<span class="badge" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);">Initializing</span>';
           if (s === 'error') return '<span class="badge" style="background:rgba(239,68,68,0.2); color:#f87171;">Error</span>';
           return `<span class="badge" style="background:rgba(255,255,255,0.06); color:#94a3b8;">${escapeHtml(st)}</span>`;
         };
@@ -146,7 +146,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 </div>
                 <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Linked To Servers</div>
-                  <div style="font-size:1.2rem; font-weight:700; color:#38bdf8; margin-top:2px;">${connectedSrvCount}</div>
+                  <div style="font-size:1.2rem; font-weight:700; color:var(--sm-accent); margin-top:2px;">${connectedSrvCount}</div>
                 </div>
               </div>
 
@@ -262,13 +262,13 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               ? nsList.map(ns => `
                   <span class="badge" style="background:rgba(255,255,255,0.04); font-family:monospace; font-size:0.68rem; color:#cbd5e1; margin-right:3px;">
                     ${escapeHtml(ns)}
-                    <button type="button" class="btn-copy-ns" data-ns="${escapeHtml(ns)}" style="background:none; border:none; color:#38bdf8; cursor:pointer; padding:0 2px; font-size:0.65rem;" title="Copy nameserver">&copy;</button>
+                    <button type="button" class="btn-copy-ns" data-ns="${escapeHtml(ns)}" style="background:none; border:none; color:var(--sm-accent); cursor:pointer; padding:0 2px; font-size:0.65rem;" title="Copy nameserver">&copy;</button>
                   </span>
                 `).join('')
               : '<span style="color:var(--text-muted); font-size:0.7rem;">None assigned</span>';
 
             const serverHtml = d.server_id
-              ? `<div style="display:flex; align-items:center; gap:0.3rem;"><span class="sys-pulse-dot online" style="width:6px;height:6px;"></span><span style="font-weight:600; color:#38bdf8;">${escapeHtml(d.server_name || 'Server')}</span> <span style="font-size:0.68rem; color:var(--text-muted);">(${escapeHtml(d.server_host || '')})</span></div>`
+              ? `<div style="display:flex; align-items:center; gap:0.3rem;"><span class="sys-pulse-dot online" style="width:6px;height:6px;"></span><span style="font-weight:600; color:var(--sm-accent);">${escapeHtml(d.server_name || 'Server')}</span> <span style="font-size:0.68rem; color:var(--text-muted);">(${escapeHtml(d.server_host || '')})</span></div>`
               : `<span style="color:var(--text-muted); font-size:0.7rem;">Unlinked</span>`;
 
             return `
@@ -606,7 +606,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
               return `
                 <tr>
-                  <td><span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; font-family:monospace; font-weight:700;">${r.type}</span></td>
+                  <td><span class="badge" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent); font-family:monospace; font-weight:700;">${r.type}</span></td>
                   <td><code style="font-size:0.75rem; color:#f8fafc;">${escapeHtml(r.name)}</code></td>
                   <td>
                     <div style="display:flex; align-items:center; gap:0.35rem; max-width:320px;">
@@ -892,7 +892,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                     <div style="display:flex; align-items:center; justify-content:space-between; background:#0b111c; border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
                       <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">NS ${idx + 1}:</span>
-                        <code style="font-size:0.8rem; color:#38bdf8; font-weight:700;">${escapeHtml(ns)}</code>
+                        <code style="font-size:0.8rem; color:var(--sm-accent); font-weight:700;">${escapeHtml(ns)}</code>
                       </div>
                       <button type="button" class="btn btn-ghost btn-xs btn-copy-single-ns" data-ns="${escapeHtml(ns)}" style="font-size:0.7rem;">Copy</button>
                     </div>
@@ -1007,7 +1007,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                   <div style="display:flex; flex-direction:column; gap:0.75rem;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.5rem; border-bottom:1px solid var(--border-subtle);">
                       <span style="font-weight:700; color:#f8fafc;">Target Hostname</span>
-                      <code style="color:#38bdf8;">${escapeHtml(d.hostname)}</code>
+                      <code style="color:var(--sm-accent);">${escapeHtml(d.hostname)}</code>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.5rem; border-bottom:1px solid var(--border-subtle);">
@@ -1078,7 +1078,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                   <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Total Requests (24h)</div>
                     <div style="font-size:1.25rem; font-weight:700; color:#f8fafc; margin-top:2px;" id="statReqTotal_${domWinId}">--</div>
-                    <div style="font-size:0.68rem; color:#38bdf8; margin-top:3px;" id="statReqCached_${domWinId}">-- cached</div>
+                    <div style="font-size:0.68rem; color:var(--sm-accent); margin-top:3px;" id="statReqCached_${domWinId}">-- cached</div>
                   </div>
                   <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Bandwidth Served</div>
@@ -1715,9 +1715,9 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
                 <!-- Scoped Token Permissions Guide -->
                 <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:6px; padding:0.75rem 0.95rem; line-height:1.5;">
-                  <div style="font-weight:700; color:#38bdf8; margin-bottom:0.3rem;">Required Minimum-Privilege Scoped Permissions:</div>
+                  <div style="font-weight:700; color:var(--sm-accent); margin-bottom:0.3rem;">Required Minimum-Privilege Scoped Permissions:</div>
                   <div style="color:var(--text-secondary); font-size:0.73rem;">
-                    When creating an API Token at <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" style="color:#38bdf8; text-decoration:underline;">Cloudflare Dashboard &gt; API Tokens</a>, choose <strong>Create Custom Token</strong> with:
+                    When creating an API Token at <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" style="color:var(--sm-accent); text-decoration:underline;">Cloudflare Dashboard &gt; API Tokens</a>, choose <strong>Create Custom Token</strong> with:
                     <ul style="margin:4px 0 0; padding-left:1.2rem;">
                       <li><code>Account &gt; Account Settings &gt; Read</code> <em>(Required to identify your Cloudflare Account)</em></li>
                       <li><code>Zone &gt; Zone &gt; Read / Edit</code></li>
@@ -1728,7 +1728,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                       <li>Zone Resources: <code>All Zones</code></li>
                     </ul>
                     <div style="margin-top:0.5rem;">
-                      <a href="/static/images/cloudflare-token-setup.png?v=2" target="_blank" style="display:inline-flex; align-items:center; gap:4px; color:#38bdf8; text-decoration:none; font-weight:600; font-size:0.72rem; padding:3px 7px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:4px;">
+                      <a href="/static/images/cloudflare-token-setup.png?v=2" target="_blank" style="display:inline-flex; align-items:center; gap:4px; color:var(--sm-accent); text-decoration:none; font-weight:600; font-size:0.72rem; padding:3px 7px; background:color-mix(in srgb, var(--sm-accent) 10%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); border-radius:4px;">
                         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                         View Reference Screenshot
                       </a>

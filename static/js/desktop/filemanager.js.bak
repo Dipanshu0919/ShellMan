@@ -21,7 +21,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
     //    Opens /api/tasks/<task_id>/progress and updates a live
     //    toast with transferred / total bytes and percentage.
     // ─────────────────────────────────────────────────────────────
-          function streamTaskProgress(taskId, title, successMsg, onComplete) {
+    function streamTaskProgress(taskId, title, successMsg, onComplete) {
       const toastId = 'sse_toast_' + Date.now();
       const toast = document.createElement('div');
       toast.id = toastId;
@@ -44,12 +44,14 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
       let lastTransferred = 0;
       let lastUpdateTime = Date.now();
+      let stallShown = false;
       let stallCheck = setInterval(() => {
-        if (Date.now() - lastUpdateTime > 4000 && toast.isConnected) {
+        if (Date.now() - lastUpdateTime > 4000 && toast.isConnected && !stallShown) {
           const statEl = toast.querySelector('.sse-status');
-          if (statEl && !statEl.textContent.includes('stalled')) {
+          if (statEl) {
             statEl.textContent += ' (waiting on remote server...)';
             statEl.style.color = '#f59e0b';
+            stallShown = true;
           }
         }
       }, 1000);
@@ -62,25 +64,28 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
           if (data.transferred !== lastTransferred) {
             lastTransferred = data.transferred;
             lastUpdateTime = Date.now();
-            const statEl = toast.querySelector('.sse-status');
-            if (statEl) statEl.style.color = '#94a3b8';
+            stallShown = false;
+            const s = toast.querySelector('.sse-status');
+            if (s) s.style.color = '#94a3b8';
           }
 
-          const transferredMB = (data.transferred / (1024 * 1024)).toFixed(2);
-          const totalMB = (data.total / (1024 * 1024)).toFixed(2);
-          
-          let percent = 0;
-          if (data.total > 0) {
-            percent = Math.min(100, Math.round((data.transferred / data.total) * 100));
-          }
-
+          const transferredMB = (data.transferred / 1048576).toFixed(2);
           const pctEl = toast.querySelector('.sse-percent');
           const barEl = toast.querySelector('.sse-bar');
           const statEl = toast.querySelector('.sse-status');
 
-          if (pctEl) pctEl.textContent = `${percent}%`;
-          if (barEl) barEl.style.width = `${percent}%`;
-          if (statEl) statEl.textContent = `${transferredMB} MB / ${totalMB} MB`;
+          if (data.total > 0) {
+            const percent = Math.min(100, Math.round((data.transferred / data.total) * 100));
+            const totalMB = (data.total / 1048576).toFixed(2);
+            if (pctEl) pctEl.textContent = `${percent}%`;
+            if (barEl) { barEl.style.width = `${percent}%`; barEl.style.opacity = '1'; }
+            if (statEl && !stallShown) statEl.textContent = `${transferredMB} MB / ${totalMB} MB`;
+          } else {
+            // total unknown (e.g. compression): show real bytes written, no fake percent
+            if (pctEl) pctEl.textContent = '…';
+            if (barEl) { barEl.style.width = '100%'; barEl.style.opacity = '0.35'; }
+            if (statEl && !stallShown) statEl.textContent = `${transferredMB} MB written`;
+          }
 
           if (data.status === 'done') {
             clearInterval(stallCheck);
@@ -105,7 +110,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         toast.remove();
       };
     }
-    
+
     const startProgressToast = (taskId, title, successMsg, onComplete) => {
       streamTaskProgress(taskId, title, successMsg, onComplete);
     };
@@ -223,7 +228,24 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                     </tr>
                   </thead>
                   <tbody id="tb_${fileWinId}">
-                    <tr><td colspan="4" style="text-align:center; padding:3rem; color:var(--text-muted);">Loading remote files...</td></tr>
+                    <tr>
+                      <td style="width:36px; text-align:center; padding:10px;"><div class="sm-skeleton" style="width:14px; height:14px; border-radius:3px;"></div></td>
+                      <td style="padding:10px;"><div style="display:flex; align-items:center; gap:10px;"><div class="sm-skeleton sm-skeleton-circle" style="width:20px; height:20px;"></div><div class="sm-skeleton sm-skeleton-text" style="width:160px; height:12px;"></div></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:60px; height:11px;"></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:110px; height:11px;"></div></td>
+                    </tr>
+                    <tr>
+                      <td style="width:36px; text-align:center; padding:10px;"><div class="sm-skeleton" style="width:14px; height:14px; border-radius:3px;"></div></td>
+                      <td style="padding:10px;"><div style="display:flex; align-items:center; gap:10px;"><div class="sm-skeleton sm-skeleton-circle" style="width:20px; height:20px;"></div><div class="sm-skeleton sm-skeleton-text" style="width:120px; height:12px;"></div></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:45px; height:11px;"></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:115px; height:11px;"></div></td>
+                    </tr>
+                    <tr>
+                      <td style="width:36px; text-align:center; padding:10px;"><div class="sm-skeleton" style="width:14px; height:14px; border-radius:3px;"></div></td>
+                      <td style="padding:10px;"><div style="display:flex; align-items:center; gap:10px;"><div class="sm-skeleton sm-skeleton-circle" style="width:20px; height:20px;"></div><div class="sm-skeleton sm-skeleton-text" style="width:210px; height:12px;"></div></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:70px; height:11px;"></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:105px; height:11px;"></div></td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -1683,8 +1705,27 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             selectedPaths.clear();
             updateSelectionUI();
 
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:3rem; color:var(--text-muted);"><span class="spinner-border spinner-border-sm" style="margin-right:8px;"></span>Loading files...</td></tr>`;
-            gridView.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">Loading files...</div>`;
+            tbody.innerHTML = [170, 120, 240, 90, 160, 130, 200].map(w => `
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="width:36px; text-align:center; padding:10px;"><div class="sm-skeleton" style="width:14px; height:14px; border-radius:3px;"></div></td>
+                <td style="padding:10px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="sm-skeleton sm-skeleton-circle" style="width:20px; height:20px;"></div>
+                    <div class="sm-skeleton sm-skeleton-text" style="width:${w}px; height:12px;"></div>
+                  </div>
+                </td>
+                <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:55px; height:11px;"></div></td>
+                <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:115px; height:11px;"></div></td>
+              </tr>
+            `).join('');
+
+            gridView.innerHTML = Array.from({ length: 8 }).map(() => `
+              <div class="sm-skeleton-card" style="align-items:center; justify-content:center; padding:1.2rem 0.5rem; min-height:96px;">
+                <div class="sm-skeleton sm-skeleton-circle" style="width:38px; height:38px; margin-bottom:6px;"></div>
+                <div class="sm-skeleton sm-skeleton-text" style="width:75%; height:11px;"></div>
+                <div class="sm-skeleton sm-skeleton-text" style="width:40%; height:9px; margin-top:2px;"></div>
+              </div>
+            `).join('');
 
             const resp = await fetch(`/api/servers/${this.serverId}/files/list?path=${encodeURIComponent(path)}`);
             const res = await resp.json();

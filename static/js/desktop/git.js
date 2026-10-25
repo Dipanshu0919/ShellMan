@@ -198,14 +198,14 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
                   <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.75rem; color:#94a3b8; background:rgba(0,0,0,0.2); padding:0.6rem 0.8rem; border-radius:6px;">
                     <div>Directory: <code style="color:#cbd5e1; font-family:monospace;">${d.target_path}</code></div>
                     <div>Repository: <code style="color:#cbd5e1; font-family:monospace;">${d.repo_url}</code></div>
-                    ${d.post_deploy_cmd ? `<div style="grid-column:1 / -1;">Post-Deploy: <code style="color:#38bdf8; font-family:monospace;">${d.post_deploy_cmd}</code></div>` : ''}
+                    ${d.post_deploy_cmd ? `<div style="grid-column:1 / -1;">Post-Deploy: <code style="color:var(--sm-accent); font-family:monospace;">${d.post_deploy_cmd}</code></div>` : ''}
                     ${d.last_deployed_at ? `<div style="grid-column:1 / -1; font-size:0.7rem; color:var(--text-muted);">Last Deployed: ${d.last_deployed_at}</div>` : ''}
                   </div>
 
                   <!-- Webhook URL Box -->
-                  <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); border-radius:6px; padding:0.4rem 0.75rem;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; background:color-mix(in srgb, var(--sm-accent) 6%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); border-radius:6px; padding:0.4rem 0.75rem;">
                     <div style="display:flex; align-items:center; gap:0.4rem; min-width:0; flex:1;">
-                      <span style="font-size:0.7rem; font-weight:700; color:#38bdf8;">WEBHOOK:</span>
+                      <span style="font-size:0.7rem; font-weight:700; color:var(--sm-accent);">WEBHOOK:</span>
                       <code style="font-size:0.72rem; color:#cbd5e1; font-family:monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${window.location.origin}${d.webhook_url}</code>
                     </div>
                     <button class="btn btn-secondary btn-xs btn-copy-hook" data-url="${window.location.origin}${d.webhook_url}" style="font-size:0.7rem; padding:0.15rem 0.45rem;">

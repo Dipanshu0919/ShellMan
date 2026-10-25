@@ -42,7 +42,7 @@
   <div class="card" style="margin-top: 1.5rem;">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
       <span class="card-title">System Font Size & Scale</span>
-      <span id="webFontBadge" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3);">
+      <span id="webFontBadge" style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; background: color-mix(in srgb, var(--sm-accent) 15%, transparent); color: var(--sm-accent); border: 1px solid color-mix(in srgb, var(--sm-accent) 30%, transparent);">
         16px (100% Default)
       </span>
     </div>
@@ -63,7 +63,7 @@
     <!-- Slider -->
     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
       <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">12px</span>
-      <input type="range" class="form-range" id="webFontSlider" min="12" max="24" step="1" value="16" style="flex: 1; accent-color: #38bdf8; cursor: pointer;">
+      <input type="range" class="form-range" id="webFontSlider" min="12" max="24" step="1" value="16" style="flex: 1; accent-color: var(--sm-accent); cursor: pointer;">
       <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">24px</span>
       <button class="btn btn-ghost btn-xs" id="webFontResetBtn">Reset</button>
     </div>

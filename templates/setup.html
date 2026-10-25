@@ -52,9 +52,9 @@
       font-weight: 600;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      background: rgba(56, 189, 248, 0.12);
-      color: #38bdf8;
-      border: 1px solid rgba(56, 189, 248, 0.25);
+      background: color-mix(in srgb, var(--sm-accent) 12%, transparent);
+      color: var(--sm-accent);
+      border: 1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent);
       margin-bottom: 0.5rem;
     }
     .setup-info-box {
@@ -84,12 +84,12 @@
 <body>
   <div class="setup-card">
     <div class="setup-brand">
-      <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ShellMan Logo" style="width: 72px; height: 72px; filter: drop-shadow(0 8px 24px rgba(14, 165, 233, 0.4)); margin-bottom: 0.25rem;">
+      <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ShellMan Logo" style="width: 72px; height: 72px; filter: drop-shadow(0 8px 24px color-mix(in srgb, var(--sm-accent) 40%, transparent)); margin-bottom: 0.25rem;">
       <span class="setup-badge">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
         First-Time Initialization
       </span>
-      <h1 class="brand-title" style="font-size: 1.65rem; font-weight: 700; letter-spacing: 0.04em; background: linear-gradient(135deg, #ffffff 0%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">Create Admin Account</h1>
+      <h1 class="brand-title" style="font-size: 1.65rem; font-weight: 700; letter-spacing: 0.04em; background: linear-gradient(135deg, #ffffff 0%, var(--sm-accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">Create Admin Account</h1>
       <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">Welcome to ShellMan! Configure your master administrator credentials to start managing your remote infrastructure.</p>
     </div>
 
@@ -104,7 +104,7 @@
     {% endwith %}
 
     <div class="setup-info-box">
-      <svg style="width:16px; height:16px; min-width:16px; margin-top:2px; color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      <svg style="width:16px; height:16px; min-width:16px; margin-top:2px; color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
       <div>No default credentials exist. Please choose a strong administrator username and password.</div>
     </div>
 
