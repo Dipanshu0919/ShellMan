@@ -347,14 +347,70 @@ class SFTPService:
         sources = " ".join(shlex.quote(os.path.basename(p)) for p in clean_paths)
 
         if archive_name.endswith('.zip'):
-            cmd = f"cd {shlex.quote(base_dir)} && (zip -r {shlex.quote(archive_path)} {sources} 2>/dev/null || tar -czf {shlex.quote(archive_path + '.tar.gz')} {sources})"
+            # Real .zip only: use `zip` if installed, else a python3 zipfile script with DEFLATE
+            # (note: `python3 -m zipfile -c` stores files UNCOMPRESSED, so we don't use it).
+            qa = shlex.quote(archive_path)
+            py_zip = (
+                "import sys, os, zipfile\n"
+                "out = sys.argv[1]\n"
+                "with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as z:\n"
+                "    for src in sys.argv[2:]:\n"
+                "        if os.path.isdir(src) and not os.path.islink(src):\n"
+                "            z.write(src)\n"
+                "            for r, ds, fs in os.walk(src):\n"
+                "                for n in ds + fs:\n"
+                "                    try:\n"
+                "                        z.write(os.path.join(r, n))\n"
+                "                    except OSError:\n"
+                "                        pass\n"
+                "        else:\n"
+                "            z.write(src)\n"
+            )
+            cmd = (
+                f"cd {shlex.quote(base_dir)} && rm -f {qa} && "
+                f"if command -v zip >/dev/null 2>&1; then zip -qr {qa} {sources}; "
+                f"elif command -v python3 >/dev/null 2>&1; then python3 -c {shlex.quote(py_zip)} {qa} {sources}; "
+                f"else echo 'Cannot create .zip: install zip (sudo apt install zip) or python3, or choose .tar.gz' >&2; exit 127; fi"
+            )
         else:
             if not archive_name.endswith('.tar.gz') and not archive_name.endswith('.tgz') and not archive_name.endswith('.tar'):
                 archive_name += '.tar.gz'
                 archive_path += '.tar.gz'
             cmd = f"cd {shlex.quote(base_dir)} && tar -czf {shlex.quote(archive_path)} {sources}"
 
-        code, out, err = ssh_manager.execute(server, cmd, timeout=1800)
+        # tar/zip report no progress; watch the output folder and report the size of the
+        # archive being written (real bytes, total unknown). zip writes to a temp file
+        # ("zi" + random) in the destination folder and renames it at the end, so watch for
+        # NEW files that either start with the archive name or look like a zip temp file.
+        stop_watch = threading.Event()
+        if task_id:
+            def _watch_archive():
+                try:
+                    _, w_sftp = ssh_manager.open_sftp(server)
+                    before = {a.filename for a in w_sftp.listdir_attr(dest_dir)}
+                except Exception:
+                    return
+                base = os.path.basename(archive_path)
+                while not stop_watch.is_set():
+                    try:
+                        best = 0
+                        for a in w_sftp.listdir_attr(dest_dir):
+                            n = a.filename
+                            is_target = (n == base)
+                            is_new_candidate = (n not in before) and (n.startswith(base) or (n.startswith('zi') and len(n) <= 10))
+                            if (is_target or is_new_candidate) and not stat.S_ISDIR(a.st_mode):
+                                best = max(best, a.st_size)
+                        if best:
+                            ProgressTracker.update(task_id, best)
+                    except Exception:
+                        pass
+                    stop_watch.wait(0.5)
+            threading.Thread(target=_watch_archive, daemon=True).start()
+
+        try:
+            code, out, err = ssh_manager.execute(server, cmd, timeout=1800)
+        finally:
+            stop_watch.set()
 
         if task_id:
             if code == 0:

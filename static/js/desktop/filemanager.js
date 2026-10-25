@@ -21,7 +21,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
     //    Opens /api/tasks/<task_id>/progress and updates a live
     //    toast with transferred / total bytes and percentage.
     // ─────────────────────────────────────────────────────────────
-          function streamTaskProgress(taskId, title, successMsg, onComplete) {
+    function streamTaskProgress(taskId, title, successMsg, onComplete) {
       const toastId = 'sse_toast_' + Date.now();
       const toast = document.createElement('div');
       toast.id = toastId;
@@ -44,12 +44,14 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
       let lastTransferred = 0;
       let lastUpdateTime = Date.now();
+      let stallShown = false;
       let stallCheck = setInterval(() => {
-        if (Date.now() - lastUpdateTime > 4000 && toast.isConnected) {
+        if (Date.now() - lastUpdateTime > 4000 && toast.isConnected && !stallShown) {
           const statEl = toast.querySelector('.sse-status');
-          if (statEl && !statEl.textContent.includes('stalled')) {
+          if (statEl) {
             statEl.textContent += ' (waiting on remote server...)';
             statEl.style.color = '#f59e0b';
+            stallShown = true;
           }
         }
       }, 1000);
@@ -62,25 +64,28 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
           if (data.transferred !== lastTransferred) {
             lastTransferred = data.transferred;
             lastUpdateTime = Date.now();
-            const statEl = toast.querySelector('.sse-status');
-            if (statEl) statEl.style.color = '#94a3b8';
+            stallShown = false;
+            const s = toast.querySelector('.sse-status');
+            if (s) s.style.color = '#94a3b8';
           }
 
-          const transferredMB = (data.transferred / (1024 * 1024)).toFixed(2);
-          const totalMB = (data.total / (1024 * 1024)).toFixed(2);
-          
-          let percent = 0;
-          if (data.total > 0) {
-            percent = Math.min(100, Math.round((data.transferred / data.total) * 100));
-          }
-
+          const transferredMB = (data.transferred / 1048576).toFixed(2);
           const pctEl = toast.querySelector('.sse-percent');
           const barEl = toast.querySelector('.sse-bar');
           const statEl = toast.querySelector('.sse-status');
 
-          if (pctEl) pctEl.textContent = `${percent}%`;
-          if (barEl) barEl.style.width = `${percent}%`;
-          if (statEl) statEl.textContent = `${transferredMB} MB / ${totalMB} MB`;
+          if (data.total > 0) {
+            const percent = Math.min(100, Math.round((data.transferred / data.total) * 100));
+            const totalMB = (data.total / 1048576).toFixed(2);
+            if (pctEl) pctEl.textContent = `${percent}%`;
+            if (barEl) { barEl.style.width = `${percent}%`; barEl.style.opacity = '1'; }
+            if (statEl && !stallShown) statEl.textContent = `${transferredMB} MB / ${totalMB} MB`;
+          } else {
+            // total unknown (e.g. compression): show real bytes written, no fake percent
+            if (pctEl) pctEl.textContent = '…';
+            if (barEl) { barEl.style.width = '100%'; barEl.style.opacity = '0.35'; }
+            if (statEl && !stallShown) statEl.textContent = `${transferredMB} MB written`;
+          }
 
           if (data.status === 'done') {
             clearInterval(stallCheck);
@@ -105,7 +110,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         toast.remove();
       };
     }
-    
+
     const startProgressToast = (taskId, title, successMsg, onComplete) => {
       streamTaskProgress(taskId, title, successMsg, onComplete);
     };
