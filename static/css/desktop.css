@@ -766,10 +766,13 @@ html, body {
   position: absolute;
   display: flex;
   flex-direction: column;
-  background: #0b0f19;
-  border: 1px solid var(--win-border-inactive);
+  /* Translucent blurred glassmorphism background */
+  background: rgba(15, 22, 35, 0.85);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
-  box-shadow: var(--win-shadow-inactive);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
   pointer-events: auto;
   transition: box-shadow var(--trans-fast), border-color var(--trans-fast), width 0.18s cubic-bezier(0.16,1,0.3,1), height 0.18s cubic-bezier(0.16,1,0.3,1), left 0.18s cubic-bezier(0.16,1,0.3,1), top 0.18s cubic-bezier(0.16,1,0.3,1);
@@ -797,8 +800,8 @@ html, body {
 }
 
 .desktop-window.active {
-  border-color: var(--win-border-active);
-  box-shadow: var(--win-shadow-active);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(56, 189, 248, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .desktop-window.maximized {
@@ -946,20 +949,20 @@ html, body {
 
 /* Window Title Bar */
 .window-titlebar {
-  height: 34px;
-  background: linear-gradient(180deg, #162032 0%, #0e1522 100%);
+  height: 38px; /* Slightly taller */
+  background: rgba(0, 0, 0, 0.2); /* Darker than the window body */
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0.65rem;
+  padding: 0 0.85rem;
   cursor: grab;
   user-select: none;
   flex-shrink: 0;
 }
 
 .desktop-window.active .window-titlebar {
-  background: linear-gradient(180deg, #1b263b 0%, #111a28 100%);
+  background: rgba(0, 0, 0, 0.28);
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -2444,8 +2447,8 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .files-viewport thead th {
-  padding: 0.55rem 0.75rem;
-  font-size: 0.7rem;
+  padding: 0.75rem 0.85rem; /* Taller header */
+  font-size: 0.75rem;      /* Slightly larger text */
   font-weight: 700;
   color: #94a3b8;
   letter-spacing: 0.06em;
@@ -2493,14 +2496,14 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .files-viewport tbody td {
-  padding: 0.45rem 0.75rem;
+  padding: 0.65rem 0.85rem; /* Taller rows */
   vertical-align: middle;
-  font-size: 0.78rem;
+  font-size: 0.82rem;       /* Easier to read */
 }
 
 .file-name-text {
   font-weight: 500;
-  font-size: 0.8rem;
+  font-size: 0.85rem; /* Name stands out */
   color: #f8fafc;
 }
 

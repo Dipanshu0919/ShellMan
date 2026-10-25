@@ -2,22 +2,26 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ShellMan</title>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0b111c">
+  <meta name="theme-color" content="#090b10">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="ShellMan">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.4">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop.css') }}?v=2.9">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&family=Doto:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.5">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop.css') }}?v=3.0">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v=1.3">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/xterm/xterm.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/premium.css') }}?v=1.0">
   
   <script>
     window.DesktopConfig = {
@@ -103,7 +107,7 @@
             </span>
             <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
-          <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation(); DesktopApps.launch('ssh_diag')" title="SSH Connection Diagnostics (Cipher, Latency, Protocol)" style="display:inline-flex; align-items:center; gap:4px; padding:0.35rem 0.65rem; background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:20px; font-size:0.72rem; color:#38bdf8; font-weight:600; cursor:pointer;">
+          <button class="sm-chip-btn" onclick="event.stopPropagation(); DesktopApps.launch('ssh_diag')" title="SSH Connection Diagnostics (Cipher, Latency, Protocol)">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 6v6l4 2"></path></svg>
             <span>Diagnostics</span>
           </button>
@@ -134,11 +138,11 @@
             {% endfor %}
           </div>
           <div class="server-dropdown-divider"></div>
-          <div onclick="DesktopApps.launch('settings', { tab: 'servers' }); toggleServerMenu(event);" class="server-dropdown-action-item" style="display:flex; align-items:center; gap:0.55rem; padding:0.48rem 0.65rem; border-radius:5px; background:rgba(56,189,248,0.08) !important; color:#38bdf8 !important; border:1px solid rgba(56,189,248,0.18) !important; font-size:0.75rem; font-weight:600; cursor:pointer; margin-bottom:4px; transition:all 0.15s ease;">
+          <div onclick="DesktopApps.launch('settings', { tab: 'servers' }); toggleServerMenu(event);" class="sm-menu-action">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2" style="width:14px;height:14px;min-width:14px;min-height:14px;flex-shrink:0;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
             <span>Manage All Servers (Settings)...</span>
           </div>
-          <div onclick="DesktopApps.launch('settings', { tab: 'servers', action: 'add' }); toggleServerMenu(event);" class="server-dropdown-action-item" style="display:flex; align-items:center; gap:0.55rem; padding:0.48rem 0.65rem; border-radius:5px; background:rgba(56,189,248,0.08) !important; color:#38bdf8 !important; border:1px solid rgba(56,189,248,0.18) !important; font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.15s ease;">
+          <div onclick="DesktopApps.launch('settings', { tab: 'servers', action: 'add' }); toggleServerMenu(event);" class="sm-menu-action">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2" style="width:14px;height:14px;min-width:14px;min-height:14px;flex-shrink:0;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             <span>Add New Server Node...</span>
           </div>
@@ -445,6 +449,33 @@
 <script src="{{ url_for('static', filename='js/desktop/domains.js') }}?v=5.0"></script>
 <script src="{{ url_for('static', filename='js/desktop/settings.js') }}?v=5.0"></script>
 <script src="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=1.4"></script>
+<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=4.2"></script>
+
+</body>
+</html>="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=1.4"></script>
+<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=4.2"></script>
+<script src="{{ url_for('static', filename='js/modal.js') }}?v=5.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/pwa.js') }}?v=2.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/wm.js') }}?v=5.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/dock.js') }}?v=5.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/menu.js') }}?v=5.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/apps.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/terminal.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/filemanager.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/code.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/taskmanager.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/nginx.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/sync.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/cron.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/git.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/domains.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/settings.js') }}?v=6.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=2.0"></script>
+<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=5.0"></script>
+
+</body>
+</html>
+="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=1.4"></script>
 <script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=4.2"></script>
 
 </body>

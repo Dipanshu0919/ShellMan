@@ -28,7 +28,7 @@ window.SHELLMAN_APPS = [
   },
   {
     id: 'files',
-    title: 'Files (SFTP)',
+    title: 'File Manager (SFTP)',
     shortTitle: 'Files',
     desc: 'High-speed remote file explorer, drag & drop uploader',
     category: 'core',
