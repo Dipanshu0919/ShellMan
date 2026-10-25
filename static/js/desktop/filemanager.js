@@ -228,7 +228,24 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                     </tr>
                   </thead>
                   <tbody id="tb_${fileWinId}">
-                    <tr><td colspan="4" style="text-align:center; padding:3rem; color:var(--text-muted);">Loading remote files...</td></tr>
+                    <tr>
+                      <td style="width:36px; text-align:center; padding:10px;"><div class="sm-skeleton" style="width:14px; height:14px; border-radius:3px;"></div></td>
+                      <td style="padding:10px;"><div style="display:flex; align-items:center; gap:10px;"><div class="sm-skeleton sm-skeleton-circle" style="width:20px; height:20px;"></div><div class="sm-skeleton sm-skeleton-text" style="width:160px; height:12px;"></div></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:60px; height:11px;"></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:110px; height:11px;"></div></td>
+                    </tr>
+                    <tr>
+                      <td style="width:36px; text-align:center; padding:10px;"><div class="sm-skeleton" style="width:14px; height:14px; border-radius:3px;"></div></td>
+                      <td style="padding:10px;"><div style="display:flex; align-items:center; gap:10px;"><div class="sm-skeleton sm-skeleton-circle" style="width:20px; height:20px;"></div><div class="sm-skeleton sm-skeleton-text" style="width:120px; height:12px;"></div></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:45px; height:11px;"></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:115px; height:11px;"></div></td>
+                    </tr>
+                    <tr>
+                      <td style="width:36px; text-align:center; padding:10px;"><div class="sm-skeleton" style="width:14px; height:14px; border-radius:3px;"></div></td>
+                      <td style="padding:10px;"><div style="display:flex; align-items:center; gap:10px;"><div class="sm-skeleton sm-skeleton-circle" style="width:20px; height:20px;"></div><div class="sm-skeleton sm-skeleton-text" style="width:210px; height:12px;"></div></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:70px; height:11px;"></div></td>
+                      <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:105px; height:11px;"></div></td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -1688,8 +1705,27 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             selectedPaths.clear();
             updateSelectionUI();
 
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:3rem; color:var(--text-muted);"><span class="spinner-border spinner-border-sm" style="margin-right:8px;"></span>Loading files...</td></tr>`;
-            gridView.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:3rem; color:var(--text-muted);">Loading files...</div>`;
+            tbody.innerHTML = [170, 120, 240, 90, 160, 130, 200].map(w => `
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                <td style="width:36px; text-align:center; padding:10px;"><div class="sm-skeleton" style="width:14px; height:14px; border-radius:3px;"></div></td>
+                <td style="padding:10px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="sm-skeleton sm-skeleton-circle" style="width:20px; height:20px;"></div>
+                    <div class="sm-skeleton sm-skeleton-text" style="width:${w}px; height:12px;"></div>
+                  </div>
+                </td>
+                <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:55px; height:11px;"></div></td>
+                <td style="padding:10px;"><div class="sm-skeleton sm-skeleton-text" style="width:115px; height:11px;"></div></td>
+              </tr>
+            `).join('');
+
+            gridView.innerHTML = Array.from({ length: 8 }).map(() => `
+              <div class="sm-skeleton-card" style="align-items:center; justify-content:center; padding:1.2rem 0.5rem; min-height:96px;">
+                <div class="sm-skeleton sm-skeleton-circle" style="width:38px; height:38px; margin-bottom:6px;"></div>
+                <div class="sm-skeleton sm-skeleton-text" style="width:75%; height:11px;"></div>
+                <div class="sm-skeleton sm-skeleton-text" style="width:40%; height:9px; margin-top:2px;"></div>
+              </div>
+            `).join('');
 
             const resp = await fetch(`/api/servers/${this.serverId}/files/list?path=${encodeURIComponent(path)}`);
             const res = await resp.json();

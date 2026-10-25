@@ -2,7 +2,31 @@
  * ShellMan OS: Desktop Main Orchestrator (main.js)
  */
 
+window.applyAccentColor = function(accentKey) {
+  const acc = accentKey || 'cyan';
+  localStorage.setItem('shellman_accent', acc);
+  document.documentElement.setAttribute('data-accent', acc);
+  const accents = {
+    cyan: { primary: '#38bdf8', soft: 'rgba(56,189,248,0.15)', line: 'rgba(56,189,248,0.38)', ink: '#03131d' },
+    violet: { primary: '#a78bfa', soft: 'rgba(167,139,250,0.16)', line: 'rgba(167,139,250,0.4)', ink: '#140d27' },
+    emerald: { primary: '#34d399', soft: 'rgba(52,211,153,0.16)', line: 'rgba(52,211,153,0.4)', ink: '#021a11' },
+    rose: { primary: '#fb7185', soft: 'rgba(251,113,133,0.16)', line: 'rgba(251,113,133,0.4)', ink: '#20040a' },
+    amber: { primary: '#fbbf24', soft: 'rgba(251,191,36,0.16)', line: 'rgba(251,191,36,0.4)', ink: '#1f1402' }
+  };
+  const theme = accents[acc] || accents.cyan;
+  const root = document.documentElement;
+  root.style.setProperty('--accent-primary', theme.primary);
+  root.style.setProperty('--accent-cyan', theme.primary);
+  root.style.setProperty('--sm-accent', theme.primary);
+  root.style.setProperty('--sm-accent-soft', theme.soft);
+  root.style.setProperty('--sm-accent-line', theme.line);
+  root.style.setProperty('--sm-accent-ink', theme.ink);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+  // Apply saved accent theme
+  window.applyAccentColor(localStorage.getItem('shellman_accent') || 'cyan');
+
   // 1. Initialize Window Manager
   WindowManager.init(
     document.getElementById('windowsContainer'),
@@ -372,6 +396,61 @@ const DesktopTelemetry = {
 };
 window.DesktopTelemetry = DesktopTelemetry;
 
+// --- Desktop Sparklines & Ring Gauges System ---
+window.DesktopSparklines = {
+  cpu: [],
+  mem: [],
+  net: [],
+
+  updateSparkline(svgId, val, maxVal = 100) {
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
+    const key = svgId.replace('wgt', '').replace('Sparkline', '').toLowerCase();
+    const history = this[key] || [];
+    history.push(Math.min(maxVal, Math.max(0, Number(val) || 0)));
+    if (history.length > 16) history.shift();
+    this[key] = history;
+
+    const width = 100;
+    const height = 24;
+    const totalPoints = 16;
+    const step = width / (totalPoints - 1);
+    const startIdx = totalPoints - history.length;
+
+    const points = history.map((v, i) => {
+      const x = ((startIdx + i) * step).toFixed(1);
+      const y = (height - (v / maxVal) * (height - 4) - 2).toFixed(1);
+      return { x, y };
+    });
+
+    if (points.length < 2) return;
+
+    const pathD = points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(' ');
+    const areaD = `${pathD} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
+
+    const lineEl = svg.querySelector('.sparkline-line');
+    const areaEl = svg.querySelector('.sparkline-area');
+    if (lineEl) lineEl.setAttribute('d', pathD);
+    if (areaEl) areaEl.setAttribute('d', areaD);
+  },
+
+  updateRing(ringId, val) {
+    const ring = document.getElementById(ringId);
+    if (!ring) return;
+    const radius = 14;
+    const circ = 2 * Math.PI * radius; // ~87.96
+    const pct = Math.min(100, Math.max(0, Number(val) || 0));
+    const offset = circ - (pct / 100) * circ;
+    ring.style.strokeDashoffset = offset.toFixed(2);
+  },
+
+  getLoadClass(val) {
+    if (val >= 85) return 'load-crit';
+    if (val >= 70) return 'load-warn';
+    return 'load-normal';
+  }
+};
+
 function updateDesktopWidgets(metrics) {
   // Sync remote SSH server time
   if (metrics.server_time && metrics.server_time.epoch) {
@@ -418,6 +497,20 @@ function updateDesktopWidgets(metrics) {
     wgtCpuLoad.textContent = `Load: ${metrics.load.join(', ')}`;
   }
 
+  // Update CPU Ring & Sparkline + High-Load Status Color
+  if (window.DesktopSparklines) {
+    window.DesktopSparklines.updateRing('wgtCpuRing', cpu);
+    window.DesktopSparklines.updateSparkline('wgtCpuSparkline', cpu, 100);
+    const cpuClass = window.DesktopSparklines.getLoadClass(cpu);
+    ['wgtCpuVal', 'wgtCpuRing', 'wgtCpuSparkline', 'wgtCpuBar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('load-normal', 'load-warn', 'load-crit');
+        el.classList.add(cpuClass);
+      }
+    });
+  }
+
   const wgtMemVal = document.getElementById('wgtMemVal');
   const wgtMemBar = document.getElementById('wgtMemBar');
   const wgtMemDetail = document.getElementById('wgtMemDetail');
@@ -431,6 +524,20 @@ function updateDesktopWidgets(metrics) {
       const totalGb = (metrics.memory.total / (1024 ** 3)).toFixed(1);
       wgtMemDetail.textContent = `${usedGb} / ${totalGb} GB`;
     }
+  }
+
+  // Update RAM Ring & Sparkline + High-Load Status Color
+  if (window.DesktopSparklines) {
+    window.DesktopSparklines.updateRing('wgtMemRing', mem);
+    window.DesktopSparklines.updateSparkline('wgtMemSparkline', mem, 100);
+    const memClass = window.DesktopSparklines.getLoadClass(mem);
+    ['wgtMemVal', 'wgtMemRing', 'wgtMemSparkline', 'wgtMemBar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('load-normal', 'load-warn', 'load-crit');
+        el.classList.add(memClass);
+      }
+    });
   }
 
   const wgtDiskVal = document.getElementById('wgtDiskVal');
@@ -448,6 +555,21 @@ function updateDesktopWidgets(metrics) {
     }
   }
 
+  // Update Disk Ring
+  if (window.DesktopSparklines) {
+    window.DesktopSparklines.updateRing('wgtDiskRing', disk);
+    const diskClass = window.DesktopSparklines.getLoadClass(disk);
+    const dVal = document.getElementById('wgtDiskVal');
+    const dRing = document.getElementById('wgtDiskRing');
+    const dBar = document.getElementById('wgtDiskBar');
+    [dVal, dRing, dBar].forEach(el => {
+      if (el) {
+        el.classList.remove('load-normal', 'load-warn', 'load-crit');
+        el.classList.add(diskClass);
+      }
+    });
+  }
+
   const wgtUptime = document.getElementById('wgtUptime');
   if (wgtUptime && metrics.uptime !== undefined) {
     const u = metrics.uptime;
@@ -462,7 +584,7 @@ function updateDesktopWidgets(metrics) {
     wgtOs.textContent = metrics.os.length > 20 ? metrics.os.substring(0, 18) + '..' : metrics.os;
   }
 
-  // Network Throughput (Upload & Download Speed)
+  // Network Throughput (Upload & Download Speed + Sparkline)
   if (metrics.network) {
     const wgtNetRx = document.getElementById('wgtNetRx');
     const wgtNetTx = document.getElementById('wgtNetTx');
@@ -470,6 +592,13 @@ function updateDesktopWidgets(metrics) {
     if (wgtNetRx) wgtNetRx.textContent = metrics.network.rx_rate_human || '0 KB/s';
     if (wgtNetTx) wgtNetTx.textContent = metrics.network.tx_rate_human || '0 KB/s';
     if (wgtNetIface) wgtNetIface.textContent = metrics.network.interface || 'eth0';
+
+    if (window.DesktopSparklines) {
+      const rxRate = metrics.network.rx_rate || 0;
+      const txRate = metrics.network.tx_rate || 0;
+      const totalKb = (rxRate + txRate) / 1024;
+      window.DesktopSparklines.updateSparkline('wgtNetSparkline', totalKb, 1024);
+    }
   }
 }
 

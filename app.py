@@ -153,7 +153,15 @@ def create_app(config_class=Config):
 
     @app.context_processor
     def inject_helpers():
-        return dict(mask_ip=mask_ip_filter)
+        def static_v(filename):
+            try:
+                p = os.path.join(app.static_folder, filename)
+                mtime = int(os.path.getmtime(p))
+                return f"{url_for('static', filename=filename)}?v={mtime}"
+            except Exception:
+                return url_for('static', filename=filename)
+
+        return dict(mask_ip=mask_ip_filter, static_v=static_v)
 
     return app
 

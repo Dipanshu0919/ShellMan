@@ -3,7 +3,7 @@
 {% block title %}Terminal - ShellMan{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='vendor/xterm/xterm.css') }}">
+<link rel="stylesheet" href="{{ static_v('vendor/xterm/xterm.css') }}">
 {% endblock %}
 
 {% block content_class %}full-bleed{% endblock %}
@@ -67,9 +67,9 @@
 
 {% block extra_scripts %}
 {% if selected_server %}
-<script src="{{ url_for('static', filename='vendor/xterm/xterm.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-fit.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-web-links.js') }}"></script>
+<script src="{{ static_v('vendor/xterm/xterm.js') }}"></script>
+<script src="{{ static_v('vendor/xterm/xterm-addon-fit.js') }}"></script>
+<script src="{{ static_v('vendor/xterm/xterm-addon-web-links.js') }}"></script>
 
 <script>
   const serverId = {{ selected_server.id }};

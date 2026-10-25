@@ -555,7 +555,23 @@ const DesktopDock = {
         </div>
         <span class="running-dot"></span>
       </div>
-    `).join('');
+    `).join('') + `<div class="dock-active-pill" id="dockActivePill"></div>`;
+
+    if (window.WindowManager) {
+      this.updateRunningIndicators(window.WindowManager.windows, window.WindowManager.activeWindowId);
+    }
+  },
+
+  bounce(appId) {
+    if (!this.dockEl) return;
+    const item = this.dockEl.querySelector(`.dock-item[data-app="${appId}"]`);
+    if (!item) return;
+    item.classList.remove('bouncing');
+    void item.offsetWidth; // force DOM reflow to restart animation
+    item.classList.add('bouncing');
+    setTimeout(() => {
+      item.classList.remove('bouncing');
+    }, 700);
   },
 
   handleContextMenu(e, appId) {
@@ -601,9 +617,10 @@ const DesktopDock = {
 
     windows.forEach(win => {
       runningAppIds.add(win.appId);
-      if (win.id === activeId) activeAppId = win.appId;
+      if (win.id === activeId && !win.isMinimized) activeAppId = win.appId;
     });
 
+    let activeItem = null;
     this.dockEl.querySelectorAll('.dock-item').forEach(item => {
       const appId = item.dataset.app;
       if (runningAppIds.has(appId)) {
@@ -614,16 +631,36 @@ const DesktopDock = {
 
       if (appId === activeAppId) {
         item.classList.add('active');
+        activeItem = item;
       } else {
         item.classList.remove('active');
       }
     });
+
+    // Update sliding indicator pill under active app
+    let pill = this.dockEl.querySelector('#dockActivePill');
+    if (!pill) {
+      pill = document.createElement('div');
+      pill.className = 'dock-active-pill';
+      pill.id = 'dockActivePill';
+      this.dockEl.appendChild(pill);
+    }
+    if (activeItem) {
+      const left = activeItem.offsetLeft + (activeItem.offsetWidth / 2) - 10;
+      pill.style.opacity = '1';
+      pill.style.transform = `translateX(${left}px)`;
+    } else {
+      pill.style.opacity = '0';
+    }
   },
 
   handleDockClick(appId) {
     if (this.isHandlingClick) return;
     this.isHandlingClick = true;
     setTimeout(() => { this.isHandlingClick = false; }, 280);
+
+    // Trigger lifelike dock bounce animation
+    this.bounce(appId);
 
     if (!window.WindowManager) return;
 

@@ -956,11 +956,42 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           const currentFontPx = parseInt(localStorage.getItem('shellman_font_size') || '16', 10);
           const currentFontPct = Math.round((currentFontPx / 16) * 100);
           const currentTermTheme = localStorage.getItem('shellman_terminal_theme') || 'shellman';
+          const currentAccent = localStorage.getItem('shellman_accent') || 'cyan';
+
+          const accents = [
+            { id: 'cyan', name: 'Cyan', color: '#38bdf8' },
+            { id: 'violet', name: 'Violet', color: '#a78bfa' },
+            { id: 'emerald', name: 'Emerald', color: '#34d399' },
+            { id: 'rose', name: 'Rose', color: '#fb7185' },
+            { id: 'amber', name: 'Amber', color: '#fbbf24' }
+          ];
 
           contentPane.innerHTML = `
             <div>
               <h3 class="settings-section-title">Desktop Appearance & Display</h3>
               <p class="settings-section-desc">Personalize system typography, font scale, wallpaper, and visual theme.</p>
+
+              <!-- 0. Accent Color Picker Card -->
+              <div class="settings-card" style="margin-bottom:1.25rem;">
+                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc; margin-bottom:0.25rem;">System Accent Color</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.85rem;">
+                  Choose the primary accent color. The entire UI (active windows, sliding dock indicator, telemetry rings, gauges, buttons) follows seamlessly.
+                </div>
+                <div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
+                  ${accents.map(acc => `
+                    <button type="button" class="accent-color-btn" data-accent="${acc.id}" style="
+                      display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px;
+                      background: ${currentAccent === acc.id ? 'var(--sm-surface, rgba(255,255,255,0.08))' : 'rgba(255,255,255,0.03)'};
+                      border: 1.5px solid ${currentAccent === acc.id ? acc.color : 'rgba(255,255,255,0.1)'};
+                      box-shadow: ${currentAccent === acc.id ? `0 0 12px ${acc.color}50` : 'none'};
+                      color: #f8fafc; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.2s ease;
+                    ">
+                      <span style="width:11px; height:11px; border-radius:50%; background:${acc.color}; box-shadow:0 0 8px ${acc.color};"></span>
+                      <span>${acc.name}</span>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
 
               <!-- 1. System Font Size & UI Scale Card -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
@@ -1049,6 +1080,20 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               </div>
             </div>
           `;
+
+          contentPane.querySelectorAll('.accent-color-btn').forEach(btn => {
+            btn.onclick = () => {
+              const accId = btn.dataset.accent;
+              if (window.applyAccentColor) {
+                window.applyAccentColor(accId);
+              } else {
+                localStorage.setItem('shellman_accent', accId);
+                document.documentElement.setAttribute('data-accent', accId);
+              }
+              renderAppearanceTab();
+              if (window.showToast) window.showToast(`Accent color updated to ${accId.toUpperCase()}`, 'success');
+            };
+          });
 
           // Font scaling logic
           const applyFontSize = (size) => {

@@ -7,15 +7,15 @@
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico') }}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/xterm/xterm.css') }}">
+  <link rel="stylesheet" href="{{ static_v('css/style.css') }}">
+  <link rel="stylesheet" href="{{ static_v('css/workspace.css') }}">
+  <link rel="stylesheet" href="{{ static_v('vendor/xterm/xterm.css') }}">
   <!-- Load XTerm.js first so window.Terminal and window.FitAddon are globally available -->
-  <script src="{{ url_for('static', filename='vendor/xterm/xterm.js') }}"></script>
-  <script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-fit.js') }}"></script>
+  <script src="{{ static_v('vendor/xterm/xterm.js') }}"></script>
+  <script src="{{ static_v('vendor/xterm/xterm-addon-fit.js') }}"></script>
   <!-- Load Monaco Editor AMD Loader -->
-  <script src="{{ url_for('static', filename='vendor/monaco/loader.min.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/modal.js') }}?v=1.0"></script>
+  <script src="{{ static_v('vendor/monaco/loader.min.js') }}"></script>
+  <script src="{{ static_v('js/modal.js') }}"></script>
   <style>
     body, html {
       margin: 0;

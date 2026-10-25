@@ -268,6 +268,10 @@ class DesktopAppsController {
   }
 
   launch(appId, params = {}) {
+    if (window.DesktopDock && typeof window.DesktopDock.bounce === 'function') {
+      window.DesktopDock.bounce(appId);
+    }
+
     if (!this.serverId && appId !== 'servers' && appId !== 'settings') {
       this.launchSettings({ tab: 'servers' });
       return;

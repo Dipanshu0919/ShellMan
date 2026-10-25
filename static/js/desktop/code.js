@@ -618,7 +618,12 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
         // Remote Explorer Tree
         const loadTree = async (rootPath = '~') => {
           try {
-            treeContainer.innerHTML = `<div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.75rem;"><span class="spinner-border spinner-border-sm" style="margin-right:6px;"></span>Loading remote files...</div>`;
+            treeContainer.innerHTML = Array.from({ length: 7 }).map((_, i) => `
+              <div style="display:flex; align-items:center; gap:8px; padding:5px ${12 + (i % 3) * 14}px;">
+                <div class="sm-skeleton sm-skeleton-circle" style="width:14px; height:14px;"></div>
+                <div class="sm-skeleton sm-skeleton-text" style="width:${[90, 130, 80, 110, 70, 100, 120][i]}px; height:11px;"></div>
+              </div>
+            `).join('');
             const resp = await fetch(`/api/servers/${this.serverId}/files/list?path=${encodeURIComponent(rootPath)}`);
             const res = await resp.json();
             if (!res.success) {

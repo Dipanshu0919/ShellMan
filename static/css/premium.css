@@ -151,13 +151,9 @@ body { font-feature-settings: 'cv11', 'ss01'; }
    -------------------------------------------------------------------------- */
 .desktop-environment {
   height: 100dvh;
-  background-color: var(--sm-canvas) !important;
-  background-image: linear-gradient(160deg, #0e121b 0%, #0a0d13 60%, #0b0e15 100%) !important;
-  background-size: 100% 100% !important;
-  background-position: 0 0 !important;
-  background-attachment: scroll !important;
+  /* wallpaper is left to desktop.css / the saved wallpaper in Settings (inline style) */
+  background-color: var(--sm-canvas);
 }
-.desktop-environment::before { display: none; }
 
 .desktop-workspace {
   height: 100dvh;
@@ -303,7 +299,7 @@ body { font-feature-settings: 'cv11', 'ss01'; }
 .desktop-icon:hover .desktop-icon-tile { transform: translateY(-2px); box-shadow: 0 12px 18px -8px #000; }
 .desktop-icon-tile svg { width: 26px; height: 26px; filter: none; }
 .desktop-icon-label {
-  font-size: .72rem; font-weight: 600; color: var(--sm-text); text-shadow: none; letter-spacing: .005em;
+  font-size: .72rem; font-weight: 600; color: #fff; text-shadow: 0 1px 3px #000, 0 0 10px #000; letter-spacing: .005em;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
@@ -832,7 +828,7 @@ body { font-feature-settings: 'cv11', 'ss01'; }
 .desktop-title-mark { letter-spacing: .24em !important; text-indent: .24em; font-size: 1.2rem !important; }
 
 .desktop-icon { width: 96px; }
-.desktop-icon-label { font-size: .8rem; line-height: 1.3; font-weight: 600; }
+.desktop-icon-label { font-size: .8rem; line-height: 1.3; font-weight: 600; text-shadow: 0 1px 3px #000, 0 0 10px #000; }
 .desktop-icon-tile { width: 54px; height: 54px; }
 
 .window-title-text { font-size: .86rem; }
@@ -845,4 +841,579 @@ body { font-feature-settings: 'cv11', 'ss01'; }
   .desktop-icon { width: auto; }
   .desktop-icon-label { font-size: .74rem; }
   .widget-time-main { font-size: 3.2rem; }
+}
+
+/* ==========================================================================
+   13. FILE MANAGER — responds to its own window width (container queries)
+   ========================================================================== */
+.files-app-container { container-type: inline-size; container-name: fm; }
+
+.files-toolbar {
+  height: auto !important; min-height: 52px;
+  flex-wrap: wrap; row-gap: 8px; column-gap: 10px;
+  padding: 8px 12px !important;
+  background: var(--sm-surface) !important;
+  border-bottom: 1px solid var(--sm-line) !important;
+  box-shadow: none !important;
+}
+.files-toolbar > div:first-child { flex: 1 1 300px; min-width: 0; }
+.files-toolbar > div:last-child {
+  flex: 1 1 auto; min-width: 0; flex-wrap: wrap; justify-content: flex-end; row-gap: 6px;
+}
+.files-toolbar > div:last-child > input.form-control { width: auto !important; flex: 1 1 150px; max-width: 220px; min-height: 30px; }
+.files-address-bar { min-height: 32px; background: var(--sm-base) !important; border: 1px solid var(--sm-line-strong) !important; border-radius: 999px !important; box-shadow: none !important; }
+
+/* medium window: actions drop to their own full-width row */
+@container fm (max-width: 900px) {
+  .files-toolbar > div:first-child { flex-basis: 100%; }
+  .files-toolbar > div:last-child { flex-basis: 100%; justify-content: flex-start; }
+}
+/* narrow window: one swipeable row of actions, icon-first */
+@container fm (max-width: 640px) {
+  .files-toolbar > div:last-child {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+  }
+  .files-toolbar > div:last-child::-webkit-scrollbar { display: none; }
+  .files-toolbar > div:last-child > * { flex-shrink: 0; }
+  .files-toolbar > div:last-child > input.form-control { flex: 0 0 130px; }
+  .files-props-panel, .files-props-resizer { display: none !important; }
+}
+@container fm (max-width: 520px) {
+  .files-places-sidebar { display: none !important; }
+}
+
+/* ==========================================================================
+   14. SHELLMAN POLISH — ACCENT THEMES, MOTION, SKELETONS & LIVE GAUGES
+   ========================================================================== */
+
+/* --- 14.1 Dynamic Accent Palettes --- */
+:root[data-accent="cyan"], :root {
+  --accent-primary: #38bdf8;
+  --accent-cyan: #38bdf8;
+  --sm-accent: #38bdf8;
+  --sm-accent-soft: rgba(56, 189, 248, 0.15);
+  --sm-accent-line: rgba(56, 189, 248, 0.38);
+  --sm-accent-ink: #03131d;
+}
+:root[data-accent="violet"] {
+  --accent-primary: #a78bfa;
+  --accent-cyan: #a78bfa;
+  --sm-accent: #a78bfa;
+  --sm-accent-soft: rgba(167, 139, 250, 0.16);
+  --sm-accent-line: rgba(167, 139, 250, 0.4);
+  --sm-accent-ink: #140d27;
+}
+:root[data-accent="emerald"] {
+  --accent-primary: #34d399;
+  --accent-cyan: #34d399;
+  --sm-accent: #34d399;
+  --sm-accent-soft: rgba(52, 211, 153, 0.16);
+  --sm-accent-line: rgba(52, 211, 153, 0.4);
+  --sm-accent-ink: #021a11;
+}
+:root[data-accent="rose"] {
+  --accent-primary: #fb7185;
+  --accent-cyan: #fb7185;
+  --sm-accent: #fb7185;
+  --sm-accent-soft: rgba(251, 113, 133, 0.16);
+  --sm-accent-line: rgba(251, 113, 133, 0.4);
+  --sm-accent-ink: #20040a;
+}
+:root[data-accent="amber"] {
+  --accent-primary: #fbbf24;
+  --accent-cyan: #fbbf24;
+  --sm-accent: #fbbf24;
+  --sm-accent-soft: rgba(251, 191, 36, 0.16);
+  --sm-accent-line: rgba(251, 191, 36, 0.4);
+  --sm-accent-ink: #1f1402;
+}
+
+/* Light Mode Accent Adjustments */
+:root[data-theme="light"][data-accent="cyan"] {
+  --sm-accent: #0284c7;
+  --sm-accent-soft: rgba(2, 132, 199, 0.12);
+  --sm-accent-line: rgba(2, 132, 199, 0.35);
+}
+:root[data-theme="light"][data-accent="violet"] {
+  --sm-accent: #7c3aed;
+  --sm-accent-soft: rgba(124, 58, 237, 0.12);
+  --sm-accent-line: rgba(124, 58, 237, 0.35);
+}
+:root[data-theme="light"][data-accent="emerald"] {
+  --sm-accent: #059669;
+  --sm-accent-soft: rgba(5, 150, 105, 0.12);
+  --sm-accent-line: rgba(5, 150, 105, 0.35);
+}
+:root[data-theme="light"][data-accent="rose"] {
+  --sm-accent: #e11d48;
+  --sm-accent-soft: rgba(225, 29, 72, 0.12);
+  --sm-accent-line: rgba(225, 29, 72, 0.35);
+}
+
+/* --- 14.2 Shimmer Loading Skeletons --- */
+@keyframes sm-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.sm-skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 37%, rgba(255, 255, 255, 0.03) 63%);
+  background-size: 200% 100%;
+  animation: sm-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--sm-r-xs, 6px);
+  display: inline-block;
+  pointer-events: none;
+}
+
+.sm-skeleton-text {
+  height: 12px;
+  border-radius: 4px;
+}
+.sm-skeleton-circle {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sm-skeleton-table-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--sm-line, rgba(255, 255, 255, 0.06));
+}
+.sm-skeleton-card {
+  padding: 14px;
+  border-radius: var(--sm-r-sm, 10px);
+  background: var(--sm-surface, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--sm-line, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- 14.3 Window Opening / Closing Scale Motion --- */
+@keyframes winOpenScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes winCloseScale {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+}
+
+.desktop-window {
+  animation: winOpenScale 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.desktop-window.closing {
+  animation: winCloseScale 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  pointer-events: none !important;
+}
+
+/* --- 14.4 Dock Bounce & Sliding Active Indicator --- */
+@keyframes dockBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-16px) scale(1.1);
+  }
+  50% {
+    transform: translateY(0) scale(0.95);
+  }
+  75% {
+    transform: translateY(-7px) scale(1.03);
+  }
+}
+
+.dock-item.bouncing .dock-tile {
+  animation: dockBounce 0.65s cubic-bezier(0.28, 0.84, 0.42, 1);
+}
+
+.desktop-dock {
+  position: relative;
+}
+
+.dock-active-pill {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  width: 20px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--sm-accent, #38bdf8);
+  box-shadow: 0 0 10px var(--sm-accent, #38bdf8), 0 0 4px var(--sm-accent, #38bdf8);
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, width 0.2s ease;
+  z-index: 5;
+}
+
+/* --- 14.5 Ring Gauges & Sparkline History Charts --- */
+.widget-metric-row {
+  position: relative;
+}
+
+.widget-metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.metric-gauge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.metric-ring-svg {
+  width: 44px;
+  height: 44px;
+  transform: rotate(-90deg);
+  flex-shrink: 0;
+}
+
+.metric-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 3.5;
+}
+
+.metric-ring-val {
+  fill: none;
+  stroke: var(--sm-accent, #38bdf8);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s ease;
+}
+
+.metric-sparkline-svg {
+  width: 100%;
+  height: 26px;
+  margin-top: 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  display: block;
+}
+
+.sparkline-area {
+  fill: var(--sm-accent-soft, rgba(56, 189, 248, 0.15));
+  transition: fill 0.3s ease;
+}
+
+.sparkline-line {
+  fill: none;
+  stroke: var(--sm-accent, #38bdf8);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.3s ease;
+}
+
+/* Load-level states for bars, rings, and sparklines */
+.load-normal {
+  color: var(--sm-accent, #38bdf8);
+  stroke: var(--sm-accent, #38bdf8) !important;
+  fill: var(--sm-accent, #38bdf8);
+}
+.load-warn {
+  color: #fbbf24 !important;
+  stroke: #fbbf24 !important;
+  fill: #fbbf24;
+}
+.load-crit {
+  color: #ef4444 !important;
+  stroke: #ef4444 !important;
+  fill: #ef4444;
+}
+.widget-progress-fill.load-warn {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.45) !important;
+}
+.widget-progress-fill.load-crit {
+  background: linear-gradient(90deg, #dc2626, #ef4444) !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important;
+}
+
+/* ==========================================================================
+   14. SHELLMAN POLISH — ACCENT THEMES, MOTION, SKELETONS & LIVE GAUGES
+   ========================================================================== */
+
+/* --- 14.1 Dynamic Accent Palettes --- */
+:root[data-accent="cyan"], :root {
+  --accent-primary: #38bdf8;
+  --accent-cyan: #38bdf8;
+  --sm-accent: #38bdf8;
+  --sm-accent-soft: rgba(56, 189, 248, 0.15);
+  --sm-accent-line: rgba(56, 189, 248, 0.38);
+  --sm-accent-ink: #03131d;
+}
+:root[data-accent="violet"] {
+  --accent-primary: #a78bfa;
+  --accent-cyan: #a78bfa;
+  --sm-accent: #a78bfa;
+  --sm-accent-soft: rgba(167, 139, 250, 0.16);
+  --sm-accent-line: rgba(167, 139, 250, 0.4);
+  --sm-accent-ink: #140d27;
+}
+:root[data-accent="emerald"] {
+  --accent-primary: #34d399;
+  --accent-cyan: #34d399;
+  --sm-accent: #34d399;
+  --sm-accent-soft: rgba(52, 211, 153, 0.16);
+  --sm-accent-line: rgba(52, 211, 153, 0.4);
+  --sm-accent-ink: #021a11;
+}
+:root[data-accent="rose"] {
+  --accent-primary: #fb7185;
+  --accent-cyan: #fb7185;
+  --sm-accent: #fb7185;
+  --sm-accent-soft: rgba(251, 113, 133, 0.16);
+  --sm-accent-line: rgba(251, 113, 133, 0.4);
+  --sm-accent-ink: #20040a;
+}
+:root[data-accent="amber"] {
+  --accent-primary: #fbbf24;
+  --accent-cyan: #fbbf24;
+  --sm-accent: #fbbf24;
+  --sm-accent-soft: rgba(251, 191, 36, 0.16);
+  --sm-accent-line: rgba(251, 191, 36, 0.4);
+  --sm-accent-ink: #1f1402;
+}
+
+/* Light Mode Accent Adjustments */
+:root[data-theme="light"][data-accent="cyan"] {
+  --sm-accent: #0284c7;
+  --sm-accent-soft: rgba(2, 132, 199, 0.12);
+  --sm-accent-line: rgba(2, 132, 199, 0.35);
+}
+:root[data-theme="light"][data-accent="violet"] {
+  --sm-accent: #7c3aed;
+  --sm-accent-soft: rgba(124, 58, 237, 0.12);
+  --sm-accent-line: rgba(124, 58, 237, 0.35);
+}
+:root[data-theme="light"][data-accent="emerald"] {
+  --sm-accent: #059669;
+  --sm-accent-soft: rgba(5, 150, 105, 0.12);
+  --sm-accent-line: rgba(5, 150, 105, 0.35);
+}
+:root[data-theme="light"][data-accent="rose"] {
+  --sm-accent: #e11d48;
+  --sm-accent-soft: rgba(225, 29, 72, 0.12);
+  --sm-accent-line: rgba(225, 29, 72, 0.35);
+}
+
+/* --- 14.2 Shimmer Loading Skeletons --- */
+@keyframes sm-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.sm-skeleton {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 255, 255, 0.08) 37%, rgba(255, 255, 255, 0.03) 63%);
+  background-size: 200% 100%;
+  animation: sm-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--sm-r-xs, 6px);
+  display: inline-block;
+  pointer-events: none;
+}
+
+.sm-skeleton-text {
+  height: 12px;
+  border-radius: 4px;
+}
+.sm-skeleton-circle {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sm-skeleton-table-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--sm-line, rgba(255, 255, 255, 0.06));
+}
+.sm-skeleton-card {
+  padding: 14px;
+  border-radius: var(--sm-r-sm, 10px);
+  background: var(--sm-surface, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--sm-line, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- 14.3 Window Opening / Closing Scale Motion --- */
+@keyframes winOpenScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes winCloseScale {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+}
+
+.desktop-window {
+  animation: winOpenScale 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.desktop-window.closing {
+  animation: winCloseScale 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  pointer-events: none !important;
+}
+
+/* --- 14.4 Dock Bounce & Sliding Active Indicator --- */
+@keyframes dockBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-16px) scale(1.1);
+  }
+  50% {
+    transform: translateY(0) scale(0.95);
+  }
+  75% {
+    transform: translateY(-7px) scale(1.03);
+  }
+}
+
+.dock-item.bouncing .dock-tile {
+  animation: dockBounce 0.65s cubic-bezier(0.28, 0.84, 0.42, 1);
+}
+
+.desktop-dock {
+  position: relative;
+}
+
+.dock-active-pill {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  width: 20px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--sm-accent, #38bdf8);
+  box-shadow: 0 0 10px var(--sm-accent, #38bdf8), 0 0 4px var(--sm-accent, #38bdf8);
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease, width 0.2s ease;
+  z-index: 5;
+}
+
+/* --- 14.5 Ring Gauges & Sparkline History Charts --- */
+.widget-metric-row {
+  position: relative;
+}
+
+.widget-metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.metric-gauge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.metric-ring-svg {
+  width: 44px;
+  height: 44px;
+  transform: rotate(-90deg);
+  flex-shrink: 0;
+}
+
+.metric-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 3.5;
+}
+
+.metric-ring-val {
+  fill: none;
+  stroke: var(--sm-accent, #38bdf8);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s ease;
+}
+
+.metric-sparkline-svg {
+  width: 100%;
+  height: 26px;
+  margin-top: 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  display: block;
+}
+
+.sparkline-area {
+  fill: var(--sm-accent-soft, rgba(56, 189, 248, 0.15));
+  transition: fill 0.3s ease;
+}
+
+.sparkline-line {
+  fill: none;
+  stroke: var(--sm-accent, #38bdf8);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.3s ease;
+}
+
+/* Load-level states for bars, rings, and sparklines */
+.load-normal {
+  color: var(--sm-accent, #38bdf8);
+  stroke: var(--sm-accent, #38bdf8) !important;
+  fill: var(--sm-accent, #38bdf8);
+}
+.load-warn {
+  color: #fbbf24 !important;
+  stroke: #fbbf24 !important;
+  fill: #fbbf24;
+}
+.load-crit {
+  color: #ef4444 !important;
+  stroke: #ef4444 !important;
+  fill: #ef4444;
+}
+.widget-progress-fill.load-warn {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24) !important;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.45) !important;
+}
+.widget-progress-fill.load-crit {
+  background: linear-gradient(90deg, #dc2626, #ef4444) !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important;
 }

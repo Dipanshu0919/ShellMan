@@ -17,12 +17,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&family=Doto:wght@700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=1.5">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/desktop.css') }}?v=3.0">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/workspace.css') }}?v=1.3">
-  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/xterm/xterm.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/premium.css') }}?v=1.0">
+  <link rel="stylesheet" href="{{ static_v('css/style.css') }}">
+  <link rel="stylesheet" href="{{ static_v('css/desktop.css') }}">
+  <link rel="stylesheet" href="{{ static_v('css/workspace.css') }}">
+  <link rel="stylesheet" href="{{ static_v('vendor/xterm/xterm.css') }}">
+  <link rel="stylesheet" href="{{ static_v('css/premium.css') }}">
   
+  <script>
+    (function() {
+      try {
+        var acc = localStorage.getItem('shellman_accent') || 'cyan';
+        document.documentElement.setAttribute('data-accent', acc);
+        var s = localStorage.getItem('shellman_font_size');
+        if (s) {
+          document.documentElement.style.fontSize = s + 'px';
+          document.documentElement.style.setProperty('--app-font-size', s + 'px');
+          document.documentElement.style.setProperty('--app-font-scale', (parseInt(s, 10) / 16).toString());
+        }
+      } catch(e) {}
+    })();
+  </script>
+
   <script>
     window.DesktopConfig = {
       serverId: {{ selected_server.id if selected_server else 'null' }},
@@ -174,58 +189,88 @@
           </div>
         </div>
 
-        <!-- CPU Metric Meter -->
+        <!-- CPU Metric Meter with Ring Gauge & Live History Sparkline -->
         <div class="widget-metric-row">
-          <div class="widget-metric-info">
-            <span class="metric-label">CPU USAGE</span>
-            <span class="metric-value" id="wgtCpuVal">--%</span>
+          <div class="widget-metric-header">
+            <div style="display:flex; align-items:center; gap:9px;">
+              <svg class="metric-ring-svg" viewBox="0 0 36 36">
+                <circle class="metric-ring-bg" cx="18" cy="18" r="14"></circle>
+                <circle class="metric-ring-val" id="wgtCpuRing" cx="18" cy="18" r="14" stroke-dasharray="87.96" stroke-dashoffset="87.96"></circle>
+              </svg>
+              <div>
+                <span class="metric-label" style="display:block; line-height:1.1;">CPU USAGE</span>
+                <span class="widget-metric-sub" id="wgtCpuLoad" style="font-size:0.67rem; margin:0;">Load: --</span>
+              </div>
+            </div>
+            <span class="metric-value" id="wgtCpuVal" style="font-size:0.95rem; font-weight:700;">--%</span>
           </div>
-          <div class="widget-progress-track">
-            <div class="widget-progress-fill cpu-fill" id="wgtCpuBar" style="width: 0%;"></div>
-          </div>
-          <div class="widget-metric-sub" id="wgtCpuLoad">Load: --, --, --</div>
+          <svg class="metric-sparkline-svg" id="wgtCpuSparkline" viewBox="0 0 100 24" preserveAspectRatio="none">
+            <path class="sparkline-area" d=""></path>
+            <path class="sparkline-line" d=""></path>
+          </svg>
         </div>
 
-        <!-- RAM Metric Meter -->
-        <div class="widget-metric-row">
-          <div class="widget-metric-info">
-            <span class="metric-label">MEMORY (RAM)</span>
-            <span class="metric-value" id="wgtMemVal">--%</span>
+        <!-- RAM Metric Meter with Ring Gauge & Live History Sparkline -->
+        <div class="widget-metric-row" style="margin-top:0.65rem;">
+          <div class="widget-metric-header">
+            <div style="display:flex; align-items:center; gap:9px;">
+              <svg class="metric-ring-svg" viewBox="0 0 36 36">
+                <circle class="metric-ring-bg" cx="18" cy="18" r="14"></circle>
+                <circle class="metric-ring-val" id="wgtMemRing" cx="18" cy="18" r="14" stroke-dasharray="87.96" stroke-dashoffset="87.96"></circle>
+              </svg>
+              <div>
+                <span class="metric-label" style="display:block; line-height:1.1;">MEMORY (RAM)</span>
+                <span class="widget-metric-sub" id="wgtMemDetail" style="font-size:0.67rem; margin:0;">-- / -- GB</span>
+              </div>
+            </div>
+            <span class="metric-value" id="wgtMemVal" style="font-size:0.95rem; font-weight:700;">--%</span>
           </div>
-          <div class="widget-progress-track">
-            <div class="widget-progress-fill mem-fill" id="wgtMemBar" style="width: 0%;"></div>
-          </div>
-          <div class="widget-metric-sub" id="wgtMemDetail">-- / -- GB</div>
+          <svg class="metric-sparkline-svg" id="wgtMemSparkline" viewBox="0 0 100 24" preserveAspectRatio="none">
+            <path class="sparkline-area" d=""></path>
+            <path class="sparkline-line" d=""></path>
+          </svg>
         </div>
 
-        <!-- Storage / Disk Metric Meter -->
-        <div class="widget-metric-row">
-          <div class="widget-metric-info">
-            <span class="metric-label">STORAGE (DISK)</span>
-            <span class="metric-value" id="wgtDiskVal">--%</span>
+        <!-- Storage / Disk Metric Meter with Ring Gauge -->
+        <div class="widget-metric-row" style="margin-top:0.65rem;">
+          <div class="widget-metric-header">
+            <div style="display:flex; align-items:center; gap:9px;">
+              <svg class="metric-ring-svg" viewBox="0 0 36 36">
+                <circle class="metric-ring-bg" cx="18" cy="18" r="14"></circle>
+                <circle class="metric-ring-val" id="wgtDiskRing" cx="18" cy="18" r="14" stroke-dasharray="87.96" stroke-dashoffset="87.96"></circle>
+              </svg>
+              <div>
+                <span class="metric-label" style="display:block; line-height:1.1;">STORAGE (DISK)</span>
+                <span class="widget-metric-sub" id="wgtDiskDetail" style="font-size:0.67rem; margin:0;">-- / -- GB (/)</span>
+              </div>
+            </div>
+            <span class="metric-value" id="wgtDiskVal" style="font-size:0.95rem; font-weight:700;">--%</span>
           </div>
-          <div class="widget-progress-track">
+          <div class="widget-progress-track" style="margin-top:4px;">
             <div class="widget-progress-fill disk-fill" id="wgtDiskBar" style="width: 0%;"></div>
           </div>
-          <div class="widget-metric-sub" id="wgtDiskDetail">-- / -- GB (/)</div>
         </div>
 
-        <!-- Network Upload / Download Speed Meter -->
-        <div class="widget-metric-row" style="margin-top:0.45rem;">
-          <div class="widget-metric-info">
+        <!-- Network Upload / Download Speed Meter with Live Sparkline -->
+        <div class="widget-metric-row" style="margin-top:0.65rem;">
+          <div class="widget-metric-info" style="margin-bottom:3px;">
             <span class="metric-label">NETWORK SPEED</span>
             <span class="metric-value" id="wgtNetIface" style="font-size:0.68rem; font-family:var(--font-mono); color:#94a3b8;">eth0</span>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:0.75rem; margin-top:3px; padding:0.25rem 0.5rem; background:rgba(0,0,0,0.22); border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:0.75rem; padding:0.25rem 0.5rem; background:rgba(0,0,0,0.22); border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
             <span style="color:#34d399; display:flex; align-items:center; gap:3px;">
               <span style="font-weight:700;">&#8595;</span>
               <span id="wgtNetRx">0 KB/s</span>
             </span>
-            <span style="color:#38bdf8; display:flex; align-items:center; gap:3px;">
+            <span style="color:var(--sm-accent, #38bdf8); display:flex; align-items:center; gap:3px;">
               <span style="font-weight:700;">&#8593;</span>
               <span id="wgtNetTx">0 KB/s</span>
             </span>
           </div>
+          <svg class="metric-sparkline-svg" id="wgtNetSparkline" viewBox="0 0 100 24" preserveAspectRatio="none">
+            <path class="sparkline-area" d=""></path>
+            <path class="sparkline-line" d=""></path>
+          </svg>
         </div>
       </div>
 
@@ -426,57 +471,30 @@
 <div class="desktop-toast-container" id="toastContainer"></div>
 
 <!-- Vendor Scripts -->
-<script src="{{ url_for('static', filename='vendor/xterm/xterm.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-fit.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/xterm/xterm-addon-web-links.js') }}"></script>
-<script src="{{ url_for('static', filename='vendor/monaco/loader.min.js') }}"></script>
+<script src="{{ static_v('vendor/xterm/xterm.js') }}"></script>
+<script src="{{ static_v('vendor/xterm/xterm-addon-fit.js') }}"></script>
+<script src="{{ static_v('vendor/xterm/xterm-addon-web-links.js') }}"></script>
+<script src="{{ static_v('vendor/monaco/loader.min.js') }}"></script>
 
 <!-- Desktop OS JavaScript Modules -->
-<script src="{{ url_for('static', filename='js/modal.js') }}?v=4.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/pwa.js') }}?v=1.9"></script>
-<script src="{{ url_for('static', filename='js/desktop/wm.js') }}?v=4.1"></script>
-<script src="{{ url_for('static', filename='js/desktop/dock.js') }}?v=4.1"></script>
-<script src="{{ url_for('static', filename='js/desktop/menu.js') }}?v=4.1"></script>
-<script src="{{ url_for('static', filename='js/desktop/apps.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/terminal.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/filemanager.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/code.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/taskmanager.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/nginx.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/sync.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/cron.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/git.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/domains.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/settings.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=1.4"></script>
-<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=4.2"></script>
-
-</body>
-</html>="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=1.4"></script>
-<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=4.2"></script>
-<script src="{{ url_for('static', filename='js/modal.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/pwa.js') }}?v=2.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/wm.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/dock.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/menu.js') }}?v=5.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/apps.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/terminal.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/filemanager.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/code.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/taskmanager.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/nginx.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/sync.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/cron.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/git.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/domains.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/settings.js') }}?v=6.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=2.0"></script>
-<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=5.0"></script>
-
-</body>
-</html>
-="{{ url_for('static', filename='js/desktop/apps_ext.js') }}?v=1.4"></script>
-<script src="{{ url_for('static', filename='js/desktop/main.js') }}?v=4.2"></script>
+<script src="{{ static_v('js/modal.js') }}"></script>
+<script src="{{ static_v('js/desktop/pwa.js') }}"></script>
+<script src="{{ static_v('js/desktop/wm.js') }}"></script>
+<script src="{{ static_v('js/desktop/dock.js') }}"></script>
+<script src="{{ static_v('js/desktop/menu.js') }}"></script>
+<script src="{{ static_v('js/desktop/apps.js') }}"></script>
+<script src="{{ static_v('js/desktop/terminal.js') }}"></script>
+<script src="{{ static_v('js/desktop/filemanager.js') }}"></script>
+<script src="{{ static_v('js/desktop/code.js') }}"></script>
+<script src="{{ static_v('js/desktop/taskmanager.js') }}"></script>
+<script src="{{ static_v('js/desktop/nginx.js') }}"></script>
+<script src="{{ static_v('js/desktop/sync.js') }}"></script>
+<script src="{{ static_v('js/desktop/cron.js') }}"></script>
+<script src="{{ static_v('js/desktop/git.js') }}"></script>
+<script src="{{ static_v('js/desktop/domains.js') }}"></script>
+<script src="{{ static_v('js/desktop/settings.js') }}"></script>
+<script src="{{ static_v('js/desktop/apps_ext.js') }}"></script>
+<script src="{{ static_v('js/desktop/main.js') }}"></script>
 
 </body>
 </html>
