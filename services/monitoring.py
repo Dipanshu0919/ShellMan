@@ -41,7 +41,7 @@ class SystemMonitor:
                 if cached and (now - cached.get('timestamp', 0) < SystemMonitor.CACHE_TTL):
                     return cached['data']
 
-        need_os = not getattr(server, 'os_cache', None) or not getattr(server, 'kernel_cache', None)
+        need_os = force or not getattr(server, 'os_cache', None) or not getattr(server, 'kernel_cache', None)
 
         os_subcmd = ""
         if need_os:

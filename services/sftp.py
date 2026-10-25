@@ -6,6 +6,7 @@ import tempfile
 import threading
 import time
 import shlex
+import json
 from typing import List, Dict, Any, Tuple
 
 import logging
@@ -43,6 +44,9 @@ class SFTPService:
         elif path == '~':
             return '/root' if (server and server.username == 'root') else f'/home/{server.username if server else "user"}'
 
+        # Eliminate consecutive slashes (e.g. //home -> /home) which POSIX normpath preserves
+        import re
+        path = re.sub(r'/+', '/', path)
         path = os.path.normpath(path)
         if not path.startswith("/"):
             path = "/" + path
@@ -61,29 +65,184 @@ class SFTPService:
         return 0
 
     @classmethod
+    def _list_dir_via_ssh(cls, server, path: str) -> Tuple[bool, Any]:
+        """
+        Robust fallback directory listing via SSH shell command when SFTP fails
+        (e.g., permission boundaries, broken SFTP channel, symlinks, or special paths).
+        """
+        py_script = (
+            "import os, stat, time, json, sys\n"
+            "p = sys.argv[1]\n"
+            "try:\n"
+            "    entries = list(os.scandir(p))\n"
+            "except Exception as e:\n"
+            "    sys.exit(2)\n"
+            "items = []\n"
+            "for e in entries:\n"
+            "    try:\n"
+            "        st = e.stat(follow_symlinks=False)\n"
+            "        is_dir = e.is_dir(follow_symlinks=True)\n"
+            "        is_link = e.is_symlink()\n"
+            "        mode_str = stat.filemode(st.st_mode)\n"
+            "        mtime_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(st.st_mtime))\n"
+            "        items.append({\n"
+            "            'name': e.name,\n"
+            "            'path': os.path.normpath(os.path.join(p, e.name)),\n"
+            "            'is_dir': is_dir,\n"
+            "            'is_link': is_link,\n"
+            "            'size': st.st_size if not is_dir else None,\n"
+            "            'size_formatted': '-' if is_dir else str(st.st_size),\n"
+            "            'permissions': mode_str,\n"
+            "            'mtime': mtime_str,\n"
+            "            'owner': str(st.st_uid),\n"
+            "            'group': str(st.st_gid)\n"
+            "        })\n"
+            "    except Exception:\n"
+            "        pass\n"
+            "items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))\n"
+            "parent = os.path.dirname(p) if p != '/' else None\n"
+            "print(json.dumps({'current_path': p, 'parent_path': parent, 'items': items}))\n"
+        )
+        quoted_path = shlex.quote(path)
+        cmd = f"python3 -c {shlex.quote(py_script)} {quoted_path}"
+        code, stdout, _ = ssh_manager.execute(server, cmd, timeout=12)
+        if code == 0 and stdout.strip():
+            try:
+                data = json.loads(stdout.strip())
+                for item in data.get('items', []):
+                    if item.get('size') is not None:
+                        item['size_formatted'] = format_bytes(item['size'])
+                return True, data
+            except Exception:
+                pass
+
+        # If python3 fails (or python3 is not available), fallback to standard POSIX ls
+        ls_cmd = f"ls -la --time-style=+%Y-%m-%d\\ %H:%M:%S -- {quoted_path} 2>/dev/null || sudo -n ls -la --time-style=+%Y-%m-%d\\ %H:%M:%S -- {quoted_path} 2>/dev/null"
+        code, stdout, _ = ssh_manager.execute(server, ls_cmd, timeout=12)
+        if code == 0 and stdout.strip():
+            items = []
+            for line in stdout.strip().splitlines():
+                parts = line.split()
+                if len(parts) >= 8 and parts[0] != 'total':
+                    perms = parts[0]
+                    owner = parts[2]
+                    group = parts[3]
+                    size_str = parts[4]
+                    date_str = f"{parts[5]} {parts[6]}"
+                    name = " ".join(parts[7:])
+                    if name in ('.', '..'):
+                        continue
+                    is_dir = perms.startswith('d')
+                    is_link = perms.startswith('l')
+                    clean_name = name.split(' -> ')[0] if is_link else name
+                    item_path = os.path.normpath(os.path.join(path, clean_name))
+                    try:
+                        sz = int(size_str)
+                    except ValueError:
+                        sz = 0
+                    items.append({
+                        'name': clean_name,
+                        'path': item_path,
+                        'is_dir': is_dir,
+                        'is_link': is_link,
+                        'size': sz if not is_dir else None,
+                        'size_formatted': format_bytes(sz) if not is_dir else '-',
+                        'permissions': perms,
+                        'mtime': date_str,
+                        'owner': owner,
+                        'group': group,
+                    })
+            items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+            parent_path = os.path.dirname(path) if path != '/' else None
+            return True, {
+                'current_path': path,
+                'parent_path': parent_path,
+                'items': items
+            }
+
+        return False, f"Cannot open directory {path}: Permission denied or directory not found"
+
+    @classmethod
     def list_dir(cls, server, path: str = "/") -> Tuple[bool, Any]:
         path = cls._normalize_path(path, server)
+        server_user = getattr(server, 'username', 'user') if server else 'user'
         try:
-            _, sftp = ssh_manager.open_sftp(server)
-            try:
-                entries = sftp.listdir_attr(path)
-            except IOError as e:
-                return False, f"Cannot open directory {path}: {str(e)}"
+            with ssh_manager.sftp_context(server) as sftp:
+                try:
+                    entries = sftp.listdir_attr(path)
+                except Exception as e:
+                    logger.warning(f"SFTP listdir_attr failed on {path}: {e}, falling back to SSH shell")
+                    return cls._list_dir_via_ssh(server, path)
 
-            items = []
-            server_user = getattr(server, 'username', 'user') if server else 'user'
-            for attr in entries:
+                items = []
+                for attr in entries:
+                    is_dir = stat.S_ISDIR(attr.st_mode)
+                    is_link = stat.S_ISLNK(attr.st_mode)
+                    mode_str = stat.filemode(attr.st_mode)
+                    item_path = os.path.normpath(os.path.join(path, attr.filename))
+
+                    # If symlink, resolve whether it targets a directory
+                    if is_link:
+                        try:
+                            target_st = sftp.stat(item_path)
+                            if stat.S_ISDIR(target_st.st_mode):
+                                is_dir = True
+                        except Exception:
+                            pass
+
+                    mtime_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(attr.st_mtime))
+                    owner_name = 'root' if attr.st_uid == 0 else server_user
+                    group_name = 'root' if attr.st_gid == 0 else server_user
+
+                    items.append({
+                        'name': attr.filename,
+                        'path': item_path,
+                        'is_dir': is_dir,
+                        'is_link': is_link,
+                        'size': attr.st_size if not is_dir else None,
+                        'size_formatted': format_bytes(attr.st_size) if not is_dir else '-',
+                        'permissions': mode_str,
+                        'mtime': mtime_str,
+                        'owner': owner_name,
+                        'group': group_name,
+                    })
+
+                items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+                parent_path = os.path.dirname(path) if path != '/' else None
+                return True, {
+                    'current_path': path,
+                    'parent_path': parent_path,
+                    'items': items
+                }
+        except Exception as e:
+            logger.warning(f"SFTP context failed for {path}: {e}, falling back to SSH shell")
+            return cls._list_dir_via_ssh(server, path)
+
+    @classmethod
+    def stat_item(cls, server, path: str) -> Tuple[bool, Any]:
+        path = cls._normalize_path(path, server)
+        server_user = getattr(server, 'username', 'user') if server else 'user'
+        try:
+            with ssh_manager.sftp_context(server) as sftp:
+                attr = sftp.stat(path)
                 is_dir = stat.S_ISDIR(attr.st_mode)
                 is_link = stat.S_ISLNK(attr.st_mode)
                 mode_str = stat.filemode(attr.st_mode)
-                item_path = os.path.normpath(os.path.join(path, attr.filename))
+                name = os.path.basename(path) or '/'
                 mtime_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(attr.st_mtime))
                 owner_name = 'root' if attr.st_uid == 0 else server_user
                 group_name = 'root' if attr.st_gid == 0 else server_user
 
-                items.append({
-                    'name': attr.filename,
-                    'path': item_path,
+                items_count = None
+                if is_dir:
+                    try:
+                        items_count = len(sftp.listdir(path))
+                    except Exception:
+                        items_count = None
+
+                return True, {
+                    'name': name,
+                    'path': path,
                     'is_dir': is_dir,
                     'is_link': is_link,
                     'size': attr.st_size if not is_dir else None,
@@ -92,53 +251,8 @@ class SFTPService:
                     'mtime': mtime_str,
                     'owner': owner_name,
                     'group': group_name,
-                })
-
-            items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
-            parent_path = os.path.dirname(path) if path != '/' else None
-            return True, {
-                'current_path': path,
-                'parent_path': parent_path,
-                'items': items
-            }
-        except Exception as e:
-            return False, f"SFTP error: {str(e)}"
-
-    @classmethod
-    def stat_item(cls, server, path: str) -> Tuple[bool, Any]:
-        path = cls._normalize_path(path, server)
-        server_user = getattr(server, 'username', 'user') if server else 'user'
-        try:
-            _, sftp = ssh_manager.open_sftp(server)
-            attr = sftp.stat(path)
-            is_dir = stat.S_ISDIR(attr.st_mode)
-            is_link = stat.S_ISLNK(attr.st_mode)
-            mode_str = stat.filemode(attr.st_mode)
-            name = os.path.basename(path) or '/'
-            mtime_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(attr.st_mtime))
-            owner_name = 'root' if attr.st_uid == 0 else server_user
-            group_name = 'root' if attr.st_gid == 0 else server_user
-
-            items_count = None
-            if is_dir:
-                try:
-                    items_count = len(sftp.listdir(path))
-                except Exception:
-                    items_count = None
-
-            return True, {
-                'name': name,
-                'path': path,
-                'is_dir': is_dir,
-                'is_link': is_link,
-                'size': attr.st_size if not is_dir else None,
-                'size_formatted': format_bytes(attr.st_size) if not is_dir else '-',
-                'permissions': mode_str,
-                'mtime': mtime_str,
-                'owner': owner_name,
-                'group': group_name,
-                'items_count': items_count
-            }
+                    'items_count': items_count
+                }
         except Exception as e:
             return False, f"Cannot stat {path}: {str(e)}"
 
@@ -146,28 +260,28 @@ class SFTPService:
     def read_file(cls, server, file_path: str, max_bytes: int = 5 * 1024 * 1024) -> Tuple[bool, Any]:
         file_path = cls._normalize_path(file_path, server)
         try:
-            _, sftp = ssh_manager.open_sftp(server)
-            attr = sftp.stat(file_path)
-            if stat.S_ISDIR(attr.st_mode):
-                return False, "Target is a directory, not a file"
-            if attr.st_size > max_bytes:
-                return False, f"File size ({format_bytes(attr.st_size)}) exceeds editable limit (5MB)"
+            with ssh_manager.sftp_context(server) as sftp:
+                attr = sftp.stat(file_path)
+                if stat.S_ISDIR(attr.st_mode):
+                    return False, "Target is a directory, not a file"
+                if attr.st_size > max_bytes:
+                    return False, f"File size ({format_bytes(attr.st_size)}) exceeds editable limit (5MB)"
 
-            with sftp.open(file_path, 'rb') as f:
-                content_bytes = f.read()
+                with sftp.open(file_path, 'rb') as f:
+                    content_bytes = f.read()
 
-            try:
-                content_str = content_bytes.decode('utf-8')
-            except UnicodeDecodeError:
-                content_str = content_bytes.decode('latin1', errors='replace')
+                try:
+                    content_str = content_bytes.decode('utf-8')
+                except UnicodeDecodeError:
+                    content_str = content_bytes.decode('latin1', errors='replace')
 
-            return True, {
-                'path': file_path,
-                'name': os.path.basename(file_path),
-                'size': attr.st_size,
-                'content': content_str,
-                'permissions': stat.filemode(attr.st_mode)
-            }
+                return True, {
+                    'path': file_path,
+                    'name': os.path.basename(file_path),
+                    'size': attr.st_size,
+                    'content': content_str,
+                    'permissions': stat.filemode(attr.st_mode)
+                }
         except Exception as e:
             return False, f"Read error: {str(e)}"
 
@@ -175,11 +289,11 @@ class SFTPService:
     def write_file(cls, server, file_path: str, content: str) -> Tuple[bool, str]:
         file_path = cls._normalize_path(file_path, server)
         try:
-            _, sftp = ssh_manager.open_sftp(server)
-            content_bytes = content.encode('utf-8')
-            with sftp.open(file_path, 'wb') as f:
-                f.write(content_bytes)
-            return True, f"File saved successfully ({len(content_bytes)} bytes)"
+            with ssh_manager.sftp_context(server) as sftp:
+                content_bytes = content.encode('utf-8')
+                with sftp.open(file_path, 'wb') as f:
+                    f.write(content_bytes)
+                return True, f"File saved successfully ({len(content_bytes)} bytes)"
         except Exception as e:
             return False, f"Write error: {str(e)}"
 
@@ -187,10 +301,10 @@ class SFTPService:
     def create_file(cls, server, file_path: str) -> Tuple[bool, str]:
         file_path = cls._normalize_path(file_path, server)
         try:
-            _, sftp = ssh_manager.open_sftp(server)
-            with sftp.open(file_path, 'wx') as f:
-                f.write(b"")
-            return True, "File created"
+            with ssh_manager.sftp_context(server) as sftp:
+                with sftp.open(file_path, 'wx') as f:
+                    f.write(b"")
+                return True, "File created"
         except Exception as e:
             return False, f"Failed to create file: {str(e)}"
 
@@ -198,9 +312,9 @@ class SFTPService:
     def create_dir(cls, server, dir_path: str) -> Tuple[bool, str]:
         dir_path = cls._normalize_path(dir_path, server)
         try:
-            _, sftp = ssh_manager.open_sftp(server)
-            sftp.mkdir(dir_path)
-            return True, "Directory created"
+            with ssh_manager.sftp_context(server) as sftp:
+                sftp.mkdir(dir_path)
+                return True, "Directory created"
         except Exception as e:
             return False, f"Failed to create directory: {str(e)}"
 
@@ -209,9 +323,9 @@ class SFTPService:
         old_path = cls._normalize_path(old_path, server)
         new_path = cls._normalize_path(new_path, server)
         try:
-            _, sftp = ssh_manager.open_sftp(server)
-            sftp.rename(old_path, new_path)
-            return True, "Renamed successfully"
+            with ssh_manager.sftp_context(server) as sftp:
+                sftp.rename(old_path, new_path)
+                return True, "Renamed successfully"
         except Exception:
             code, out, err = ssh_manager.execute(server, f"mv -- {shlex.quote(old_path)} {shlex.quote(new_path)}")
             if code == 0:
@@ -224,15 +338,15 @@ class SFTPService:
         if path == "/":
             return False, "Refusing to delete root directory"
         try:
-            _, sftp = ssh_manager.open_sftp(server)
             if is_dir:
                 code, out, err = ssh_manager.execute(server, f"rm -rf -- {shlex.quote(path)}")
                 if code == 0:
                     return True, "Directory deleted"
                 return False, err or out
             else:
-                sftp.remove(path)
-                return True, "File deleted"
+                with ssh_manager.sftp_context(server) as sftp:
+                    sftp.remove(path)
+                    return True, "File deleted"
         except Exception as e:
             return False, f"Delete failed: {str(e)}"
 
@@ -385,23 +499,19 @@ class SFTPService:
         stop_watch = threading.Event()
         if task_id:
             def _watch_archive():
-                try:
-                    _, w_sftp = ssh_manager.open_sftp(server)
-                    before = {a.filename for a in w_sftp.listdir_attr(dest_dir)}
-                except Exception:
-                    return
                 base = os.path.basename(archive_path)
                 while not stop_watch.is_set():
                     try:
-                        best = 0
-                        for a in w_sftp.listdir_attr(dest_dir):
-                            n = a.filename
-                            is_target = (n == base)
-                            is_new_candidate = (n not in before) and (n.startswith(base) or (n.startswith('zi') and len(n) <= 10))
-                            if (is_target or is_new_candidate) and not stat.S_ISDIR(a.st_mode):
-                                best = max(best, a.st_size)
-                        if best:
-                            ProgressTracker.update(task_id, best)
+                        with ssh_manager.sftp_context(server) as w_sftp:
+                            best = 0
+                            for a in w_sftp.listdir_attr(dest_dir):
+                                n = a.filename
+                                is_target = (n == base)
+                                is_new_candidate = (n.startswith(base) or (n.startswith('zi') and len(n) <= 10))
+                                if (is_target or is_new_candidate) and not stat.S_ISDIR(a.st_mode):
+                                    best = max(best, a.st_size)
+                            if best:
+                                ProgressTracker.update(task_id, best)
                     except Exception:
                         pass
                     stop_watch.wait(0.5)
@@ -493,6 +603,183 @@ class SFTPService:
         except Exception:
             pass
         return client.open_sftp(), True
+
+    @classmethod
+    def _upload_batch_via_tar(
+        cls,
+        server,
+        dest_dir: str,
+        files_data: List[Tuple[str, Any]],
+        overwrite: bool = True,
+        task_id: str = None
+    ) -> Tuple[bool, int, List[str]]:
+        import tarfile
+
+        dest_dir = cls._normalize_path(dest_dir, server)
+        total_files = len(files_data)
+        uploaded_count = 0
+        errors = []
+
+        lock = ssh_manager._get_server_lock(server.id)
+        with lock:
+            try:
+                client = ssh_manager.get_client(server)
+                transport = client.get_transport()
+                if not transport or not transport.is_active():
+                    client = ssh_manager.get_client(server, force_new=True)
+                    transport = client.get_transport()
+
+                quoted_dest = shlex.quote(dest_dir)
+                tar_flags = "-xf - -C" if overwrite else "-xkf - -C"
+                remote_cmd = f"mkdir -p -- {quoted_dest} && tar --no-same-owner {tar_flags} {quoted_dest}"
+
+                session = transport.open_session(timeout=120)
+                session.exec_command(remote_cmd)
+                stdin = session.makefile('wb', 1024 * 1024)
+
+                with tarfile.open(fileobj=stdin, mode='w|') as tar:
+                    for rel_path, file_obj in files_data:
+                        try:
+                            clean_rel = rel_path.lstrip('/\\').replace('\\', '/')
+                            file_obj.seek(0, os.SEEK_END)
+                            sz = file_obj.tell()
+                            file_obj.seek(0)
+
+                            ti = tarfile.TarInfo(name=clean_rel)
+                            ti.size = sz
+                            ti.mtime = int(time.time())
+                            ti.mode = 0o644
+
+                            tar.addfile(ti, file_obj)
+                            uploaded_count += 1
+                            if task_id:
+                                ProgressTracker.update(task_id, uploaded_count, total_files)
+                        except Exception as e:
+                            errors.append(f"{rel_path}: {e}")
+
+                stdin.close()
+                exit_code = session.recv_exit_status()
+                session.close()
+
+                if exit_code != 0:
+                    logger.warning(f"Tar stream returned exit code {exit_code}, falling back to SFTP batch")
+                    for _, f_obj in files_data:
+                        try:
+                            f_obj.seek(0)
+                        except Exception:
+                            pass
+                    return cls._upload_batch_via_sftp(server, dest_dir, files_data, overwrite, task_id)
+
+                if task_id:
+                    ProgressTracker.complete(task_id)
+
+                return True, uploaded_count, errors
+
+            except Exception as e:
+                logger.warning(f"Tar stream failed ({e}), falling back to SFTP batch")
+                for _, f_obj in files_data:
+                    try:
+                        f_obj.seek(0)
+                    except Exception:
+                        pass
+                return cls._upload_batch_via_sftp(server, dest_dir, files_data, overwrite, task_id)
+
+    @classmethod
+    def _upload_batch_via_sftp(
+        cls,
+        server,
+        dest_dir: str,
+        files_data: List[Tuple[str, Any]],
+        overwrite: bool = True,
+        task_id: str = None
+    ) -> Tuple[bool, int, List[str]]:
+        dest_dir = cls._normalize_path(dest_dir, server)
+        total_files = len(files_data)
+        uploaded_count = 0
+        errors = []
+        known_dirs = {dest_dir}
+
+        try:
+            with ssh_manager.sftp_context(server) as sftp:
+                try:
+                    sftp.stat(dest_dir)
+                except Exception:
+                    cls._ensure_remote_dir(server, sftp, dest_dir)
+
+                for rel_path, file_obj in files_data:
+                    clean_rel = rel_path.lstrip('/\\')
+                    target_path = os.path.normpath(os.path.join(dest_dir, clean_rel))
+                    target_dir = os.path.dirname(target_path)
+
+                    if target_dir and target_dir not in known_dirs:
+                        parts = [p for p in target_dir.split('/') if p]
+                        cur = ""
+                        for part in parts:
+                            cur += "/" + part
+                            if cur not in known_dirs:
+                                try:
+                                    sftp.stat(cur)
+                                except Exception:
+                                    try:
+                                        sftp.mkdir(cur)
+                                    except Exception:
+                                        pass
+                                known_dirs.add(cur)
+
+                    try:
+                        if not overwrite:
+                            try:
+                                sftp.stat(target_path)
+                                continue
+                            except Exception:
+                                pass
+
+                        file_obj.seek(0, os.SEEK_END)
+                        sz = file_obj.tell()
+                        file_obj.seek(0)
+
+                        sftp.putfo(file_obj, target_path, file_size=sz, confirm=False)
+                        uploaded_count += 1
+                        if task_id:
+                            ProgressTracker.update(task_id, uploaded_count, total_files)
+                    except Exception as e:
+                        errors.append(f"{clean_rel}: {str(e)}")
+
+        except Exception as exc:
+            errors.append(f"SFTP session failure: {str(exc)}")
+
+        if task_id:
+            if errors:
+                ProgressTracker.complete(task_id, error=f"{len(errors)} error(s)")
+            else:
+                ProgressTracker.complete(task_id)
+
+        all_ok = (len(errors) == 0)
+        return all_ok, uploaded_count, errors
+
+    @classmethod
+    def upload_batch(
+        cls,
+        server,
+        dest_dir: str,
+        files_data: List[Tuple[str, Any]],
+        overwrite: bool = True,
+        task_id: str = None
+    ) -> Tuple[bool, int, List[str]]:
+        dest_dir = cls._normalize_path(dest_dir, server)
+        total_files = len(files_data)
+        if total_files == 0:
+            return True, 0, []
+
+        if task_id:
+            ProgressTracker.create_task(task_id, f"Uploading {total_files} file(s)", total_files)
+
+        # For batches or any upload with nested subdirectories, use ultra-fast SSH Tar pipeline
+        has_subdirs = any('/' in rel.lstrip('/\\') or '\\' in rel for rel, _ in files_data)
+        if total_files > 1 or has_subdirs:
+            return cls._upload_batch_via_tar(server, dest_dir, files_data, overwrite=overwrite, task_id=task_id)
+
+        return cls._upload_batch_via_sftp(server, dest_dir, files_data, overwrite=overwrite, task_id=task_id)
 
     @classmethod
     def upload_file(cls, server, remote_dir: str, filename: str, file_stream, overwrite: bool = True, task_id: str = None) -> Tuple[bool, str]:

@@ -1,6 +1,8 @@
 import os
 import logging
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, request, jsonify, Request
+Request.max_form_parts = None
+Request.max_form_memory_size = None
 from flask_sock import Sock
 
 from config import Config
@@ -97,6 +99,15 @@ def create_app(config_class=Config):
         response.headers['Service-Worker-Allowed'] = '/'
         return response
 
+    @app.errorhandler(413)
+    def request_entity_too_large(error):
+        if request.path.startswith('/api/'):
+            return jsonify({
+                'success': False,
+                'error': 'Uploaded file/folder exceeds server maximum upload size limit (MAX_CONTENT_LENGTH).'
+            }), 413
+        return "<h1>413 Request Entity Too Large</h1>", 413
+
     with app.app_context():
         db.create_all()
         # Auto-migrate SQLite columns if table already existed
@@ -171,6 +182,6 @@ if __name__ == '__main__':
     # FIX: default bind is 127.0.0.1 (localhost only). ShellMan holds SSH
     # credentials to your servers — binding 0.0.0.0 by default would expose
     # it to the entire LAN. Set HOST=0.0.0.0 explicitly only on a trusted network.
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 9874))
     host = os.environ.get('HOST', '127.0.0.1')
     app.run(host=host, port=port, debug=False)

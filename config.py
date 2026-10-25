@@ -11,7 +11,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB max file upload
+    MAX_CONTENT_LENGTH = int(os.environ.get('MAX_CONTENT_LENGTH', 2 * 1024 * 1024 * 1024))  # 2GB max file upload
     SSH_CONNECT_TIMEOUT = 10
     SSH_BANNER_TIMEOUT = 10
     SSH_IDLE_TIMEOUT = 1800  # 30 minutes

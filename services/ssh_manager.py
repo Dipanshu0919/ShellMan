@@ -4,6 +4,7 @@ import socket
 import threading
 import logging
 import paramiko
+from contextlib import contextmanager
 from typing import Optional, Dict, Tuple
 
 logger = logging.getLogger('shellman.ssh')
@@ -23,14 +24,14 @@ class SSHConnectionManager:
                 cls._instance = super(SSHConnectionManager, cls).__new__(cls)
                 cls._instance._clients: Dict[int, Tuple[paramiko.SSHClient, float]] = {}
                 cls._instance._client_lock = threading.Lock()
-                cls._instance._server_locks: Dict[int, threading.Lock] = {}
+                cls._instance._server_locks: Dict[int, threading.RLock] = {}
                 cls._instance._sftp: Dict[int, Tuple[paramiko.SSHClient, paramiko.SFTPClient]] = {}
             return cls._instance
 
-    def _get_server_lock(self, server_id: int) -> threading.Lock:
+    def _get_server_lock(self, server_id: int) -> threading.RLock:
         with self._client_lock:
             if server_id not in self._server_locks:
-                self._server_locks[server_id] = threading.Lock()
+                self._server_locks[server_id] = threading.RLock()
             return self._server_locks[server_id]
 
     def _create_client(self, server) -> paramiko.SSHClient:
@@ -238,23 +239,38 @@ class SSHConnectionManager:
         channel.settimeout(0.0)  # Non-blocking recv
         return client, channel
 
-    def open_sftp(self, server) -> Tuple[paramiko.SSHClient, paramiko.SFTPClient]:
+    def close_sftp(self, server_id: int):
+        """Cleanly closes and purges any cached SFTP session for a server."""
+        with self._client_lock:
+            entry = self._sftp.pop(server_id, None)
+            if entry:
+                _, cached_sftp = entry
+                try:
+                    cached_sftp.close()
+                except Exception:
+                    pass
+
+    def open_sftp(self, server, force_new: bool = False) -> Tuple[paramiko.SSHClient, paramiko.SFTPClient]:
         """
         Returns the pooled client plus ONE shared SFTP session per server.
-        Reusing the session avoids leaking a channel + remote sftp-server
-        process on every file-manager call. Do NOT close the returned sftp
-        in callers; use SFTPService._open_fast_sftp for dedicated channels.
+        Thread-safe: validated channel health and sets non-hanging timeouts.
         """
         client = self.get_client(server)
         with self._client_lock:
+            if force_new:
+                self._sftp.pop(server.id, None)
+
             entry = self._sftp.get(server.id)
             if entry:
                 cached_client, cached_sftp = entry
                 try:
+                    channel = cached_sftp.sock
                     alive = (
                         cached_client is client
-                        and cached_sftp.sock is not None
-                        and not cached_sftp.sock.closed
+                        and channel is not None
+                        and not channel.closed
+                        and channel.get_transport() is not None
+                        and channel.get_transport().is_active()
                     )
                 except Exception:
                     alive = False
@@ -267,8 +283,31 @@ class SSHConnectionManager:
                 self._sftp.pop(server.id, None)
 
             sftp = client.open_sftp()
+            try:
+                if sftp.get_channel():
+                    sftp.get_channel().settimeout(12.0)
+            except Exception:
+                pass
             self._sftp[server.id] = (client, sftp)
             return client, sftp
+
+    @contextmanager
+    def sftp_context(self, server):
+        """
+        Thread-safe context manager for SFTP operations on a server.
+        Acquires the per-server lock to prevent packet interleaving and
+        automatically closes the cached session on channel errors.
+        """
+        lock = self._get_server_lock(server.id)
+        with lock:
+            client, sftp = self.open_sftp(server)
+            try:
+                yield sftp
+            except Exception as exc:
+                err_str = str(exc).lower()
+                if any(k in err_str for k in ('closed', 'eof', 'socket', 'transport', 'packet', 'broken pipe', 'not active')):
+                    self.close_sftp(server.id)
+                raise
 
     def disconnect(self, server_id: int):
         with self._client_lock:

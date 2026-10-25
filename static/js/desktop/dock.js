@@ -533,9 +533,15 @@ const DesktopDock = {
   init(dockEl) {
     this.dockEl = dockEl || document.getElementById('desktopDock');
     if (!this.dockEl) return;
+    this.wrapperEl = this.dockEl.closest('.desktop-dock-wrapper') || document.getElementById('dockWrapper');
 
     this.apps = DesktopCustomizer.getDockApps();
     this.render();
+
+    // Restore saved dock visibility state
+    if (localStorage.getItem('shellman_dock_hidden') === 'true' && this.wrapperEl) {
+      this.wrapperEl.classList.add('dock-hidden');
+    }
 
     // Hook into WindowManager state changes to update running dots
     if (window.WindowManager) {
@@ -545,17 +551,46 @@ const DesktopDock = {
     }
   },
 
+  toggleHide(forceState = null) {
+    if (!this.wrapperEl) {
+      this.wrapperEl = this.dockEl ? this.dockEl.closest('.desktop-dock-wrapper') : document.getElementById('dockWrapper');
+    }
+    if (!this.wrapperEl) return;
+
+    const willHide = forceState !== null ? forceState : !this.wrapperEl.classList.contains('dock-hidden');
+    this.wrapperEl.classList.toggle('dock-hidden', willHide);
+    localStorage.setItem('shellman_dock_hidden', willHide ? 'true' : 'false');
+
+    if (window.showToast) {
+      window.showToast(willHide ? 'Dock minimized (Click bottom bar to restore)' : 'Dock visible', 'info', 1800);
+    }
+  },
+
   render() {
     if (!this.dockEl) return;
     this.apps = DesktopCustomizer.getDockApps();
-    this.dockEl.innerHTML = this.apps.map(app => `
+
+    const appsHtml = this.apps.map(app => `
       <div class="dock-item" data-app="${app.id}" data-tooltip="${app.title}" onclick="DesktopDock.handleDockClick('${app.id}')" oncontextmenu="DesktopDock.handleContextMenu(event, '${app.id}')">
         <div class="dock-tile" style="background: ${app.gradient};">
           ${app.icon}
         </div>
         <span class="running-dot"></span>
       </div>
-    `).join('') + `<div class="dock-active-pill" id="dockActivePill"></div>`;
+    `).join('');
+
+    const toggleBtnHtml = `
+      <div class="dock-sep"></div>
+      <div class="dock-item dock-toggle-item" id="dockToggleBtn" data-tooltip="Hide Dock" onclick="DesktopDock.toggleHide()" title="Hide Dock">
+        <div class="dock-tile dock-toggle-tile">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20h16M12 4v11M8 11l4 4 4-4"/>
+          </svg>
+        </div>
+      </div>
+    `;
+
+    this.dockEl.innerHTML = appsHtml + toggleBtnHtml + `<div class="dock-active-pill" id="dockActivePill"></div>`;
 
     if (window.WindowManager) {
       this.updateRunningIndicators(window.WindowManager.windows, window.WindowManager.activeWindowId);
@@ -602,6 +637,11 @@ const DesktopDock = {
         label: 'Customize Desktop & Dock...',
         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
         action: () => DesktopCustomizer.openCustomizerModal()
+      },
+      {
+        label: 'Hide Dock',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16M12 4v11M8 11l4 4 4-4"/></svg>',
+        action: () => DesktopDock.toggleHide(true)
       }
     ];
 
@@ -621,7 +661,7 @@ const DesktopDock = {
     });
 
     let activeItem = null;
-    this.dockEl.querySelectorAll('.dock-item').forEach(item => {
+    this.dockEl.querySelectorAll('.dock-item[data-app]').forEach(item => {
       const appId = item.dataset.app;
       if (runningAppIds.has(appId)) {
         item.classList.add('running');

@@ -289,8 +289,14 @@
     <div class="windows-container" id="windowsContainer"></div>
 
     <!-- 3. Floating Application Dock -->
-    <div class="desktop-dock-wrapper">
+    <div class="desktop-dock-wrapper" id="dockWrapper">
       <div class="desktop-dock" id="desktopDock"></div>
+      <button type="button" class="dock-peek-trigger" id="dockPeekTrigger" onclick="DesktopDock.toggleHide()" title="Show Dock (Click to restore)">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16M12 20V9M8 13l4-4 4 4"/>
+        </svg>
+        <span>Show Dock</span>
+      </button>
     </div>
   </main>
 </div>
@@ -329,6 +335,10 @@
   <div class="ctx-item" onclick="WindowManager.minimizeAll()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="4" y1="12" x2="20" y2="12"></line></svg>
     Minimize All Windows
+  </div>
+  <div class="ctx-item" onclick="DesktopDock.toggleHide()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M12 4v11M8 11l4 4 4-4"/></svg>
+    Toggle Dock (Hide / Show)
   </div>
   <div class="ctx-sep"></div>
   <div class="ctx-item" onclick="DesktopApps.launch('settings')">

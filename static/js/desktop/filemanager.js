@@ -318,6 +318,8 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         let historyBack = [];
         let historyFwd = [];
         let isPropsOpen = true;
+        let activeListAbort = null;
+        let activeStatAbort = null;
 
         const getTypeDescription = (item) => {
           if (item.is_dir) return 'Folder';
@@ -1392,10 +1394,17 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
             // Asynchronously fetch folder item count if directory and not already cached
             if (isDir && item.items_count === undefined) {
-              fetch(`/api/servers/${this.serverId}/files/stat?path=${encodeURIComponent(item.path)}`)
+              if (activeStatAbort) {
+                try { activeStatAbort.abort(); } catch (_) {}
+              }
+              activeStatAbort = new AbortController();
+              const reqPath = item.path;
+              fetch(`/api/servers/${this.serverId}/files/stat?path=${encodeURIComponent(reqPath)}`, {
+                signal: activeStatAbort.signal
+              })
                 .then(r => r.json())
                 .then(res => {
-                  if (res.success && res.data) {
+                  if (res.success && res.data && reqPath === item.path) {
                     item.items_count = res.data.items_count;
                     const countEl = propsContent.querySelector(`#propsItemCount_${fileWinId}`);
                     if (countEl) countEl.textContent = res.data.items_count !== null ? `${res.data.items_count} items` : '-';
@@ -1697,11 +1706,30 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         };
 
         const loadDir = async (path, pushToHistory = true) => {
+          if (!path) return;
+          // Normalize leading/consecutive slashes
+          path = path.trim();
+          if (!path.startsWith('~')) {
+            path = '/' + path.replace(/^\/+/, '').replace(/\/+/g, '/');
+          }
+
+          // Abort previous in-flight directory list request
+          if (activeListAbort) {
+            try { activeListAbort.abort(); } catch (_) {}
+          }
+          activeListAbort = new AbortController();
+
+          // Abort pending item stat request so it doesn't race
+          if (activeStatAbort) {
+            try { activeStatAbort.abort(); } catch (_) {}
+            activeStatAbort = null;
+          }
+
+          const previousItems = items;
+          const previousCurrentPath = currentPath;
+          const previousParentPath = parentPath;
+
           try {
-            if (pushToHistory && currentPath && currentPath !== path) {
-              historyBack.push(currentPath);
-              historyFwd = [];
-            }
             selectedPaths.clear();
             updateSelectionUI();
 
@@ -1727,13 +1755,31 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               </div>
             `).join('');
 
-            const resp = await fetch(`/api/servers/${this.serverId}/files/list?path=${encodeURIComponent(path)}`);
+            const resp = await fetch(`/api/servers/${this.serverId}/files/list?path=${encodeURIComponent(path)}`, {
+              signal: activeListAbort.signal
+            });
             const res = await resp.json();
             if (!res.success) {
-              if (path !== '/') return loadDir('/', false);
-              DesktopModal.alert({ title: 'SFTP Error', message: res.error || 'Failed to list directory contents.', type: 'danger' });
+              // Restore previous items without getting stuck on skeleton state
+              items = previousItems;
+              currentPath = previousCurrentPath;
+              parentPath = previousParentPath;
+              renderViews();
+              updatePropertiesPane();
+
+              DesktopModal.alert({
+                title: 'Cannot Open Directory',
+                message: res.error || `Failed to open "${path}". Please verify server permissions.`,
+                type: 'danger'
+              });
               return;
             }
+
+            if (pushToHistory && currentPath && currentPath !== res.data.current_path) {
+              historyBack.push(currentPath);
+              historyFwd = [];
+            }
+
             currentPath = res.data.current_path;
             parentPath = res.data.parent_path;
             items = res.data.items || [];
@@ -1749,6 +1795,12 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             renderViews();
             updatePropertiesPane();
           } catch (e) {
+            if (e.name === 'AbortError') return;
+            items = previousItems;
+            currentPath = previousCurrentPath;
+            parentPath = previousParentPath;
+            renderViews();
+            updatePropertiesPane();
             tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--accent-rose);">Error: ${e}</td></tr>`;
             gridView.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:2rem; color:var(--accent-rose);">Error: ${e}</div>`;
           }
@@ -1756,12 +1808,17 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
         const renderBreadcrumb = (path) => {
           const parts = path.split('/').filter(p => p.length > 0);
-          let html = `<span class="bc-segment" style="cursor:pointer; font-weight:700; color:var(--accent-primary);" data-path="/">/</span>`;
+          let html = `<span class="bc-segment" style="cursor:pointer; font-weight:700; color:var(--accent-primary);" data-path="/" title="Root (/)">/</span>`;
+          if (parts.length === 0) {
+            bc.innerHTML = html;
+            return;
+          }
           let acc = '';
           for (let i = 0; i < parts.length; i++) {
             acc += '/' + parts[i];
             const t = acc;
-            html += `<span style="color:var(--text-muted); margin:0 3px;">/</span><span class="bc-segment" style="cursor:pointer; color:var(--text-secondary);" data-path="${t}">${parts[i]}</span>`;
+            const isLast = (i === parts.length - 1);
+            html += `<span style="color:var(--text-muted); opacity:0.4; margin:0 5px; font-size:11px; user-select:none;">›</span><span class="bc-segment" style="cursor:pointer; color:${isLast ? 'var(--text-primary)' : 'var(--text-secondary)'}; font-weight:${isLast ? '600' : '400'};" data-path="${t}">${escapeHtml(parts[i])}</span>`;
           }
           bc.innerHTML = html;
         };
@@ -3273,6 +3330,12 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             }
           }
 
+          const proceedWithOptions = (finalFiles, overwriteChoice) => {
+            showUploadOptionsModal(finalFiles, overwriteChoice, destDir, (mode) => {
+              executeUpload(finalFiles, overwriteChoice, destDir, mode);
+            });
+          };
+
           if (conflicts.length > 0) {
             showUploadConflictModal(conflicts, (choice) => {
               if (choice === 'cancel') return;
@@ -3288,44 +3351,308 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   return;
                 }
               }
-              executeUpload(finalFiles, overwrite, destDir);
+              proceedWithOptions(finalFiles, overwrite);
             });
           } else {
-            executeUpload(itemsToUpload, true, destDir);
+            proceedWithOptions(itemsToUpload, true);
           }
         };
 
-        const executeUpload = (uploadItems, overwrite, destDir = currentPath) => {
+        const showUploadOptionsModal = (uploadItems, overwrite, destDir, onProceed) => {
+          const appContainer = bodyEl.querySelector(`#fapp_${fileWinId}`);
+          const totalFiles = uploadItems.length;
+          const totalBytes = uploadItems.reduce((acc, it) => acc + (it.file.size || 0), 0);
+          const formattedSize = totalBytes > 1024 * 1024 ? `${(totalBytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(totalBytes / 1024))} KB`;
+          const savedMode = localStorage.getItem('sm_upload_mode') || 'turbo';
+
+          const backdrop = document.createElement('div');
+          backdrop.className = 'file-modal-backdrop';
+          backdrop.style.zIndex = '1000';
+          backdrop.innerHTML = `
+            <div class="file-modal-box" style="max-width:460px; width:95%;">
+              <div class="file-modal-header" style="padding:0.75rem 1rem; border-bottom:1px solid rgba(255,255,255,0.08);">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <svg style="width:16px;height:16px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span class="file-modal-title" style="font-size:0.85rem; font-weight:700;">Upload Mode & Performance</span>
+                </div>
+                <button class="win-btn win-close" id="optClose">×</button>
+              </div>
+
+              <div class="file-modal-body" style="padding:1rem; display:flex; flex-direction:column; gap:0.85rem;">
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:var(--radius-sm); padding:0.55rem 0.75rem; display:flex; justify-content:space-between; align-items:center; font-size:0.74rem;">
+                  <div>
+                    <span style="color:#64748b;">Payload: </span>
+                    <span style="color:#f8fafc; font-weight:600;">${totalFiles} item${totalFiles > 1 ? 's' : ''} (${formattedSize})</span>
+                  </div>
+                  <div style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right;">
+                    <span style="color:#64748b;">Destination: </span>
+                    <span style="color:var(--sm-accent); font-family:var(--font-mono); font-size:0.7rem;" title="${escapeHtml(destDir)}">${escapeHtml(destDir)}</span>
+                  </div>
+                </div>
+
+                <div style="font-size:0.73rem; color:var(--text-secondary); margin-bottom:-2px;">Select upload speed & RAM profile:</div>
+
+                <!-- Option 1: Eco Mode -->
+                <label class="upload-mode-card" style="display:flex; align-items:flex-start; gap:0.75rem; padding:0.75rem; border-radius:var(--radius-sm); border:1px solid ${savedMode === 'eco' ? 'var(--sm-accent)' : 'rgba(255,255,255,0.08)'}; background:${savedMode === 'eco' ? 'color-mix(in srgb, var(--sm-accent) 8%, transparent)' : 'rgba(0,0,0,0.2)'}; cursor:pointer; transition:all 0.15s ease;">
+                  <input type="radio" name="uploadMode_${fileWinId}" value="eco" ${savedMode === 'eco' ? 'checked' : ''} style="margin-top:2px;">
+                  <div style="flex:1;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+                      <span style="font-size:0.78rem; font-weight:700; color:#f8fafc;">Default / Eco Mode</span>
+                      <span style="font-size:0.65rem; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); border-radius:3px; padding:1px 5px; font-weight:600;">Max 50MB RAM</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:#94a3b8; line-height:1.35;">
+                      Low memory mode. Slices files into 50MB batches (max 50 files). Best for low-spec PCs, mobile devices, or servers with limited free RAM.
+                    </div>
+                  </div>
+                </label>
+
+                <!-- Option 2: Turbo Mode -->
+                <label class="upload-mode-card" style="display:flex; align-items:flex-start; gap:0.75rem; padding:0.75rem; border-radius:var(--radius-sm); border:1px solid ${savedMode === 'turbo' ? 'var(--sm-accent)' : 'rgba(255,255,255,0.08)'}; background:${savedMode === 'turbo' ? 'color-mix(in srgb, var(--sm-accent) 8%, transparent)' : 'rgba(0,0,0,0.2)'}; cursor:pointer; transition:all 0.15s ease;">
+                  <input type="radio" name="uploadMode_${fileWinId}" value="turbo" ${savedMode === 'turbo' ? 'checked' : ''} style="margin-top:2px;">
+                  <div style="flex:1;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+                      <span style="font-size:0.78rem; font-weight:700; color:#f8fafc;">Turbo High Speed Mode</span>
+                      <span style="font-size:0.65rem; background:rgba(99,102,241,0.15); color:#818cf8; border:1px solid rgba(99,102,241,0.3); border-radius:3px; padding:1px 5px; font-weight:600;">Max 300MB RAM</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:#94a3b8; line-height:1.35;">
+                      Maximum transfer throughput. Uses large 300MB batches (max 200 files). Best when both client and server have ample RAM available.
+                    </div>
+                  </div>
+                </label>
+
+                <div style="display:flex; align-items:center; gap:0.45rem; margin-top:2px;">
+                  <input type="checkbox" id="optRemember_${fileWinId}" style="cursor:pointer;" ${localStorage.getItem('sm_upload_remember') === 'true' ? 'checked' : ''}>
+                  <label for="optRemember_${fileWinId}" style="font-size:0.7rem; color:#94a3b8; cursor:pointer;">Remember choice for this session</label>
+                </div>
+              </div>
+
+              <div class="file-modal-footer" style="padding:0.65rem 1rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; gap:0.5rem;">
+                <button class="btn btn-ghost btn-sm" id="optCancel" style="font-size:0.74rem;">Cancel</button>
+                <button class="btn btn-primary btn-sm" id="optStart" style="font-size:0.74rem; font-weight:600; display:flex; align-items:center; gap:0.35rem;">
+                  <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span>Start Upload</span>
+                </button>
+              </div>
+            </div>
+          `;
+          appContainer.appendChild(backdrop);
+
+          const cards = backdrop.querySelectorAll('.upload-mode-card');
+          cards.forEach(card => {
+            const rad = card.querySelector('input[type="radio"]');
+            rad.addEventListener('change', () => {
+              cards.forEach(c => {
+                c.style.borderColor = 'rgba(255,255,255,0.08)';
+                c.style.background = 'rgba(0,0,0,0.2)';
+              });
+              if (rad.checked) {
+                card.style.borderColor = 'var(--sm-accent)';
+                card.style.background = 'color-mix(in srgb, var(--sm-accent) 8%, transparent)';
+              }
+            });
+          });
+
+          const close = () => { if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); };
+          backdrop.querySelector('#optClose').onclick = close;
+          backdrop.querySelector('#optCancel').onclick = close;
+
+          backdrop.querySelector('#optStart').onclick = () => {
+            const selectedRad = backdrop.querySelector(`input[name="uploadMode_${fileWinId}"]:checked`);
+            const chosenMode = selectedRad ? selectedRad.value : 'turbo';
+            const remember = backdrop.querySelector(`#optRemember_${fileWinId}`).checked;
+
+            if (remember) {
+              localStorage.setItem('sm_upload_mode', chosenMode);
+              localStorage.setItem('sm_upload_remember', 'true');
+            } else {
+              localStorage.removeItem('sm_upload_remember');
+            }
+
+            close();
+            onProceed(chosenMode);
+          };
+        };
+
+        const executeUpload = async (uploadItems, overwrite, destDir = currentPath, mode = 'turbo') => {
+          const totalFiles = uploadItems.length;
           const totalSize = uploadItems.reduce((acc, it) => acc + (it.file.size || 0), 0);
-          const taskId = 'upl_' + Date.now();
 
-          // Show toast with real-time progress from server
-          startProgressToast(
-            taskId,
-            `Uploading ${uploadItems.length} item(s) (${(totalSize / 1024 / 1024).toFixed(1)} MB)`,
-            `Upload complete!`,
-            () => loadDir(currentPath, false)
-          );
+          let isCancelled = false;
+          let activeFetchAbort = null;
 
-          const formData = new FormData();
-          formData.append('dest_dir', destDir);
-          formData.append('overwrite', overwrite ? 'true' : 'false');
-          formData.append('task_id', taskId);
-          for (const it of uploadItems) {
-            formData.append('files', it.file, it.file.name);
-            formData.append('relative_paths', it.relativePath || it.file.name);
+          // Mode-specific batch configuration:
+          // Eco Mode: max 100 files or 50MB per chunk
+          // Turbo Mode: max 400 files or 300MB per chunk (fast tar streaming pipeline)
+          const isEco = (mode === 'eco');
+          const BATCH_FILE_LIMIT = isEco ? 100 : 400;
+          const BATCH_SIZE_LIMIT = isEco ? (50 * 1024 * 1024) : (300 * 1024 * 1024);
+
+          // Dedicated progress toast with a STOP button
+          const toastId = 'upl_toast_' + Date.now();
+          const toast = document.createElement('div');
+          toast.id = toastId;
+          toast.className = 'desktop-toast info';
+          toast.style.cssText = 'flex-direction:column; align-items:flex-start; gap:6px; min-width:340px; box-shadow:0 8px 24px rgba(0,0,0,0.5);';
+          toast.innerHTML = `
+            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+              <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                <span style="font-weight:600; font-size:0.8rem; color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:210px;">Uploading ${totalFiles} item(s)</span>
+                <span style="font-size:0.62rem; font-weight:700; text-transform:uppercase; border-radius:3px; padding:1px 4px; ${isEco ? 'background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(99,102,241,0.15); color:#818cf8; border:1px solid rgba(99,102,241,0.3);'}">${isEco ? 'Eco' : 'Turbo'}</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="upl-percent" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--sm-accent);">0%</span>
+                <button class="upl-stop-btn" title="Stop upload" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; border-radius:4px; font-size:0.68rem; padding:2px 7px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:3px;">
+                  <svg style="width:10px;height:10px;" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>
+                  Stop
+                </button>
+              </div>
+            </div>
+            <div style="width:100%; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
+              <div class="upl-bar" style="width:0%; height:100%; background:color-mix(in srgb, var(--sm-accent) 78%, #000); transition:width 0.2s ease;"></div>
+            </div>
+            <div class="upl-status" style="font-family:var(--font-mono); font-size:0.68rem; color:#94a3b8; width:100%; text-align:right;">Initializing...</div>
+          `;
+          const tc = document.getElementById('toastContainer');
+          if (tc) tc.appendChild(toast);
+
+          const percentEl = toast.querySelector('.upl-percent');
+          const barEl = toast.querySelector('.upl-bar');
+          const statEl = toast.querySelector('.upl-status');
+          const stopBtn = toast.querySelector('.upl-stop-btn');
+
+          if (stopBtn) {
+            stopBtn.onclick = () => {
+              isCancelled = true;
+              if (activeFetchAbort) {
+                try { activeFetchAbort.abort(); } catch (_) {}
+              }
+              stopBtn.disabled = true;
+              stopBtn.textContent = 'Stopping...';
+              if (statEl) {
+                statEl.textContent = 'Upload stopped by user.';
+                statEl.style.color = '#ef4444';
+              }
+              setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 2500);
+              loadDir(currentPath, false);
+              if (window.showToast) window.showToast('Upload stopped', 'info');
+            };
           }
 
-          fetch(`/api/servers/${this.serverId}/files/upload`, {
-            method: 'POST',
-            body: formData
-          }).then(r => r.json()).then(res => {
-            if (!res.success) {
-              DesktopModal.alert({ title: 'Upload Failed', message: res.error || 'Upload failed', type: 'danger' });
+          const updateProgress = (uploadedCount, uploadedBytes) => {
+            const pct = totalSize > 0 ? Math.min(100, Math.round((uploadedBytes / totalSize) * 100)) : Math.round((uploadedCount / totalFiles) * 100);
+            if (percentEl) percentEl.textContent = `${pct}%`;
+            if (barEl) barEl.style.width = `${pct}%`;
+            if (statEl) statEl.textContent = `${uploadedCount} of ${totalFiles} files (${(uploadedBytes / 1024 / 1024).toFixed(1)} / ${(totalSize / 1024 / 1024).toFixed(1)} MB)`;
+          };
+
+          const batches = [];
+          let currentBatch = [];
+          let currentBatchSize = 0;
+
+          for (const item of uploadItems) {
+            const sz = item.file.size || 0;
+            if (currentBatch.length > 0 && (currentBatch.length >= BATCH_FILE_LIMIT || (currentBatchSize + sz > BATCH_SIZE_LIMIT))) {
+              batches.push(currentBatch);
+              currentBatch = [];
+              currentBatchSize = 0;
             }
-          }).catch(err => {
-            DesktopModal.alert({ title: 'Upload Error', message: String(err), type: 'danger' });
-          });
+            currentBatch.push(item);
+            currentBatchSize += sz;
+          }
+          if (currentBatch.length > 0) batches.push(currentBatch);
+
+          let uploadedCount = 0;
+          let uploadedBytes = 0;
+          let errors = [];
+
+          try {
+            for (let bIndex = 0; bIndex < batches.length; bIndex++) {
+              if (isCancelled) break;
+
+              const batch = batches[bIndex];
+              const formData = new FormData();
+              formData.append('dest_dir', destDir);
+              formData.append('overwrite', overwrite ? 'true' : 'false');
+
+              let batchItemsAdded = 0;
+              for (const it of batch) {
+                try {
+                  // Converting to a memory Blob detaches the file from the local filesystem,
+                  // completely eliminating Chrome's net::ERR_UPLOAD_FILE_CHANGED if files change on disk.
+                  const buffer = await it.file.arrayBuffer();
+                  const blob = new Blob([buffer], { type: it.file.type || 'application/octet-stream' });
+                  formData.append('files', blob, it.file.name);
+                  formData.append('relative_paths', it.relativePath || it.file.name);
+                  batchItemsAdded++;
+                } catch (readErr) {
+                  errors.push(`${it.relativePath || it.file.name}: Skipped (could not be read locally)`);
+                }
+              }
+
+              if (batchItemsAdded === 0) continue;
+
+              activeFetchAbort = new AbortController();
+              let resp;
+              try {
+                resp = await fetch(`/api/servers/${this.serverId}/files/upload`, {
+                  method: 'POST',
+                  body: formData,
+                  signal: activeFetchAbort.signal
+                });
+
+                let res;
+                try {
+                  res = await resp.json();
+                } catch (_) {
+                  if (resp.status === 413) {
+                    throw new Error(`Upload batch exceeded server limit (HTTP 413).`);
+                  }
+                  throw new Error(`Server returned HTTP ${resp.status} on batch ${bIndex + 1}/${batches.length}`);
+                }
+
+                if (!res.success) {
+                  errors.push(res.error || `Batch ${bIndex + 1} failed`);
+                } else {
+                  uploadedCount += (res.uploaded_count !== undefined ? res.uploaded_count : batchItemsAdded);
+                  const batchBytes = batch.reduce((acc, it) => acc + (it.file.size || 0), 0);
+                  uploadedBytes += batchBytes;
+                  updateProgress(uploadedCount, uploadedBytes);
+                }
+              } catch (batchErr) {
+                if (isCancelled || batchErr.name === 'AbortError') break;
+                errors.push(`Batch ${bIndex + 1}/${batches.length}: ${batchErr.message || batchErr}`);
+              }
+            }
+
+            if (isCancelled) {
+              loadDir(currentPath, false);
+              return;
+            }
+
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (percentEl) percentEl.textContent = '100%';
+            if (barEl) barEl.style.width = '100%';
+            if (statEl) statEl.textContent = 'Upload complete!';
+            setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 2500);
+            loadDir(currentPath, false);
+
+            if (errors.length > 0) {
+              DesktopModal.alert({
+                title: 'Upload Completed with Warnings',
+                message: `Uploaded ${uploadedCount}/${totalFiles} files.\nSome items could not be written:\n` + errors.slice(0, 5).join('\n'),
+                type: 'warning'
+              });
+            }
+          } catch (err) {
+            if (isCancelled) return;
+            if (stopBtn) stopBtn.style.display = 'none';
+            if (statEl) {
+              statEl.textContent = 'Upload failed';
+              statEl.style.color = '#ef4444';
+            }
+            setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
+            DesktopModal.alert({ title: 'Upload Error', message: String(err.message || err), type: 'danger' });
+          }
         };
 
         // File and Folder picker triggers

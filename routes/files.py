@@ -264,37 +264,30 @@ def upload_file(server_id):
         return jsonify({'success': False, 'error': 'No files selected for upload'}), 400
 
     relative_paths = request.form.getlist('relative_paths')
-    total_files = len(uploaded_files)
-    uploaded_count = 0
-    errors = []
-
+    files_data = []
     for index, file in enumerate(uploaded_files):
-        rel_path = relative_paths[index] if (relative_paths and index < len(relative_paths) and relative_paths[index]) else file.filename
+        rel = relative_paths[index] if (relative_paths and index < len(relative_paths) and relative_paths[index]) else file.filename
+        files_data.append((rel, file.stream))
 
-        ok, msg = SFTPService.upload_file(
-            server,
-            dest_dir,
-            rel_path,
-            file.stream,
-            overwrite=overwrite,
-            task_id=task_id if total_files == 1 else f"{task_id}_{index}"
-        )
-        if ok:
-            uploaded_count += 1
-        else:
-            errors.append(f"{file.filename}: {msg}")
+    ok, uploaded_count, errors = SFTPService.upload_batch(
+        server,
+        dest_dir,
+        files_data,
+        overwrite=overwrite,
+        task_id=task_id
+    )
 
-    all_ok = (len(errors) == 0)
-    if not all_ok:
+    if not ok and uploaded_count == 0:
         return jsonify({
             'success': False,
-            'error': f"Uploaded {uploaded_count}/{total_files} files. Issues: {'; '.join(errors)}"
+            'error': f"Upload failed: {'; '.join(errors[:5])}"
         }), 400
 
     return jsonify({
         'success': True,
-        'message': f"Successfully uploaded {uploaded_count} file(s)",
-        'uploaded_count': uploaded_count
+        'message': f"Successfully uploaded {uploaded_count}/{len(files_data)} file(s)",
+        'uploaded_count': uploaded_count,
+        'errors': errors[:5] if errors else []
     })
 
 @files_bp.route('/api/servers/<int:server_id>/files/download')

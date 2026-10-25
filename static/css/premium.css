@@ -1150,6 +1150,110 @@ body { font-feature-settings: 'cv11', 'ss01'; }
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important;
 }
 
+/* --- 14.6 Dock Hide / Show Toggle --- */
+.dock-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--sm-line-strong, rgba(255, 255, 255, 0.14));
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.dock-toggle-item {
+  width: 44px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.dock-toggle-tile {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--sm-raised, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--sm-line-strong, rgba(255, 255, 255, 0.12));
+  color: var(--sm-text-2, #c3cad8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dock-toggle-item:hover {
+  transform: translateY(-4px) scale(1.08);
+}
+
+.dock-toggle-item:hover .dock-toggle-tile {
+  background: var(--sm-hover, rgba(255, 255, 255, 0.12));
+  color: var(--sm-accent, #38bdf8);
+  border-color: var(--sm-accent-line, rgba(56, 189, 248, 0.45));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px var(--sm-accent-soft, rgba(56, 189, 248, 0.2));
+}
+
+.desktop-dock-wrapper {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.desktop-dock-wrapper.dock-hidden .desktop-dock {
+  transform: translateY(calc(100% + 28px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.desktop-dock {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+}
+
+.dock-peek-trigger {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--sm-surface, #141821);
+  border: 1px solid var(--sm-line-strong, #2f374b);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  padding: 6px 20px 4px;
+  color: var(--sm-text-2, #c3cad8);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  z-index: 9005;
+}
+
+.desktop-dock-wrapper.dock-hidden .dock-peek-trigger {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dock-peek-trigger:hover {
+  background: var(--sm-raised, #1a1f2b);
+  color: var(--sm-accent, #38bdf8);
+  border-color: var(--sm-accent-line, #1d5473);
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.7), 0 0 14px var(--sm-accent-soft, rgba(56, 189, 248, 0.2));
+}
+
+.dock-peek-trigger svg {
+  color: var(--sm-accent, #38bdf8);
+  transition: transform 0.2s ease;
+}
+
+.dock-peek-trigger:hover svg {
+  transform: translateY(-2px);
+}
+
+
 /* ==========================================================================
    14. SHELLMAN POLISH — ACCENT THEMES, MOTION, SKELETONS & LIVE GAUGES
    ========================================================================== */
@@ -1417,6 +1521,110 @@ body { font-feature-settings: 'cv11', 'ss01'; }
   background: linear-gradient(90deg, #dc2626, #ef4444) !important;
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important;
 }
+
+/* --- 14.6 Dock Hide / Show Toggle --- */
+.dock-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--sm-line-strong, rgba(255, 255, 255, 0.14));
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.dock-toggle-item {
+  width: 44px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.dock-toggle-tile {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--sm-raised, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--sm-line-strong, rgba(255, 255, 255, 0.12));
+  color: var(--sm-text-2, #c3cad8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dock-toggle-item:hover {
+  transform: translateY(-4px) scale(1.08);
+}
+
+.dock-toggle-item:hover .dock-toggle-tile {
+  background: var(--sm-hover, rgba(255, 255, 255, 0.12));
+  color: var(--sm-accent, #38bdf8);
+  border-color: var(--sm-accent-line, rgba(56, 189, 248, 0.45));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 10px var(--sm-accent-soft, rgba(56, 189, 248, 0.2));
+}
+
+.desktop-dock-wrapper {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.desktop-dock-wrapper.dock-hidden .desktop-dock {
+  transform: translateY(calc(100% + 28px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.desktop-dock {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+}
+
+.dock-peek-trigger {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--sm-surface, #141821);
+  border: 1px solid var(--sm-line-strong, #2f374b);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  padding: 6px 20px 4px;
+  color: var(--sm-text-2, #c3cad8);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  z-index: 9005;
+}
+
+.desktop-dock-wrapper.dock-hidden .dock-peek-trigger {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dock-peek-trigger:hover {
+  background: var(--sm-raised, #1a1f2b);
+  color: var(--sm-accent, #38bdf8);
+  border-color: var(--sm-accent-line, #1d5473);
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.7), 0 0 14px var(--sm-accent-soft, rgba(56, 189, 248, 0.2));
+}
+
+.dock-peek-trigger svg {
+  color: var(--sm-accent, #38bdf8);
+  transition: transform 0.2s ease;
+}
+
+.dock-peek-trigger:hover svg {
+  transform: translateY(-2px);
+}
+
 
 /* === CODE LOADER (apply_code_loader.py) ============================================ */
 .code-loading {

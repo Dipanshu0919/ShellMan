@@ -24,16 +24,16 @@ COPY . .
 RUN mkdir -p /app/instance
 
 # Expose Web OS port
-EXPOSE 5000
+EXPOSE 9874
 
 # Environment configurations
 ENV PYTHONUNBUFFERED=1 \
     HOST=0.0.0.0 \
-    PORT=5000
+    PORT=9874
 
 # Persistent storage volume
 VOLUME ["/app/instance"]
 
 # Default start command (Gunicorn with gthread worker for WebSocket PTY compatibility)
-CMD ["gunicorn", "-k", "gthread", "--threads", "16", "--workers", "1", "-b", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "-k", "gthread", "--threads", "16", "--workers", "1", "-b", "0.0.0.0:9874", "app:app"]
 

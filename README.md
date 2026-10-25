@@ -321,14 +321,14 @@ Run ShellMan with a single Docker command. All encryption keys, server credentia
 
 ```bash
 docker run -d \
-  -p 5000:5000 \
+  -p 9874:9874 \
   -v shellman_data:/app/instance \
   --name shellman \
   --restart unless-stopped \
   dipanshu0919/shellman
 ```
 
-Navigate to `http://localhost:5000` to access your environment.
+Navigate to `http://localhost:9874` to access your environment.
 
 ### Option B: Docker Compose
 
@@ -373,7 +373,7 @@ python3 app.py
 
 Open your browser and navigate to:
 ```text
-http://127.0.0.1:5000
+http://127.0.0.1:9874
 ```
 
 ### First-Time Setup Wizard (No Default Credentials)
@@ -391,7 +391,7 @@ To deploy a live read-only or sandbox demonstration of ShellMan for colleagues o
 2. **Environment Variables**:
    ```ini
    HOST=0.0.0.0
-   PORT=5000
+   PORT=9874
    SHELLMAN_SECRET_KEY=generate-a-strong-secret-key-here
    ```
 3. **Persistent Volume**: Attach a persistent disk mount to `/app/instance` to retain the initialized demo account and sample sandbox nodes across restarts.
