@@ -544,11 +544,88 @@ const DesktopDock = {
       this.wrapperEl.classList.add('dock-hidden');
     }
 
+    this.initAutoHide();
+    this.applyAutoHide();
+
     // Hook into WindowManager state changes to update running dots
     if (window.WindowManager) {
       window.WindowManager.onWindowStateChange = (windows, activeId) => {
         this.updateRunningIndicators(windows, activeId);
       };
+    }
+  },
+
+  // ── Auto-hide: dock slides away while any visible window is maximized; hover the bottom
+  //    edge to peek. Right-click the dock's hide button (or any dock icon) to turn it on/off.
+  AUTOHIDE_KEY: 'shellman_dock_autohide',
+  isAutoHide() { return localStorage.getItem(this.AUTOHIDE_KEY) === 'true'; },
+  setAutoHide(on) {
+    localStorage.setItem(this.AUTOHIDE_KEY, on ? 'true' : 'false');
+    this.applyAutoHide();
+    if (window.showToast) window.showToast(on ? 'Dock auto-hide: ON (hides when an app is maximized)' : 'Dock auto-hide: OFF', 'info', 2200);
+  },
+  applyAutoHide() {
+    if (!this.wrapperEl) return;
+    let full = false;
+    const wm = window.WindowManager;
+    if (this.isAutoHide() && wm && window.innerWidth > 720) {
+      wm.windows.forEach(w => { if (w.isMaximized && !w.isMinimized && !w.isClosing) full = true; });
+    }
+    this.wrapperEl.classList.toggle('dock-autohide-active', full);
+    if (!full) this.wrapperEl.classList.remove('dock-peek');
+  },
+  initAutoHide() {
+    if (!this.wrapperEl || this._autoHideWired) return;
+    this._autoHideWired = true;
+    let hotspot = document.getElementById('dockHotspot');
+    if (!hotspot) {
+      hotspot = document.createElement('div');
+      hotspot.id = 'dockHotspot';
+      hotspot.className = 'dock-hotspot';
+      this.wrapperEl.appendChild(hotspot);
+    }
+    let leaveTimer = null;
+    const show = () => { clearTimeout(leaveTimer); if (this.wrapperEl.classList.contains('dock-autohide-active')) this.wrapperEl.classList.add('dock-peek'); };
+    const hide = () => { clearTimeout(leaveTimer); leaveTimer = setTimeout(() => this.wrapperEl.classList.remove('dock-peek'), 450); };
+    // The "Show Dock" tab stays visible while auto-hide has the dock tucked away.
+    const trig = document.getElementById('dockPeekTrigger');
+    if (trig) {
+      trig.onclick = () => {
+        if (this.wrapperEl.classList.contains('dock-hidden')) this.toggleHide(false);
+        else { show(); hide(); }          // reveal now, tuck away again after the pointer leaves
+      };
+      trig.addEventListener('mouseenter', show);
+      trig.addEventListener('mouseleave', hide);
+    }
+    hotspot.addEventListener('mouseenter', show);
+    hotspot.addEventListener('mouseleave', hide);
+    this.dockEl.addEventListener('mouseenter', show);
+    this.dockEl.addEventListener('mouseleave', hide);
+    window.addEventListener('resize', () => this.applyAutoHide());
+  },
+  autoHideMenuItem() {
+    const on = this.isAutoHide();
+    return {
+      label: on ? 'Auto-hide: On' : 'Auto-hide: Off',
+      icon: on
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="var(--sm-accent,#38bdf8)" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="4"/><polyline points="8 12.5 11 15.5 16 9"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/></svg>',
+      action: () => DesktopDock.setAutoHide(!on)
+    };
+  },
+  handleToggleContext(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const items = [
+      {
+        label: 'Hide Dock now',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16M12 4v11M8 11l4 4 4-4"/></svg>',
+        action: () => DesktopDock.toggleHide(true)
+      },
+      this.autoHideMenuItem()
+    ];
+    if (window.DesktopMenus && typeof window.DesktopMenus.showCustomMenu === 'function') {
+      window.DesktopMenus.showCustomMenu(e, items);
     }
   },
 
@@ -622,7 +699,7 @@ const DesktopDock = {
 
     const toggleBtnHtml = `
       <div class="dock-sep"></div>
-      <div class="dock-item dock-toggle-item" id="dockToggleBtn" data-tooltip="Hide Dock" onclick="DesktopDock.toggleHide()" title="Hide Dock">
+      <div class="dock-item dock-toggle-item" id="dockToggleBtn" data-tooltip="Hide Dock (right-click: auto-hide)" onclick="DesktopDock.toggleHide()" oncontextmenu="DesktopDock.handleToggleContext(event)" title="Hide Dock. Right-click for auto-hide">
         <div class="dock-tile dock-toggle-tile">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 20h16M12 4v11M8 11l4 4 4-4"/>
@@ -696,7 +773,8 @@ const DesktopDock = {
         label: 'Hide Dock',
         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16M12 4v11M8 11l4 4 4-4"/></svg>',
         action: () => DesktopDock.toggleHide(true)
-      }
+      },
+      DesktopDock.autoHideMenuItem()
     ];
 
     if (window.DesktopMenus && typeof window.DesktopMenus.showCustomMenu === 'function') {
@@ -705,6 +783,7 @@ const DesktopDock = {
   },
 
   updateRunningIndicators(windows, activeId) {
+    this.applyAutoHide();
     if (!this.dockEl) return;
     // an unpinned app opened or closed: rebuild the dock (render() calls us again)
     if (this.syncTemp(windows)) { this.render(); return; }

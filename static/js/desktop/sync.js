@@ -16,6 +16,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
     const defaultLocalPath = params.local_path || '~/';
     const defaultRemotePath = params.remote_path || '/var/www/';
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'sync',
       multiInstance: false,
@@ -607,4 +608,3 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
       }
     });
 };
-

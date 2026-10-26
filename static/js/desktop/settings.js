@@ -17,6 +17,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
     let currentTab = params.tab || 'servers';
     let serversList = window.DesktopServersList ? [...window.DesktopServersList] : [];
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'settings',
       multiInstance: false,
@@ -130,7 +131,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                     <div>
                       <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span style="font-weight:600; font-size:0.85rem; color:#f8fafc;">${escapeHtml(s.name)}</span>
-                        ${isCurrent ? '<span style="font-size:0.68rem; background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent); border:1px solid color-mix(in srgb, var(--sm-accent) 30%, transparent); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">ACTIVE NODE</span>' : ''}
+                        ${isCurrent ? '<span style="font:700 0.68rem/1 var(--font-mono, ui-monospace, monospace); color:var(--sm-accent); letter-spacing:.04em;">[ACTIVE]</span>' : ''}
                       </div>
                       <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
                         <span>${escapeHtml(s.username)}@${escapeHtml(s.host)}:${s.port}</span>
@@ -1779,4 +1780,3 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 DesktopAppsController.prototype.launchServers = function (params = {}) {
     return this.launchSettings({ tab: 'servers' });
 };
-

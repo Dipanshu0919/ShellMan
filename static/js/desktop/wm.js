@@ -109,6 +109,9 @@ class DesktopWindowManager {
       multiInstance = false
     } = options;
 
+    // Request scope created by the app right before this call (see requests.js)
+    const reqScope = window.RequestScope ? window.RequestScope.takePending() : null;
+
     // If single-instance app is already open, focus and restore it!
     if (!multiInstance) {
       for (const [existingId, win] of this.windows.entries()) {
@@ -243,7 +246,8 @@ class DesktopWindowManager {
       isMinimized: false,
       restoreRect: null,
       onResize,
-      onClose
+      onClose,
+      scope: reqScope
     };
 
     this.windows.set(id, winObj);
@@ -361,7 +365,10 @@ class DesktopWindowManager {
       win.taskbarPill.classList.remove('minimized');
     }
 
+    win.el.classList.remove('minimizing');
     setTimeout(() => {
+      // Stop base winOpen animation from replaying when 'restoring' is removed.
+      win.el.classList.add('no-anim');
       win.el.classList.remove('restoring');
     }, 180);
 
@@ -414,6 +421,7 @@ class DesktopWindowManager {
         win.onResize(win.el.offsetWidth, win.el.offsetHeight);
       }, 50);
     }
+    this.notifyStateChange();   // dock auto-hide follows maximize state
   }
 
   maximizeWindow(id) {
@@ -427,6 +435,8 @@ class DesktopWindowManager {
     if (!win || win.isClosing) return;
 
     win.isClosing = true;
+    // Cancel every request this window started (and kill the remote jobs behind them)
+    if (win.scope && window.RequestScope) window.RequestScope.abortScope(win.scope);
     win.el.classList.add('closing');
 
     if (win.taskbarPill && win.taskbarPill.parentNode) {
@@ -967,4 +977,3 @@ if (!window._origAlert) {
     }
   };
 }
-

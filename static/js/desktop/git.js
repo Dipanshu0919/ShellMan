@@ -14,6 +14,7 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
     let deploymentsList = [];
     let editingDep = null;
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'git',
       multiInstance: false,
@@ -492,4 +493,3 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
       }
     });
 };
-

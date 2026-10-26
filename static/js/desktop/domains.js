@@ -22,6 +22,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
     let domainFilterStatus = 'ALL';
     let searchQuery = '';
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     const winObj = WindowManager.createWindow({
       appId: 'domains',
       multiInstance: false,
@@ -2079,4 +2080,3 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
     return winObj;
 };
-

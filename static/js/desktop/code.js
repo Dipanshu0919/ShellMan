@@ -150,6 +150,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
     }
     const initialRoot = params.root || (params.isDir && params.path ? params.path : '~');
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'code',
       multiInstance: false,
@@ -1802,4 +1803,3 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
       }
     });
 };
-

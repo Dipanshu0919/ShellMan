@@ -201,7 +201,8 @@ function fitDesktopIcons() {
   c.style.setProperty('--ic', '1');
   const W = c.clientWidth, H = c.clientHeight, n = c.children.length;
   if (!W || !H || !n) return;
-  const CELL_W = 124, CELL_H = 104;
+  const sz = parseFloat(getComputedStyle(c).getPropertyValue('--sz')) || 1;   // Compact / Normal / Large
+  const CELL_W = 124 * sz, CELL_H = 104 * sz;
   let best = 0.55;
   for (let s = 1; s >= 0.55; s -= 0.05) {
     const rows = Math.max(1, Math.floor(H / (CELL_H * s)));

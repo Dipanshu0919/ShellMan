@@ -21,7 +21,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
     //    Opens /api/tasks/<task_id>/progress and updates a live
     //    toast with transferred / total bytes and percentage.
     // ─────────────────────────────────────────────────────────────
-    function streamTaskProgress(taskId, title, successMsg, onComplete) {
+    function streamTaskProgress(taskId, title, successMsg, onComplete, cancellable = true) {
       const toastId = 'sse_toast_' + Date.now();
       const toast = document.createElement('div');
       toast.id = toastId;
@@ -30,7 +30,10 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
       toast.innerHTML = `
         <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
           <span style="font-weight:600; font-size:0.8rem; color:#f8fafc;">${title}</span>
-          <span class="sse-percent" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--sm-accent);">0%</span>
+          <span style="display:inline-flex; align-items:center; gap:8px;">
+            <span class="sse-percent" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--sm-accent);">0%</span>
+            ${cancellable ? '<button type="button" class="sse-cancel" title="Cancel" style="background:none;border:0;color:#94a3b8;cursor:pointer;font-size:1rem;line-height:1;padding:0 2px;">&times;</button>' : ''}
+          </span>
         </div>
         <div style="width:100%; height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
           <div class="sse-bar" style="width:0%; height:100%; background:color-mix(in srgb, var(--sm-accent) 78%, #000); transition:width 0.2s ease;"></div>
@@ -41,6 +44,12 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
       if (tc) tc.appendChild(toast);
 
       const eventSource = new EventSource(`/api/tasks/${taskId}/progress`);
+      const cancelBtn = toast.querySelector('.sse-cancel');
+      if (cancelBtn) cancelBtn.onclick = () => {
+        fetch(`/api/tasks/${taskId}/cancel`, { method: 'POST', keepalive: true }).catch(() => {});
+        cancelBtn.disabled = true;
+        const st = toast.querySelector('.sse-status'); if (st) st.textContent = 'Cancelling...';
+      };
 
       let lastTransferred = 0;
       let lastUpdateTime = Date.now();
@@ -87,6 +96,15 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             if (statEl && !stallShown) statEl.textContent = `${transferredMB} MB written`;
           }
 
+          if (data.status === 'cancelled') {
+            clearInterval(stallCheck);
+            eventSource.close();
+            toast.className = 'desktop-toast info';
+            toast.innerHTML = `<div style="font-weight:600; color:#cbd5e1;">Cancelled</div>`;
+            setTimeout(() => toast.remove(), 2500);
+            return;
+          }
+
           if (data.status === 'done') {
             clearInterval(stallCheck);
             eventSource.close();
@@ -111,14 +129,15 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
       };
     }
 
-    const startProgressToast = (taskId, title, successMsg, onComplete) => {
-      streamTaskProgress(taskId, title, successMsg, onComplete);
+    const startProgressToast = (taskId, title, successMsg, onComplete, cancellable = true) => {
+      streamTaskProgress(taskId, title, successMsg, onComplete, cancellable);
     };
 
     const downloadFile = (filePath) => {
       window.location.href = `/api/servers/${this.serverId}/files/download?path=${encodeURIComponent(filePath)}`;
     };
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'files',
       multiInstance: false,
@@ -1055,14 +1074,14 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 <div id="importErr" style="display:none; color:#ef4444; font-size:0.72rem; margin-top:0.35rem;"></div>
               </div>
             `,
-            async (modalEl) => {
+            async (modalEl, modalSignal) => {
               const raw = modalEl.querySelector('#importPayloadInp').value.trim();
               const errEl = modalEl.querySelector('#importErr');
               if (!raw) return false;
               try {
                 const parsed = JSON.parse(raw);
                 const resp = await fetch('/api/actions/import', {
-                  method: 'POST',
+                  signal: modalSignal,                  method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(parsed)
                 });
@@ -1181,7 +1200,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                           <div id="delActErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.3rem;"></div>
                         </div>
                       `,
-                      async (modalEl) => {
+                      async (modalEl, modalSignal) => {
                         const errEl = modalEl.querySelector(`#delActErr_${fileWinId}`);
                         try {
                           const resp = await fetch(`/api/actions/${act.id}`, { method: 'DELETE' });
@@ -2595,7 +2614,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         });
 
         // Dedicated Modal Helper for File Manager
-        const showModal = (title, bodyHtml, onConfirm, confirmText = 'Confirm', isDanger = false) => {
+        const showModal = (title, bodyHtml, onConfirm, confirmText = 'Confirm', isDanger = false, modalOpts = {}) => {
           const appContainer = bodyEl.querySelector(`#fapp_${fileWinId}`);
           const backdrop = document.createElement('div');
           backdrop.className = 'file-modal-backdrop';
@@ -2614,30 +2633,45 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
           `;
           appContainer.appendChild(backdrop);
 
+          const abortCtl = new AbortController();
           const closeModal = () => {
             if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
           };
+          // X / Cancel / Esc: abort every request the dialog started, tell the server to
+          // stop the work, then close. A confirmed success closes with closeModal only.
+          const dismissModal = () => {
+            abortCtl.abort();
+            try { if (typeof modalOpts.onDismiss === 'function') modalOpts.onDismiss(); } catch (_) {}
+            closeModal();
+          };
 
-          backdrop.querySelector(`#mClose_${fileWinId}`).onclick = closeModal;
-          backdrop.querySelector(`#mCancel_${fileWinId}`).onclick = closeModal;
+          backdrop.querySelector(`#mClose_${fileWinId}`).onclick = dismissModal;
+          backdrop.querySelector(`#mCancel_${fileWinId}`).onclick = dismissModal;
 
           const confirmBtn = backdrop.querySelector(`#mConfirm_${fileWinId}`);
           confirmBtn.onclick = async () => {
             confirmBtn.disabled = true;
-            const ok = await onConfirm(backdrop);
+            let ok;
+            try {
+              ok = await onConfirm(backdrop, abortCtl.signal);
+            } catch (e) {
+              if (abortCtl.signal.aborted) return;
+              throw e;
+            }
+            if (abortCtl.signal.aborted) return;
             if (ok !== false) closeModal();
             else confirmBtn.disabled = false;
           };
 
           backdrop.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
-            else if (e.key === 'Enter') {
+            if (e.key === 'Escape') dismissModal();
+            else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
               e.preventDefault();
               confirmBtn.click();
             }
           });
 
-          return { backdrop, closeModal };
+          return { backdrop, closeModal, signal: abortCtl.signal };
         };
 
         // Image Preview Modal
@@ -2752,7 +2786,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 <div id="copyMoveErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(244,63,94,0.1); border-radius:4px;"></div>
               </div>
             `,
-            async (modalEl) => {
+            async (modalEl, modalSignal) => {
               const destInp = modalEl.querySelector(`#destDirInp_${fileWinId}`);
               const targetDir = destInp.value.trim();
               const errEl = modalEl.querySelector(`#copyMoveErr_${fileWinId}`);
@@ -2773,6 +2807,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               try {
                 const endpoint = `/api/servers/${this.serverId}/files/batch-${action}`;
                 const resp = await fetch(endpoint, {
+                  signal: modalSignal,
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ paths, dest_dir: targetDir, task_id: taskId })
@@ -2817,7 +2852,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 <div id="renameErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(244,63,94,0.1); border-radius:4px;"></div>
               </div>
             `,
-            async (modalEl) => {
+            async (modalEl, modalSignal) => {
               const inp = modalEl.querySelector(`#renameInp_${fileWinId}`);
               const errEl = modalEl.querySelector(`#renameErr_${fileWinId}`);
               const newName = inp.value.trim();
@@ -2840,6 +2875,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
               try {
                 const resp = await fetch(`/api/servers/${this.serverId}/files/rename`, {
+                  signal: modalSignal,
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ old_path: item.path, new_path: newPath })
@@ -2878,70 +2914,273 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         // Compress uses SSE
         // ─────────────────────────────────────────────────
         const showCompressModal = (paths, defaultName) => {
-          const baseName = (defaultName || 'archive').replace(/\.[^.]+$/, '');
-          const { backdrop } = showModal(
+          const baseName = (defaultName || 'archive').replace(/\.(tar\.gz|tgz|tar|zip|gz)$/i, '');
+          const esc = (t) => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+          const QUICK = [
+            { p: 'node_modules', d: 'Node dependencies' },
+            { p: '.git', d: 'Git history' },
+            { p: '__pycache__', d: 'Python bytecode' },
+            { p: '.venv', d: 'Python virtualenv' },
+            { p: 'venv', d: 'Python virtualenv' },
+            { p: '.env', d: 'Secrets / env file' },
+            { p: '*.log', d: 'Log files' },
+            { p: 'dist', d: 'Build output' },
+            { p: 'build', d: 'Build output' },
+            { p: '.DS_Store', d: 'macOS metadata' },
+            { p: '.idea', d: 'IDE settings' },
+            { p: '.vscode', d: 'IDE settings' }
+          ];
+          const state = { gitOn: false, manual: {}, quick: new Set(), skipTop: new Set(), opts: null, active: 0 };
+          const optReqId = 'opt_' + Date.now();
+          let archTaskId = null;
+          const sendCancel = (id) => { fetch(`/api/tasks/${id}/cancel`, { method: 'POST', keepalive: true }).catch(() => {}); };
+          const fmtSize = (n) => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n > 1024 ? Math.round(n / 1024) + ' KB' : n + ' B';
+
+          const { backdrop, signal } = showModal(
             `Compress ${paths.length} item(s)`,
             `
-              <div>
-                <label style="display:block; margin-bottom:0.3rem; color:var(--text-secondary); font-size:0.75rem;">Archive name:</label>
+              <div class="cz-wrap">
+                <label class="cz-label">Archive name</label>
                 <div style="display:flex; gap:0.4rem;">
-                  <input type="text" id="archiveNameInp_${fileWinId}" class="form-control" value="${baseName}" style="flex:1; font-size:0.8rem; padding:0.35rem 0.6rem;">
-                  <select id="archiveFmt_${fileWinId}" class="form-control" style="width:110px; font-size:0.78rem;">
+                  <input type="text" id="archiveNameInp_${fileWinId}" class="form-control" value="${esc(baseName)}" style="flex:1;">
+                  <select id="archiveFmt_${fileWinId}" class="form-control" style="width:110px;">
                     <option value=".tar.gz">.tar.gz</option>
                     <option value=".zip">.zip</option>
                     <option value=".tar">.tar</option>
                   </select>
                 </div>
+                <div id="czBody_${fileWinId}" class="cz-body"><div class="cz-muted">Reading selection and .gitignore…</div></div>
                 <div id="compressErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.4rem;"></div>
               </div>
             `,
-            async (modalEl) => {
+            async (modalEl, modalSignal) => {
               const rawName = modalEl.querySelector(`#archiveNameInp_${fileWinId}`).value.trim();
               const fmt = modalEl.querySelector(`#archiveFmt_${fileWinId}`).value;
+              const errEl = modalEl.querySelector(`#compressErr_${fileWinId}`);
               if (!rawName) {
-                const e = modalEl.querySelector(`#compressErr_${fileWinId}`);
-                e.style.display = 'block';
-                e.textContent = 'Archive name cannot be empty';
+                errEl.style.display = 'block';
+                errEl.textContent = 'Archive name cannot be empty';
                 return false;
               }
+              if (state.opts && state.opts.groups.length && state.skipTop.size >= state.opts.groups.length) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Every selected item is unticked, so there is nothing to compress';
+                return false;
+              }
+              errEl.style.display = 'none';
               const archiveFullName = rawName.endsWith(fmt) ? rawName : rawName + fmt;
 
+              const exclude = [];
+              if (state.opts) {
+                state.opts.groups.forEach(g => {
+                  (g.children || []).forEach(c => {
+                    if (!childIncluded(c)) exclude.push(c.rel);
+                  });
+                });
+              }
+              state.skipTop.forEach(t => exclude.push(t));
+              state.quick.forEach(q => exclude.push(q));
+              const custom = (modalEl.querySelector(`#czCustom_${fileWinId}`)?.value || '').split('\n').map(x => x.trim()).filter(Boolean);
+              custom.forEach(c => exclude.push(c));
+
               const taskId = 'zip_' + Date.now();
+              archTaskId = taskId;
               startProgressToast(
                 taskId,
                 `Compressing into ${archiveFullName}`,
                 `Archive created!`,
-                () => { loadDir(currentPath, false); }
+                () => { loadDir(currentPath, false); },
+                true
               );
 
               try {
                 const resp = await fetch(`/api/servers/${this.serverId}/files/batch-archive`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
+                  signal: modalSignal,
                   body: JSON.stringify({
                     paths: paths,
                     dest_dir: currentPath,
                     archive_name: archiveFullName,
-                    task_id: taskId
+                    task_id: taskId,
+                    exclude: exclude,
+                    use_gitignore: state.gitOn
                   })
                 });
                 const res = await resp.json();
                 if (!res.success) {
-                  const e = modalEl.querySelector(`#compressErr_${fileWinId}`);
-                  e.style.display = 'block';
-                  e.textContent = res.error || 'Compression failed';
+                  if (res.error === 'Cancelled') return true;
+                  errEl.style.display = 'block';
+                  errEl.textContent = res.error || 'Compression failed';
                   return false;
                 }
                 return true;
               } catch (e) {
-                const el = modalEl.querySelector(`#compressErr_${fileWinId}`);
-                el.style.display = 'block';
-                el.textContent = 'Compression error: ' + e;
+                if (modalSignal.aborted) return false;
+                errEl.style.display = 'block';
+                errEl.textContent = 'Compression error: ' + e;
                 return false;
               }
             },
-            'Compress'
+            'Compress',
+            false,
+            { onDismiss: () => { sendCancel(optReqId); if (archTaskId) sendCancel(archTaskId); } }
           );
+
+          const body = backdrop.querySelector(`#czBody_${fileWinId}`);
+
+          const childIncluded = (c) => (c.rel in state.manual ? state.manual[c.rel] : !(state.gitOn && c.gitignored));
+          const groupOff = (g) => (g.children || []).filter(c => !childIncluded(c)).length;
+
+          const refreshCounts = () => {
+            const groups = state.opts?.groups || [];
+            const g = groups[state.active];
+            const el = body.querySelector('.cz-count');
+            if (g && el) {
+              const off = groupOff(g), total = (g.children || []).length;
+              el.textContent = g.is_dir ? (off ? `${off} of ${total} excluded` : `all ${total} included`) : '';
+            }
+            body.querySelectorAll('.cz-chip-sel').forEach(chip => {
+              const off = groupOff(groups[+chip.dataset.g]);
+              const badge = chip.querySelector('.cz-chip-badge');
+              if (badge) { badge.textContent = off ? `−${off}` : ''; badge.style.display = off ? '' : 'none'; }
+            });
+          };
+
+          const syncChildBoxes = () => {
+            body.querySelectorAll('input.cz-child').forEach(cb => {
+              const c = state.opts.groups[+cb.dataset.g].children[+cb.dataset.i];
+              cb.checked = childIncluded(c);
+            });
+            refreshCounts();
+          };
+
+          const render = () => {
+            const o = state.opts;
+            const hasGit = o.gitignore_rules > 0;
+            state.gitOn = hasGit;
+            const gitInfo = hasGit
+              ? `${o.gitignore_rules} rules from ${o.gitignore_files.length} file(s): <span class="cz-mono">${esc(o.gitignore_files.slice(0, 3).join(', '))}${o.gitignore_files.length > 3 ? ', …' : ''}</span>${o.skipped_negations ? ` <span class="cz-muted">(${o.skipped_negations} “!” rule(s) not supported)</span>` : ''}`
+              : 'No .gitignore found in the selected folders.';
+
+            const renderList = () => {
+              const gIdx = state.active;
+              const g = o.groups[gIdx];
+              if (!g) return '<div class="cz-muted">Nothing selected.</div>';
+              if (!g.is_dir) return `<div class="cz-muted"><span class="cz-mono">${esc(g.name)}</span> is a single file. It is included as is.</div>`;
+              if (!g.children.length) return '<div class="cz-muted">This folder is empty.</div>';
+              return `
+                <div class="cz-group-head"><span class="cz-mono">${esc(g.name)}/</span>
+                  <span class="cz-actions"><a href="#" data-gall="${gIdx}" data-v="1">all</a> · <a href="#" data-gall="${gIdx}" data-v="0">none</a></span></div>
+                ${g.children.map((c, ci) => `
+                  <label class="cz-row">
+                    <input type="checkbox" class="cz-child" data-g="${gIdx}" data-i="${ci}" ${childIncluded(c) ? 'checked' : ''}>
+                    <span class="cz-name">${esc(c.name)}${c.is_dir ? '/' : ''}</span>
+                    ${c.gitignored ? '<span class="cz-tag">gitignore</span>' : ''}
+                    <span class="cz-size">${c.is_dir ? '' : fmtSize(c.size)}</span>
+                  </label>`).join('')}
+                ${g.truncated ? '<div class="cz-muted">Showing the first 300 entries. Use the pattern box for the rest.</div>' : ''}`;
+            };
+
+            const chipsHtml = o.groups.map((g, gi) => `
+              <div class="cz-chip-sel ${gi === state.active ? 'active' : ''}" data-g="${gi}" tabindex="0" role="button" title="Show contents of ${esc(g.name)}">
+                <input type="checkbox" class="cz-top" data-g="${gi}" checked title="Include ${esc(g.name)} in the archive">
+                <span class="cz-chip-name">${esc(g.name)}${g.is_dir ? '/' : ''}</span>
+                <span class="cz-chip-badge" style="display:none"></span>
+              </div>`).join('');
+
+            body.innerHTML = `
+              <div class="cz-cols">
+                <div class="cz-left">
+                  <div class="cz-sec-title">Choose what goes in <span class="cz-count cz-muted"></span></div>
+                  <div class="cz-list" id="czList_${fileWinId}">${renderList()}</div>
+                </div>
+                <div class="cz-right">
+                  <div>
+                    <div class="cz-sec-title">Selected items <span class="cz-muted">(${o.groups.length}) · click one to edit its contents</span></div>
+                    <div class="cz-chips">${chipsHtml}</div>
+                  </div>
+                  <label class="cz-check cz-git ${hasGit ? '' : 'cz-disabled'}">
+                    <input type="checkbox" id="czGit_${fileWinId}" ${hasGit ? 'checked' : 'disabled'}>
+                    <span><b>Skip files listed in .gitignore</b><br><span class="cz-muted">${gitInfo}</span></span>
+                  </label>
+                  <div>
+                    <div class="cz-sec-title">Quick exclude</div>
+                    <div class="cz-quick">
+                      ${QUICK.map(q => `<label class="cz-chip" title="${esc(q.d)}"><input type="checkbox" class="cz-q" value="${esc(q.p)}"><span class="cz-mono">${esc(q.p)}</span></label>`).join('')}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="cz-sec-title">Custom patterns</div>
+                    <textarea id="czCustom_${fileWinId}" class="form-control cz-ta" rows="4" placeholder="One per line, e.g.&#10;*.tmp&#10;uploads/cache&#10;secrets.json"></textarea>
+                    <div class="cz-muted" style="margin-top:.25rem;">A name without “/” matches at any depth. Wildcards: * ?</div>
+                  </div>
+                </div>
+              </div>`;
+
+            const wireList = () => {
+              body.querySelectorAll('input.cz-child').forEach(cb => {
+                cb.onchange = () => {
+                  const c = o.groups[+cb.dataset.g].children[+cb.dataset.i];
+                  state.manual[c.rel] = cb.checked;
+                  refreshCounts();
+                };
+              });
+              body.querySelectorAll('a[data-gall]').forEach(a => {
+                a.onclick = (e) => {
+                  e.preventDefault();
+                  const v = a.dataset.v === '1';
+                  o.groups[+a.dataset.gall].children.forEach(c => { state.manual[c.rel] = v; });
+                  body.querySelectorAll(`input.cz-child[data-g="${a.dataset.gall}"]`).forEach(cb => { cb.checked = v; });
+                  refreshCounts();
+                };
+              });
+            };
+            wireList();
+
+            body.querySelector(`#czGit_${fileWinId}`).onchange = (e) => { state.gitOn = e.target.checked; syncChildBoxes(); };
+            body.querySelectorAll('.cz-chip-sel').forEach(chip => {
+              const pick = () => {
+                state.active = +chip.dataset.g;
+                body.querySelectorAll('.cz-chip-sel').forEach(c => c.classList.toggle('active', c === chip));
+                body.querySelector(`#czList_${fileWinId}`).innerHTML = renderList();
+                wireList();
+                refreshCounts();
+              };
+              chip.onclick = (e) => { if (e.target.classList.contains('cz-top')) return; pick(); };
+              chip.onkeydown = (e) => { if (e.target === chip && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(); } };
+            });
+            body.querySelectorAll('input.cz-top').forEach(cb => {
+              cb.onchange = () => {
+                const g = o.groups[+cb.dataset.g];
+                cb.checked ? state.skipTop.delete(g.name) : state.skipTop.add(g.name);
+                cb.closest('.cz-chip-sel').classList.toggle('off', !cb.checked);
+              };
+            });
+            body.querySelectorAll('input.cz-q').forEach(cb => {
+              cb.onchange = () => { cb.checked ? state.quick.add(cb.value) : state.quick.delete(cb.value); };
+            });
+            refreshCounts();
+          };
+
+          (async () => {
+            try {
+              const resp = await fetch(`/api/servers/${this.serverId}/files/archive-options`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal,
+                body: JSON.stringify({ paths, request_id: optReqId })
+              });
+              const res = await resp.json();
+              if (!res.success) throw new Error(res.error || 'Cannot read selection');
+              state.opts = res;
+              render();
+            } catch (e) {
+              if (signal.aborted) return;
+              state.opts = null;
+              body.innerHTML = `<div class="cz-muted">Exclusion options unavailable (${esc(e.message || e)}). You can still compress everything.</div>`;
+            }
+          })();
 
           setTimeout(() => {
             const inp = backdrop.querySelector(`#archiveNameInp_${fileWinId}`);
@@ -3037,18 +3276,20 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
           const { backdrop } = showModal(
             title,
             bodyHtml,
-            async (modalEl) => {
+            async (modalEl, modalSignal) => {
               const errEl = modalEl.querySelector(`#deleteErr_${fileWinId}`);
               try {
                 let resp, res;
                 if (isSingle) {
                   resp = await fetch(`/api/servers/${this.serverId}/files/delete`, {
+                  signal: modalSignal,
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path: paths[0], is_dir: singleIsDir })
                   });
                 } else {
                   resp = await fetch(`/api/servers/${this.serverId}/files/batch-delete`, {
+                  signal: modalSignal,
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paths: paths })
@@ -3116,7 +3357,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 <div id="createErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.4rem;"></div>
               </div>
             `,
-            async (modalEl) => {
+            async (modalEl, modalSignal) => {
               const inp = modalEl.querySelector(`#createInp_${fileWinId}`);
               const errEl = modalEl.querySelector(`#createErr_${fileWinId}`);
               const name = inp.value.trim();
@@ -3128,6 +3369,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               const fullPath = (currentPath === '/' ? '' : currentPath) + '/' + name;
               try {
                 const resp = await fetch(`/api/servers/${this.serverId}/files/create`, {
+                  signal: modalSignal,
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ path: fullPath, type })
@@ -3772,4 +4014,3 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
       }
     });
 };
-

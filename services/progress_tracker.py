@@ -9,6 +9,7 @@ class ProgressTracker:
     """
     _tasks = {}
     _lock = threading.Lock()
+    _cancel_flags = {}
 
     @classmethod
     def create_task(cls, task_id: str, label: str, total_bytes: int = 0):
@@ -56,3 +57,33 @@ class ProgressTracker:
     @classmethod
     def generate_id(cls) -> str:
         return 'task_' + str(uuid.uuid4())[:8]
+
+    @classmethod
+    def request_cancel(cls, task_id: str):
+        """Flag a task/request as cancelled. Workers poll is_cancelled() and stop."""
+        now = time.time()
+        with cls._lock:
+            # drop stale flags so the dict cannot grow forever
+            for k in [k for k, t in cls._cancel_flags.items() if now - t > 600]:
+                cls._cancel_flags.pop(k, None)
+            cls._cancel_flags[task_id] = now
+            if task_id in cls._tasks:
+                cls._tasks[task_id]['status'] = 'cancelled'
+
+    @classmethod
+    def is_cancelled(cls, task_id) -> bool:
+        if not task_id:
+            return False
+        with cls._lock:
+            return task_id in cls._cancel_flags
+
+    @classmethod
+    def clear_cancel(cls, task_id):
+        with cls._lock:
+            cls._cancel_flags.pop(task_id, None)
+
+    @classmethod
+    def cancel_done(cls, task_id: str):
+        with cls._lock:
+            if task_id in cls._tasks:
+                cls._tasks[task_id]['status'] = 'cancelled'

@@ -190,12 +190,28 @@ def batch_archive(server_id):
     dest_dir = data.get('dest_dir')
     archive_name = data.get('archive_name')
     task_id = data.get('task_id')
+    exclude = data.get('exclude') or []
+    use_gitignore = bool(data.get('use_gitignore'))
+    if not isinstance(exclude, list):
+        return jsonify({'success': False, 'error': 'exclude must be a list'}), 400
     if not paths or not dest_dir:
         return jsonify({'success': False, 'error': 'Paths and destination directory are required'}), 400
-    ok, msg = SFTPService.archive_multiple(server, paths, dest_dir, archive_name, task_id=task_id)
+    ok, msg = SFTPService.archive_multiple(server, paths, dest_dir, archive_name, task_id=task_id,
+                                           exclude=exclude, use_gitignore=use_gitignore)
     if not ok:
         return jsonify({'success': False, 'error': msg}), 400
     return jsonify({'success': True, 'message': msg})
+
+@files_bp.route('/api/servers/<int:server_id>/files/archive-options', methods=['POST'])
+@login_required
+def archive_options(server_id):
+    server = Server.query.get_or_404(server_id)
+    data = request.json or {}
+    paths = data.get('paths', [])
+    ok, res = SFTPService.archive_options(server, paths, cancel_id=request.headers.get('X-Request-Id') or data.get('request_id'))
+    if not ok:
+        return jsonify({'success': False, 'error': res}), 400
+    return jsonify({'success': True, **res})
 
 @files_bp.route('/api/servers/<int:server_id>/files/extract', methods=['POST'])
 @login_required
@@ -214,6 +230,12 @@ def extract_archive(server_id):
 # ─────────────────────────────────────────────────────────────
 # ★ REAL PROGRESS: SSE endpoint used by all frontend operations
 # ─────────────────────────────────────────────────────────────
+@files_bp.route('/api/tasks/<task_id>/cancel', methods=['POST'])
+@login_required
+def cancel_task(task_id):
+    ProgressTracker.request_cancel(task_id)
+    return jsonify({'success': True})
+
 @files_bp.route('/api/tasks/<task_id>/progress')
 @login_required
 def stream_task_progress(task_id):

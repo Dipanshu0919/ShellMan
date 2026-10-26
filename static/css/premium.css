@@ -1932,3 +1932,100 @@ body { font-feature-settings: 'cv11', 'ss01'; }
 @keyframes dockPop { from { transform: scale(.4) translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
 .dock-item.minimized .dock-tile { opacity: .55; filter: saturate(.7); }
 .dock-item.minimized .running-dot { background: transparent !important; box-shadow: inset 0 0 0 1px var(--sm-text-3); }
+/* Global "$" prompt marker replaces every round status dot/pill. */
+.status-dot, .status-dot.connected, .status-dot.disconnected {
+  width: auto; height: auto; border-radius: 0; background: none; box-shadow: none;
+  display: inline-block; animation: none; flex-shrink: 0;
+}
+.status-dot::after {
+  content: "$"; font: 700 .9rem/1 var(--font-mono, ui-monospace, monospace);
+  color: var(--sm-accent, #22d3ee);
+}
+.status-dot.disconnected::after, .status-dot:not(.connected)::after { color: var(--sm-text-3, #64748b); }
+
+/* Toolbar rows: search box, badge and buttons share one height. */
+.desktop-window :is(div[style*="border-bottom"][style*="display:flex"], .files-toolbar, .terminal-toolbar) :is(.btn, .btn-xs, .btn-sm, .badge, input.form-control, input[type="text"], input[type="search"], select.form-control, select) {
+  height: 28px !important; min-height: 28px !important; box-sizing: border-box !important;
+  padding-top: 0 !important; padding-bottom: 0 !important; line-height: 1 !important;
+  font-size: .75rem !important; border-radius: 8px !important; margin: 0;
+}
+.desktop-window :is(div[style*="border-bottom"][style*="display:flex"], .files-toolbar, .terminal-toolbar) :is(.btn, .btn-xs, .btn-sm, .badge) {
+  display: inline-flex !important; align-items: center; justify-content: center; white-space: nowrap;
+}
+.desktop-window :is(div[style*="border-bottom"][style*="display:flex"]) :is(.btn, .badge) { padding-left: .7rem !important; padding-right: .7rem !important; }
+
+/* Compress dialog: left = what goes in (scrolls), right = rules (always visible) */
+.file-modal-box:has(.cz-wrap) { max-width: 880px; width: 94%; }
+.cz-wrap { width: 100%; min-width: 0; font-size: .78rem; }
+.cz-wrap input.form-control, .cz-wrap select.form-control { min-height: 34px; font-size: .8rem; }
+.cz-label { display: block; margin-bottom: .3rem; color: var(--sm-text-2); font-size: .72rem; }
+.cz-body { margin-top: .75rem; }
+.cz-cols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: .85rem; align-items: start; }
+.cz-left, .cz-right { min-width: 0; }
+.cz-left { border: 1px solid var(--sm-line); border-radius: 8px; padding: .55rem .65rem; }
+.cz-list { max-height: 52vh; overflow: auto; padding-right: 2px; }
+.cz-right { display: flex; flex-direction: column; gap: .75rem; }
+.cz-sec-title { font-weight: 600; font-size: .75rem; margin-bottom: .35rem; }
+.cz-muted { color: var(--sm-text-3); font-size: .7rem; font-weight: 400; }
+.cz-mono { font-family: var(--font-mono, ui-monospace, monospace); }
+.cz-check { display: flex; gap: .6rem; align-items: flex-start; padding: .55rem .65rem; border: 1px solid var(--sm-line); border-radius: 8px; background: var(--sm-raised, transparent); cursor: pointer; }
+.cz-check input, .cz-row input, .cz-chip input { accent-color: var(--sm-accent); margin-top: 2px; }
+.cz-disabled { opacity: .55; cursor: default; }
+.cz-group + .cz-group { margin-top: .6rem; }
+.cz-group-head { display: flex; justify-content: space-between; color: var(--sm-text-2); font-size: .72rem; margin-bottom: .2rem; }
+.cz-actions a { color: var(--sm-accent); text-decoration: none; }
+.cz-row { display: flex; align-items: center; gap: .5rem; padding: .18rem .25rem; border-radius: 5px; cursor: pointer; }
+.cz-row:hover { background: var(--sm-hover, rgba(255,255,255,.04)); }
+.cz-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono, ui-monospace, monospace); }
+.cz-size { color: var(--sm-text-3); font-size: .68rem; }
+.cz-tag { font: 700 .62rem/1 var(--font-mono, ui-monospace, monospace); color: var(--sm-accent); letter-spacing: .03em; }
+.cz-quick { display: flex; flex-wrap: wrap; gap: .35rem; }
+.cz-chip { display: inline-flex; align-items: center; gap: .35rem; padding: .22rem .5rem; border: 1px solid var(--sm-line); border-radius: 7px; cursor: pointer; }
+.cz-ta { width: 100%; min-height: 84px; font-family: var(--font-mono, ui-monospace, monospace); font-size: .74rem; }
+@media (max-width: 720px) { .cz-cols { grid-template-columns: 1fr; } .cz-list { max-height: 34vh; } }
+
+/* Compress dialog: selected-item chips */
+.cz-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.cz-chip-sel { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; padding: .3rem .6rem; border: 1px solid var(--sm-line); border-radius: 999px; background: var(--sm-raised, transparent); cursor: pointer; font-size: .75rem; }
+.cz-chip-sel:hover { border-color: var(--sm-line-strong, #404a63); }
+.cz-chip-sel.active { border-color: var(--sm-accent); background: color-mix(in srgb, var(--sm-accent) 14%, transparent); }
+.cz-chip-sel.off .cz-chip-name { text-decoration: line-through; opacity: .5; }
+.cz-chip-sel input { accent-color: var(--sm-accent); margin: 0; }
+.cz-chip-name { font-family: var(--font-mono, ui-monospace, monospace); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14rem; }
+.cz-chip-badge { font: 700 .62rem/1 var(--font-mono, ui-monospace, monospace); color: var(--sm-accent); }
+
+/* Desktop icon size (Compact / Normal / Large) on 721px and up: one scale factor so the three
+   sizes differ clearly. --sz multiplies the auto-fit factor --ic (main.js fitDesktopIcons). */
+@media (min-width: 721px) {
+  .desktop-icons-container.size-compact { --sz: .78; }
+  .desktop-icons-container.size-normal { --sz: 1; }
+  .desktop-icons-container.size-large { --sz: 1.4; }
+  .desktop-icons-container.size-compact, .desktop-icons-container.size-large { gap: .5rem .35rem; }
+  .desktop-icons-container .desktop-icon,
+  .desktop-icons-container.size-compact .desktop-icon,
+  .desktop-icons-container.size-large .desktop-icon {
+    zoom: calc(var(--ic, 1) * var(--sz, 1)); width: 112px; padding: .4rem .1rem;
+  }
+  .desktop-icons-container.size-compact .desktop-icon-tile,
+  .desktop-icons-container.size-large .desktop-icon-tile { width: 44px; height: 44px; border-radius: 12px; margin-bottom: .35rem; }
+  .desktop-icons-container.size-compact .desktop-icon-tile svg,
+  .desktop-icons-container.size-large .desktop-icon-tile svg { width: 24px; height: 24px; }
+  .desktop-icons-container.size-compact .desktop-icon-label,
+  .desktop-icons-container.size-large .desktop-icon-label { font-size: .76rem; }
+}
+
+/* Dock auto-hide: slides away while a window is maximized; hover the bottom edge to peek. */
+.dock-hotspot { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: min(70vw, 760px); height: 14px; z-index: 9004; display: none; pointer-events: auto; }
+.desktop-dock-wrapper.dock-autohide-active .dock-hotspot { display: block; }
+.desktop-dock-wrapper.dock-autohide-active:not(.dock-peek) .desktop-dock {
+  transform: translateY(calc(100% + 28px)); opacity: 0; pointer-events: none;
+}
+@media (max-width: 720px) {
+  .dock-hotspot { display: none !important; }
+  .desktop-dock-wrapper.dock-autohide-active .desktop-dock { transform: none; opacity: 1; pointer-events: auto; }
+}
+
+/* Auto-hide keeps the "Show Dock" tab visible while the dock is tucked away */
+.desktop-dock-wrapper.dock-autohide-active:not(.dock-peek) .dock-peek-trigger {
+  transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto;
+}

@@ -25,6 +25,7 @@
     }
 
     const diagWinId = 'diag_' + Date.now();
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     const winObj = WindowManager.createWindow({
       appId: 'ssh_diag',
       multiInstance: false,
@@ -356,6 +357,7 @@
     }
 
     const docWinId = 'docker_' + Date.now();
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     const winObj = WindowManager.createWindow({
       appId: 'docker',
       multiInstance: false,
@@ -639,6 +641,7 @@
     }
 
     const dbWinId = 'db_' + Date.now();
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     const winObj = WindowManager.createWindow({
       appId: 'database',
       multiInstance: false,
@@ -1014,6 +1017,7 @@
     }
 
     const fwWinId = 'fw_' + Date.now();
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     const winObj = WindowManager.createWindow({
       appId: 'firewall',
       multiInstance: false,
@@ -1585,4 +1589,3 @@
     loadDatabases();
   };
 })();
-

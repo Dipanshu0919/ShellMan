@@ -311,6 +311,34 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Host Key SHA-256 Fingerprint**: Instant fingerprint inspection and 1-click clipboard copy.
 - **Socket & Protocol Banners**: Displays remote OpenSSH banner, client banner, socket endpoint, and SFTP subsystem pool status.
 
+### 22. Desktop Customizer & Real Application Dock
+- **Customize Desktop & Dock**: Right-click any desktop icon or dock item and choose *Customize Desktop & Dock...* to choose which of the 19 registered apps appear as desktop shortcuts and which are pinned to the dock. Reset to defaults at any time.
+- **Running Apps Appear in the Dock**: An app that is open but not pinned shows up after a separator, like a native dock. Minimized apps stay there, dim, with a hollow running indicator. Click to restore, or right-click and choose **Keep in Dock** to pin it permanently.
+- **Dock Context Menu**: Open, Add to / Remove from Desktop, Unpin from Dock, Close window (or Close all windows when several are open), Customize, and Hide Dock. The hidden state persists across reloads.
+- **Desktop Icon Sizes**: Compact, Normal, or Large. Icons wrap into new columns instead of hiding, auto-scale to fit the free area beside the widgets, and show app names on up to two lines.
+- **Hardware App**: CPU cores, RAM layout, storage block devices, and `lshw` topology. It is available as a desktop shortcut and can be pinned to the dock.
+
+### 23. Appearance, Themes & Wallpaper
+- **Accent Colors**: Cyan, Violet, Emerald, Rose, or Amber. The accent drives active windows, dock indicators, gauges, buttons, and the node prompt.
+- **Font Scale**: A slider from 12 to 24 px with a live preview.
+- **15 Terminal Themes**: ShellMan Cyberpunk, Dracula, One Dark, Nord Frost, Tokyo Night, Catppuccin Mocha, Gruvbox Dark, Solarized Dark and Light, Material Ocean, Cobalt2, GitHub Dark, Night Owl, Monokai Pro, and The Matrix Green. One setting applies to the SSH terminal and the Code Workspace terminal.
+- **Wallpaper**: Use the built-in 8K wallpaper with one-click reset. The choice persists locally and is included in Backup & Export preferences.
+
+### 24. Live Desktop Widgets & Responsive Layout
+- **Widgets Panel**: Clock (with a server time zone label), live CPU, RAM, and disk gauges (click to open System Overview), and an uptime and platform card. All of it follows the active node.
+- **`$` Prompt Node Switcher**: The active node is shown as a shell prompt (`$ Connected Node`, name, `user@host`). `$` is accent coloured when the node is reachable and grey when it is offline. Every status marker in the app uses the same `$`. Offline nodes are dimmed in the switcher list.
+- **Adapts to Any Screen**: Layouts for ultrawide, laptop, tablet, and phone. On phones the widgets stack, the node pill centres, and the dock and icon grid stay usable. Pages outside the desktop (system bar and node modal) share the same design.
+- **Installable & Persistent**: Window geometry, dock, icon size, accent, font scale, and terminal theme persist in browser storage.
+
+### 25. Extra Editing & File Shortcuts
+- **Search in Files**: The Code Workspace has a sidebar search across the opened workspace folder (`/workspace/search-code`).
+- **File Manager Keyboard Control**: Navigate, rename, and delete from the keyboard (see the shortcut table below).
+- **Smart Compress (.zip / .tar.gz / .tar)**: The Compress dialog can skip everything listed in `.gitignore` (root and nested files), lets you untick individual files and folders with checkboxes, offers quick-exclude chips (`node_modules`, `.git`, `__pycache__`, `.venv`, `.env`, `*.log`, build folders, IDE folders), and accepts custom patterns. Works without git installed on the server.
+- **Everything Is Cancellable**: Closing a window, or pressing ×, Cancel or Esc on any dialog, aborts every request it started and kills the matching job on the server (compress, copy, move, extract, rsync, git, docker, certbot, database queries and so on), so nothing keeps the SSH connection busy. Any operation running longer than 2 seconds appears in a **Running** panel with its own cancel button. Progress toasts have a × as well.
+- **Batch Operations**: Archive, extract, copy, move, chmod, and delete several selected items in one action.
+
+---
+
 ---
 
 ## Quick Start Guide
@@ -480,6 +508,13 @@ Do **not** use your Cloudflare Global API Key or an R2 storage token (`cfat_...`
 | <kbd>Ctrl</kbd> + <kbd>K</kbd> | Unified Command Palette (Apps, Server Nodes & Remote SFTP Files) |
 | <kbd>Ctrl</kbd> + <kbd>P</kbd> | File Search in Monaco Workspace |
 | <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save File directly over SFTP |
+| <kbd>Ctrl</kbd> + <kbd>`</kbd> | Toggle the integrated terminal in Code Workspace |
+| <kbd>F2</kbd> | Rename selected item (File Manager) |
+| <kbd>Delete</kbd> | Delete selected items (File Manager) |
+| <kbd>Enter</kbd> | Open selected item (File Manager) |
+| <kbd>Backspace</kbd> / <kbd>Alt</kbd> + <kbd>←</kbd> | Go back (File Manager) |
+| <kbd>Alt</kbd> + <kbd>↑</kbd> | Go to parent folder (File Manager) |
+| <kbd>Ctrl</kbd> / <kbd>Shift</kbd> + Click | Multi-select (File Manager) |
 | <kbd>Ctrl</kbd> + <kbd>C</kbd> | Piped directly to remote terminal (`SIGINT`) |
 | <kbd>Ctrl</kbd> + <kbd>D</kbd> | Piped directly to remote terminal (`EOF`) |
 | <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Piped directly to remote terminal (`SIGTSTP`) |

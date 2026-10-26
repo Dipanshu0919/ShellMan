@@ -3,6 +3,7 @@
  */
 
 DesktopAppsController.prototype.launchOverview = function (params = {}) {
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'overview',
       multiInstance: false,
@@ -153,6 +154,7 @@ DesktopAppsController.prototype.launchOverview = function (params = {}) {
 
 
 DesktopAppsController.prototype.launchProcesses = function (params = {}) {
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'processes',
       multiInstance: false,
@@ -763,6 +765,7 @@ DesktopAppsController.prototype.killProcess = async function (serverId, pid, sig
 
 
 DesktopAppsController.prototype.launchServices = function (params = {}) {
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'services',
       multiInstance: false,
@@ -871,6 +874,7 @@ DesktopAppsController.prototype.launchLogs = function (params = {}) {
     const service = params.service || '';
     const logWinId = 'logs_' + Date.now();
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'logs',
       multiInstance: false,
@@ -1135,6 +1139,7 @@ DesktopAppsController.prototype.launchLogs = function (params = {}) {
 
 
 DesktopAppsController.prototype.launchHardware = function (params = {}) {
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'hardware',
       multiInstance: false,
@@ -1194,6 +1199,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
     let cachedData = null;
     let refreshTimer = null;
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     const winObj = WindowManager.createWindow({
       appId: 'network',
       multiInstance: false,
@@ -1531,4 +1537,3 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
 
     return winObj;
 };
-

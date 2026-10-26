@@ -368,6 +368,16 @@ class SFTPService:
         return False, err or out or "Batch deletion failed"
 
     @classmethod
+    def _run_task_cmd(cls, server, cmd: str, timeout: int, task_id: str = None):
+        """Run a command that can be cancelled through its progress task id."""
+        if not task_id:
+            return ssh_manager.execute(server, cmd, timeout=timeout)
+        return ssh_manager.execute(
+            server, ssh_manager.mark_command(cmd, task_id), timeout=timeout,
+            cancel_check=lambda: ProgressTracker.is_cancelled(task_id),
+            on_cancel=lambda client: client.exec_command(ssh_manager.kill_script(task_id)))
+
+    @classmethod
     def move_multiple(cls, server, paths: List[str], dest_dir: str, task_id: str = None) -> Tuple[bool, str]:
         if not paths:
             return False, "No items selected to move"
@@ -382,7 +392,10 @@ class SFTPService:
         quoted_sources = " ".join(shlex.quote(p) for p in clean_paths)
 
         cmd = f"mv -t {quoted_dest} -- {quoted_sources} 2>&1"
-        code, out, err = ssh_manager.execute(server, cmd, timeout=600)
+        code, out, err = cls._run_task_cmd(server, cmd, 600, task_id)
+        if code == -2 and task_id:
+            ProgressTracker.cancel_done(task_id)
+            return False, "Cancelled"
 
         if task_id:
             if code == 0:
@@ -414,7 +427,10 @@ class SFTPService:
             f"rsync -a --info=progress2 -- {quoted_sources} {quoted_dest} 2>&1; "
             f"else cp -r --target-directory={quoted_dest} -- {quoted_sources} 2>&1; fi"
         )
-        code, out, err = ssh_manager.execute(server, cmd, timeout=1800)
+        code, out, err = cls._run_task_cmd(server, cmd, 1800, task_id)
+        if code == -2 and task_id:
+            ProgressTracker.cancel_done(task_id)
+            return False, "Cancelled"
 
         if task_id:
             if code == 0:
@@ -443,8 +459,160 @@ class SFTPService:
             return True, f"Permissions set to {mode} for {len(clean_paths)} item(s)"
         return False, err or out or "Failed to change permissions"
 
+    # ── Archive exclusion helpers ─────────────────────────────────────────
+    @staticmethod
+    def _clean_excludes(patterns) -> List[str]:
+        out = []
+        for p in (patterns or []):
+            if not isinstance(p, str):
+                continue
+            p = p.strip().replace('\\', '/')
+            if not p or '\n' in p or '\0' in p or len(p) > 300 or p.startswith('..') or '/../' in p:
+                continue
+            p = p.lstrip('/')
+            if p not in out:
+                out.append(p)
+        return out[:500]
+
+    @staticmethod
+    def _is_excluded(rel_path: str, excludes: List[str]) -> bool:
+        """Same matching the zip/tar commands use: a pattern with no '/' matches any path
+        component; a pattern with '/' matches a path prefix. '*' crosses '/' like tar and zip."""
+        import fnmatch
+        parts = [x for x in rel_path.strip('/').split('/') if x]
+        for ex in excludes:
+            ex = ex.rstrip('/')
+            if not ex:
+                continue
+            anchored = '/' in ex
+            for j in range(1, len(parts) + 1):
+                if anchored:
+                    if fnmatch.fnmatchcase('/'.join(parts[:j]), ex):
+                        return True
+                else:
+                    for i in range(j):
+                        if fnmatch.fnmatchcase('/'.join(parts[i:j]), ex):
+                            return True
+        return False
+
     @classmethod
-    def archive_multiple(cls, server, paths: List[str], dest_dir: str, archive_name: str, task_id: str = None) -> Tuple[bool, str]:
+    def _gitignore_excludes(cls, server, clean_paths: List[str], max_files: int = 40, cancel_id: str = None) -> Tuple[List[str], int, List[str]]:
+        """Read .gitignore files inside the selected folders and convert them to exclude patterns
+        relative to the archive root (the parent of the first selected item).
+        Returns (patterns, skipped_negation_rules, gitignore_files_used)."""
+        excludes: List[str] = []
+        skipped = 0
+        used: List[str] = []
+        base_dir = os.path.dirname(clean_paths[0])
+        try:
+            with ssh_manager.sftp_context(server) as sftp:
+                def walk(dir_abs, depth):
+                    nonlocal skipped
+                    if len(used) >= max_files or depth > 6 or ProgressTracker.is_cancelled(cancel_id):
+                        return
+                    rel_dir = os.path.relpath(dir_abs, base_dir).replace('\\', '/')
+                    try:
+                        entries = sftp.listdir_attr(dir_abs)
+                    except Exception:
+                        return
+                    names = {a.filename: a for a in entries}
+                    if '.gitignore' in names and not stat.S_ISDIR(names['.gitignore'].st_mode):
+                        try:
+                            with sftp.open(os.path.join(dir_abs, '.gitignore'), 'rb') as f:
+                                text = f.read(512 * 1024).decode('utf-8', 'replace')
+                        except Exception:
+                            text = ''
+                        used.append(os.path.join(rel_dir, '.gitignore'))
+                        for raw in text.splitlines():
+                            line = raw.rstrip()
+                            if not line.strip() or line.lstrip().startswith('#'):
+                                continue
+                            if line.startswith('!'):
+                                skipped += 1
+                                continue
+                            line = line.strip()
+                            anchored = line.startswith('/') or ('/' in line.rstrip('/'))
+                            line = line.strip('/')
+                            if line.startswith('**/'):
+                                line = line[3:]
+                                anchored = '/' in line
+                            if not line:
+                                continue
+                            if anchored:
+                                excludes.append(f"{rel_dir}/{line}")
+                            else:
+                                excludes.append(f"{rel_dir}/{line}")
+                                excludes.append(f"{rel_dir}/*/{line}")
+                    for n, a in names.items():
+                        if stat.S_ISDIR(a.st_mode) and not stat.S_ISLNK(a.st_mode) and n not in ('.git', 'node_modules', '.venv', 'venv', '__pycache__'):
+                            walk(os.path.join(dir_abs, n), depth + 1)
+
+                for cp in clean_paths:
+                    try:
+                        if stat.S_ISDIR(sftp.stat(cp).st_mode):
+                            walk(cp, 0)
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.warning(f"gitignore scan failed: {e}")
+        return cls._clean_excludes(excludes), skipped, used
+
+    @classmethod
+    def archive_options(cls, server, paths: List[str], cancel_id: str = None) -> Tuple[bool, Any]:
+        """Data for the Compress dialog: .gitignore rules found, and the first-level children of
+        every selected folder with a flag telling whether .gitignore would skip it."""
+        if not paths:
+            return False, "No items selected"
+        clean_paths = [cls._normalize_path(p, server) for p in paths]
+        base_dir = os.path.dirname(clean_paths[0])
+        git_ex, skipped, used = cls._gitignore_excludes(server, clean_paths, cancel_id=cancel_id)
+        if ProgressTracker.is_cancelled(cancel_id):
+            ProgressTracker.clear_cancel(cancel_id)
+            return False, "Cancelled"
+        groups = []
+        try:
+            with ssh_manager.sftp_context(server) as sftp:
+                for cp in clean_paths:
+                    if ProgressTracker.is_cancelled(cancel_id):
+                        break
+                    top = os.path.basename(cp)
+                    try:
+                        attr = sftp.stat(cp)
+                    except Exception:
+                        continue
+                    is_dir = stat.S_ISDIR(attr.st_mode)
+                    group = {'name': top, 'path': cp, 'is_dir': is_dir, 'children': [], 'truncated': False}
+                    if is_dir:
+                        try:
+                            kids = sorted(sftp.listdir_attr(cp), key=lambda a: (not stat.S_ISDIR(a.st_mode), a.filename.lower()))
+                        except Exception:
+                            kids = []
+                        for a in kids[:300]:
+                            rel = f"{top}/{a.filename}"
+                            group['children'].append({
+                                'name': a.filename,
+                                'rel': rel,
+                                'is_dir': stat.S_ISDIR(a.st_mode),
+                                'size': 0 if stat.S_ISDIR(a.st_mode) else a.st_size,
+                                'gitignored': cls._is_excluded(rel, git_ex),
+                            })
+                        group['truncated'] = len(kids) > 300
+                    else:
+                        group['gitignored'] = cls._is_excluded(top, git_ex)
+                    groups.append(group)
+        except Exception as e:
+            return False, f"Cannot read selection: {e}"
+        return True, {
+            'gitignore_files': used,
+            'gitignore_rules': len(git_ex),
+            'skipped_negations': skipped,
+            'groups': groups,
+            'base_dir': base_dir,
+        }
+
+    @classmethod
+    def archive_multiple(cls, server, paths: List[str], dest_dir: str, archive_name: str, task_id: str = None,
+                         exclude: List[str] = None, use_gitignore: bool = False) -> Tuple[bool, str]:
         if not paths:
             return False, "No items selected to archive"
         dest_dir = cls._normalize_path(dest_dir, server)
@@ -460,21 +628,62 @@ class SFTPService:
         base_dir = os.path.dirname(clean_paths[0])
         sources = " ".join(shlex.quote(os.path.basename(p)) for p in clean_paths)
 
+        # Exclusions: user checkboxes / patterns + optional .gitignore rules.
+        excludes = cls._clean_excludes(exclude)
+        git_note = ""
+        if use_gitignore:
+            git_ex, git_skipped, git_used = cls._gitignore_excludes(server, clean_paths, cancel_id=task_id)
+            for g in git_ex:
+                if g not in excludes:
+                    excludes.append(g)
+            if git_used:
+                git_note = f" (.gitignore: {len(git_ex)} rules from {len(git_used)} file(s)" + (f", {git_skipped} '!' rules ignored)" if git_skipped else ")")
+        # The archive itself must never end up inside itself.
+        arc_rel = os.path.relpath(archive_path, base_dir)
+        if not arc_rel.startswith('..'):
+            excludes.append(arc_rel)
+
+        tar_excl = " ".join(f"--exclude={shlex.quote(e)}" for e in excludes)
+        zip_pats = []
+        for e in excludes:
+            e = e.rstrip('/')
+            zip_pats += [e, e + '/*']
+            if '/' not in e:
+                zip_pats += ['*/' + e, '*/' + e + '/*']
+        zip_excl = ("-x " + " ".join(shlex.quote(x) for x in zip_pats)) if zip_pats else ""
+        py_excl = json.dumps(excludes)
+
         if archive_name.endswith('.zip'):
             # Real .zip only: use `zip` if installed, else a python3 zipfile script with DEFLATE
             # (note: `python3 -m zipfile -c` stores files UNCOMPRESSED, so we don't use it).
             qa = shlex.quote(archive_path)
             py_zip = (
-                "import sys, os, zipfile\n"
+                "import sys, os, zipfile, fnmatch, json\n"
+                f"EX = json.loads({py_excl!r})\n"
+                "def skip(rel):\n"
+                "    parts = [x for x in rel.split('/') if x]\n"
+                "    for ex in EX:\n"
+                "        ex = ex.rstrip('/')\n"
+                "        for j in range(1, len(parts) + 1):\n"
+                "            if '/' in ex:\n"
+                "                if fnmatch.fnmatchcase('/'.join(parts[:j]), ex): return True\n"
+                "            else:\n"
+                "                for i in range(j):\n"
+                "                    if fnmatch.fnmatchcase('/'.join(parts[i:j]), ex): return True\n"
+                "    return False\n"
                 "out = sys.argv[1]\n"
                 "with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as z:\n"
                 "    for src in sys.argv[2:]:\n"
+                "        if skip(src): continue\n"
                 "        if os.path.isdir(src) and not os.path.islink(src):\n"
                 "            z.write(src)\n"
                 "            for r, ds, fs in os.walk(src):\n"
+                "                ds[:] = [d for d in ds if not skip(os.path.join(r, d))]\n"
                 "                for n in ds + fs:\n"
+                "                    p = os.path.join(r, n)\n"
+                "                    if skip(p): continue\n"
                 "                    try:\n"
-                "                        z.write(os.path.join(r, n))\n"
+                "                        z.write(p)\n"
                 "                    except OSError:\n"
                 "                        pass\n"
                 "        else:\n"
@@ -482,7 +691,7 @@ class SFTPService:
             )
             cmd = (
                 f"cd {shlex.quote(base_dir)} && rm -f {qa} && "
-                f"if command -v zip >/dev/null 2>&1; then zip -qr {qa} {sources}; "
+                f"if command -v zip >/dev/null 2>&1; then zip -qr {qa} {sources} {zip_excl}; "
                 f"elif command -v python3 >/dev/null 2>&1; then python3 -c {shlex.quote(py_zip)} {qa} {sources}; "
                 f"else echo 'Cannot create .zip: install zip (sudo apt install zip) or python3, or choose .tar.gz' >&2; exit 127; fi"
             )
@@ -490,7 +699,7 @@ class SFTPService:
             if not archive_name.endswith('.tar.gz') and not archive_name.endswith('.tgz') and not archive_name.endswith('.tar'):
                 archive_name += '.tar.gz'
                 archive_path += '.tar.gz'
-            cmd = f"cd {shlex.quote(base_dir)} && tar -czf {shlex.quote(archive_path)} {sources}"
+            cmd = f"cd {shlex.quote(base_dir)} && tar {'-cf' if archive_name.endswith('.tar') else '-czf'} {shlex.quote(archive_path)} {tar_excl} {sources}"
 
         # tar/zip report no progress; watch the output folder and report the size of the
         # archive being written (real bytes, total unknown). zip writes to a temp file
@@ -517,10 +726,24 @@ class SFTPService:
                     stop_watch.wait(0.5)
             threading.Thread(target=_watch_archive, daemon=True).start()
 
+        def _kill_remote(client):
+            # Stop the running tar/zip/python (its command line contains the archive path)
+            # and remove the half-written archive.
+            q = shlex.quote(archive_path)
+            client.exec_command(f"pkill -f -- {q}; sleep 0.3; rm -f {q}")
+
         try:
-            code, out, err = ssh_manager.execute(server, cmd, timeout=1800)
+            code, out, err = ssh_manager.execute(
+                server, cmd, timeout=1800,
+                cancel_check=(lambda: ProgressTracker.is_cancelled(task_id)) if task_id else None,
+                on_cancel=_kill_remote)
         finally:
             stop_watch.set()
+
+        if task_id and ProgressTracker.is_cancelled(task_id):
+            ProgressTracker.clear_cancel(task_id)
+            ProgressTracker.cancel_done(task_id)
+            return False, "Cancelled"
 
         if task_id:
             if code == 0:
@@ -529,7 +752,8 @@ class SFTPService:
                 ProgressTracker.complete(task_id, error=err or out or "Compression failed")
 
         if code == 0:
-            return True, f"Created archive: {archive_name}"
+            n_ex = len(excludes) - (0 if arc_rel.startswith('..') else 1)
+            return True, f"Created archive: {archive_name}" + (f" ({n_ex} exclusion rule(s) applied)" if n_ex > 0 else "") + git_note
         return False, err or out or "Failed to create archive"
 
     @classmethod
@@ -639,6 +863,9 @@ class SFTPService:
 
                 with tarfile.open(fileobj=stdin, mode='w|') as tar:
                     for rel_path, file_obj in files_data:
+                        if task_id and ProgressTracker.is_cancelled(task_id):
+                            errors.append("Cancelled")
+                            break
                         try:
                             clean_rel = rel_path.lstrip('/\\').replace('\\', '/')
                             file_obj.seek(0, os.SEEK_END)
@@ -830,6 +1057,8 @@ class SFTPService:
                     def progress_callback(transferred, _paramiko_total):
                         if not task_id:
                             return
+                        if ProgressTracker.is_cancelled(task_id):
+                            raise InterruptedError("Cancelled")
                         now = time.monotonic()
                         if transferred >= total_size or (now - last_push[0]) >= 0.25:
                             last_push[0] = now
@@ -852,6 +1081,15 @@ class SFTPService:
                         ProgressTracker.update(task_id, total_size, total_size)
                         ProgressTracker.complete(task_id)
 
+                except InterruptedError:
+                    if task_id:
+                        ProgressTracker.cancel_done(task_id)
+                        ProgressTracker.clear_cancel(task_id)
+                    try:
+                        if sftp is not None:
+                            sftp.remove(target_path)
+                    except Exception:
+                        pass
                 except Exception as e:
                     if task_id:
                         ProgressTracker.complete(task_id, error=str(e))

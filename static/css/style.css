@@ -1935,3 +1935,106 @@ input[type="checkbox"]:focus-visible {
 }
 
 
+
+/* ==========================================================================
+   Server switcher as a shell prompt (same design as the desktop switcher):
+   "$ name  user@host", no pill. "$" is accent when the node is online,
+   grey when offline. Used in the system bar and the Switch Remote Node modal.
+   ========================================================================== */
+.sys-server-pill {
+  position: relative;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0.25rem 0.5rem 0.35rem;
+  gap: 0.45rem;
+}
+.sys-server-pill:hover {
+  background: none;
+  border-color: transparent;
+}
+.sys-server-pill::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+  opacity: 0.45;
+  transition: opacity var(--trans-fast);
+}
+.sys-server-pill:hover::after {
+  opacity: 1;
+}
+.sys-server-pill .sys-server-name {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.sys-server-pill .sys-pulse-dot,
+.server-modal-item .sys-pulse-dot {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  display: inline-block;
+}
+.sys-server-pill .sys-pulse-dot::after,
+.server-modal-item .sys-pulse-dot::after {
+  content: "$";
+  font: 700 0.9rem/1 var(--font-mono);
+  color: var(--accent-cyan);
+}
+.sys-server-pill .sys-pulse-dot.offline::after,
+.server-modal-item .sys-pulse-dot.offline::after {
+  color: var(--text-muted);
+}
+
+/* modal rows: monospace names like the prompt, offline nodes dimmed */
+.server-modal-item > div:first-of-type > div:first-child {
+  font-family: var(--font-mono);
+}
+.server-modal-item:has(.sys-pulse-dot.offline) > div {
+  opacity: 0.55;
+}
+
+/* keep the system-bar prompt on one line; long hosts get an ellipsis (full IP via the eye toggle) */
+.sys-server-pill {
+  min-width: 0;
+  flex-shrink: 1;
+}
+.sys-server-pill .sys-server-name {
+  white-space: nowrap;
+}
+.sys-server-pill .sys-server-host {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+}
+@media (max-width: 1280px) {
+  .sys-server-pill .sys-server-host,
+  .sys-server-pill .ip-mask-toggle {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .sys-breadcrumb {
+    display: none;
+  }
+}
+
+/* Global "$" prompt marker replaces every round status dot/pill. */
+.status-dot, .status-dot.connected, .status-dot.disconnected {
+  width: auto; height: auto; border-radius: 0; background: none; box-shadow: none;
+  display: inline-block; animation: none; flex-shrink: 0;
+}
+.status-dot::after {
+  content: "$"; font: 700 .9rem/1 var(--font-mono, ui-monospace, monospace);
+  color: var(--accent-cyan, var(--sm-accent, #22d3ee));
+}
+.status-dot.disconnected::after, .status-dot:not(.connected)::after { color: var(--text-muted, var(--sm-text-3, #64748b)); }

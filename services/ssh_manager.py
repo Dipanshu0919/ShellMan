@@ -1,3 +1,4 @@
+import shlex
 import io
 import time
 import socket
@@ -130,9 +131,36 @@ class SSHConnectionManager:
             self._sftp.pop(server.id, None)
             return client
 
-    def _run_cmd(self, client: paramiko.SSHClient, command: str, timeout: int, get_pty: bool) -> Tuple[int, str, str]:
+    def _run_cmd(self, client: paramiko.SSHClient, command: str, timeout: int, get_pty: bool,
+                 cancel_check=None, on_cancel=None) -> Tuple[int, str, str]:
         stdin, stdout, stderr = client.exec_command(command, timeout=timeout, get_pty=get_pty)
         try:
+            if cancel_check is not None:
+                # Cancellable mode: poll so a dismissed dialog can kill the remote job and
+                # release the per-server lock instead of blocking every other request.
+                chan = stdout.channel
+                out_buf, err_buf = bytearray(), bytearray()
+                deadline = time.time() + max(timeout, 3600)
+                while not chan.exit_status_ready():
+                    if chan.recv_ready():
+                        out_buf += chan.recv(65536)
+                    if chan.recv_stderr_ready():
+                        err_buf += chan.recv_stderr(65536)
+                    if cancel_check():
+                        if on_cancel:
+                            try: on_cancel(client)
+                            except Exception: pass
+                        return -2, "", "Cancelled"
+                    if time.time() > deadline:
+                        if on_cancel:
+                            try: on_cancel(client)
+                            except Exception: pass
+                        return -1, "", "Command timed out"
+                    time.sleep(0.15)
+                exit_status = chan.recv_exit_status()
+                out_buf += stdout.read()
+                err_buf += stderr.read()
+                return exit_status, out_buf.decode('utf-8', errors='replace'), err_buf.decode('utf-8', errors='replace')
             exit_status = stdout.channel.recv_exit_status()
             out_bytes = stdout.read()
             err_bytes = stderr.read()
@@ -153,27 +181,87 @@ class SSHConnectionManager:
                 try: stderr.close()
                 except Exception: pass
 
-    def execute(self, server, command: str, timeout: int = 15, get_pty: bool = False) -> Tuple[int, str, str]:
+    @staticmethod
+    def _request_id():
+        """Id the browser sent for the HTTP request being served (X-Request-Id), if any."""
+        try:
+            from flask import has_request_context, request
+            if has_request_context():
+                rid = request.headers.get('X-Request-Id', '')
+                if rid and len(rid) <= 64 and all(c.isalnum() or c in '_-' for c in rid):
+                    return rid
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def marker_for(marker: str) -> str:
+        return f"smreq:{marker}"
+
+    @classmethod
+    def mark_command(cls, command: str, marker: str) -> str:
+        """Prefix a no-op that carries the marker, so the job can be found and killed later."""
+        return f": {cls.marker_for(marker)}; {command}"
+
+    @classmethod
+    def kill_script(cls, marker: str) -> str:
+        """Shell that kills every process (and its children) whose command line has the marker.
+        The pattern is written so the killer's own command line does not match it."""
+        m = cls.marker_for(marker)
+        pat = m[:-1] + "[" + m[-1] + "]"
+        return (
+            "k(){ for c in $(pgrep -P $1 2>/dev/null); do k $c; done; kill -TERM $1 2>/dev/null; }; "
+            f"for p in $(pgrep -f {shlex.quote(pat)} 2>/dev/null); do k $p; done"
+        )
+
+    def execute(self, server, command: str, timeout: int = 15, get_pty: bool = False,
+                cancel_check=None, on_cancel=None) -> Tuple[int, str, str]:
         """
         Executes a command safely over SSH with channel lifecycle cleanup and concurrency locking.
+        Cancellable: when the browser sends X-Request-Id and later calls /api/tasks/<id>/cancel
+        (dialog closed, window closed, Cancel pressed) the remote job is killed, the per-server
+        lock is released, and (-2, '', 'Cancelled') is returned.
         Returns: (exit_status, stdout_str, stderr_str)
         """
+        from services.progress_tracker import ProgressTracker
+        rid = self._request_id()
+        if rid:
+            command = self.mark_command(command, rid)
+            req_check = lambda: ProgressTracker.is_cancelled(rid)
+            if cancel_check is None:
+                cancel_check = req_check
+            else:
+                user_check = cancel_check
+                cancel_check = lambda: user_check() or req_check()
+            if on_cancel is None:
+                kill = self.kill_script(rid)
+                on_cancel = lambda client: client.exec_command(kill)
+
         lock = self._get_server_lock(server.id)
-        with lock:
+        if cancel_check is not None:
+            # Wait for the server lock without blocking forever; give up if cancelled meanwhile.
+            while not lock.acquire(timeout=0.2):
+                if cancel_check():
+                    return -2, "", "Cancelled"
+        else:
+            lock.acquire()
+        try:
             try:
                 client = self.get_client(server)
                 try:
-                    return self._run_cmd(client, command, timeout, get_pty)
+                    return self._run_cmd(client, command, timeout, get_pty, cancel_check, on_cancel)
                 except Exception as e:
                     # If error might be due to stale connection, retry once with a fresh client
                     logger.warning(f"SSH exec error for server {server.id}, retrying with new connection: {e}")
                     self.disconnect(server.id)
                     time.sleep(0.5)
                     client = self.get_client(server, force_new=True)
-                    return self._run_cmd(client, command, timeout, get_pty)
+                    return self._run_cmd(client, command, timeout, get_pty, cancel_check, on_cancel)
             except Exception as e:
                 logger.error(f"SSH command execution failed completely for server {server.id}: {e}")
                 return -1, "", f"SSH Connection / Execution Error: {str(e)}"
+        finally:
+            lock.release()
 
     def open_shell(self, server, term: str = 'xterm-256color', width: int = 80, height: int = 24) -> Tuple[paramiko.SSHClient, paramiko.Channel]:
         """

@@ -21,6 +21,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
     let currentEditFile = params.file || '';
     let isFileDirty = false;
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'nginx',
       multiInstance: false,
@@ -1255,4 +1256,3 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
       }
     });
 };
-

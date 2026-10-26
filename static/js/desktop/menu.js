@@ -142,16 +142,31 @@ class DesktopMenusController {
       }
     });
 
-    const menuWidth = 230;
-    const menuHeight = Math.min(420, items.length * 36 + 12);
+    const el = this.contextMenuEl;
     const clientX = e ? e.clientX : window.innerWidth / 2;
     const clientY = e ? e.clientY : window.innerHeight / 2;
-    const posX = Math.min(window.innerWidth - menuWidth - 10, Math.max(10, clientX));
-    const posY = Math.min(window.innerHeight - menuHeight - 10, Math.max(10, clientY));
+    const margin = 8;
 
-    this.contextMenuEl.style.left = `${posX}px`;
-    this.contextMenuEl.style.top = `${posY}px`;
-    this.contextMenuEl.classList.add('open');
+    // Measure the real size (labels can wrap), then keep the whole menu on screen:
+    // flip upward when there is no room below, scroll if it is taller than the window.
+    el.style.maxHeight = `${window.innerHeight - margin * 2}px`;
+    el.style.overflowY = 'auto';
+    el.style.left = '0px';
+    el.style.top = '0px';
+    el.classList.add('open');
+    const w = el.offsetWidth || 244;
+    const h = el.offsetHeight || 200;
+
+    let posX = Math.min(Math.max(margin, clientX), window.innerWidth - w - margin);
+    let posY = clientY;
+    if (posY + h > window.innerHeight - margin) {
+      posY = clientY - h >= margin ? clientY - h : window.innerHeight - h - margin;
+    }
+    posX = Math.max(margin, posX);
+    posY = Math.max(margin, posY);
+
+    el.style.left = `${posX}px`;
+    el.style.top = `${posY}px`;
   }
 
   // --- Start Menu ---

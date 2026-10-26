@@ -19,6 +19,7 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
     const savedThemeKey = localStorage.getItem('shellman_terminal_theme') || 'shellman';
     const activeTheme = SHELLMAN_TERMINAL_THEMES[savedThemeKey] || SHELLMAN_TERMINAL_THEMES.shellman;
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'terminal',
       multiInstance: true,
@@ -216,4 +217,3 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
       }
     });
 };
-

@@ -14,6 +14,7 @@ DesktopAppsController.prototype.launchCron = function (params = {}) {
     let jobsList = [];
     let editingJob = null;
 
+    const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
       appId: 'cron',
       multiInstance: false,
@@ -365,4 +366,3 @@ DesktopAppsController.prototype.launchCron = function (params = {}) {
       }
     });
 };
-
