@@ -189,6 +189,10 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                     <span>Compression (<code style="color:var(--sm-accent);">-z</code>: gzip transfer stream)</span>
                   </label>
                   <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" id="chkGitignore_${syncWinId}">
+                    <span>Respect <code style="color:var(--sm-accent);">.gitignore</code> (<code style="color:var(--sm-accent);">--filter</code>: auto-exclude patterns in .gitignore)</span>
+                  </label>
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                     <input type="checkbox" id="chkDelete_${syncWinId}">
                     <span style="color:#fca5a5;">Mirror Delete (<code style="color:#f87171;">--delete</code>: remove target files not in source)</span>
                   </label>
@@ -260,6 +264,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
         // Common options
         const chkArch = bodyEl.querySelector(`#chkArchive_${syncWinId}`);
         const chkComp = bodyEl.querySelector(`#chkCompress_${syncWinId}`);
+        const chkGitignore = bodyEl.querySelector(`#chkGitignore_${syncWinId}`);
         const chkDel = bodyEl.querySelector(`#chkDelete_${syncWinId}`);
         const exclInp = bodyEl.querySelector(`#rsyncExclude_${syncWinId}`);
 
@@ -421,7 +426,8 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           const options = {
             archive: chkArch.checked,
             compress: chkComp.checked,
-            delete: chkDel.checked
+            delete: chkDel.checked,
+            gitignore: chkGitignore ? chkGitignore.checked : false
           };
 
           if (currentMode === 'local_remote') {
@@ -487,6 +493,9 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
 
               let summary = `\nMode: ${payload.sync_mode === 'local_remote' ? `Local <-> Remote (${payload.direction.toUpperCase()})` : 'Server Backup & Mirror'}\n`;
               summary += `Command: ${res.command}\n`;
+              if (payload.options.gitignore) {
+                summary += `Gitignore: Active (--filter=:- .gitignore applied)\n`;
+              }
               summary += `\nFiles to Synchronize (${res.total_files_count}):\n`;
               if (res.files && res.files.length > 0) {
                 summary += res.files.map(f => `  + ${f}`).join('\n') + '\n';
@@ -543,11 +552,12 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
             ? (payload.direction === 'push' ? `Local "${payload.local_path}" -> Server "${payload.remote_path}"` : `Server "${payload.remote_path}" -> Local "${payload.local_path}"`)
             : `Server "${payload.src_path}" -> Server "${payload.dst_path}"`;
 
+          const gitignoreNotice = payload.options.gitignore ? '\n• .gitignore rules active: all patterns matched in .gitignore will be ignored' : '';
           const warnDelete = payload.options.delete ? '\n\nWARNING: Mirror Delete (--delete) is enabled. Extraneous destination files will be permanently erased.' : '';
 
           const ok = await DesktopModal.confirm({
             title: 'Execute Live Rsync Transfer',
-            message: `Are you sure you want to execute live sync?\n\n${desc}${warnDelete}`,
+            message: `Are you sure you want to execute live sync?\n\n${desc}${gitignoreNotice}${warnDelete}`,
             confirmText: 'Execute Sync',
             isDanger: payload.options.delete
           });

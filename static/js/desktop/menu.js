@@ -117,6 +117,9 @@ class DesktopMenusController {
       if (item === 'separator' || item.type === 'separator') {
         return '<div class="ctx-sep"></div>';
       }
+      if (item.type === 'header') {
+        return `<div class="ctx-header"><span class="ctx-header-tile" style="background:${item.gradient || ''}">${item.icon || ''}</span><span class="ctx-header-title">${this.escapeHtml(item.label)}</span></div>`;
+      }
       return `
         <div class="ctx-item ${item.danger ? 'text-danger' : ''}" style="${item.style || ''}">
           ${item.icon || ''}
@@ -128,7 +131,7 @@ class DesktopMenusController {
     const itemEls = this.contextMenuEl.querySelectorAll('.ctx-item');
     let realIdx = 0;
     items.forEach(item => {
-      if (item === 'separator' || item.type === 'separator') return;
+      if (item === 'separator' || item.type === 'separator' || item.type === 'header') return;
       const el = itemEls[realIdx++];
       if (el) {
         el.onclick = (ev) => {

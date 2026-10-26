@@ -616,6 +616,7 @@ const DesktopDock = {
     if (!app) return;
     const isOnDesktop = DesktopCustomizer.isAppOnDesktop(appId);
     const items = [
+      { type: 'header', label: app.title, icon: app.icon, gradient: app.gradient },
       {
         label: `Open ${app.shortTitle || app.title}`,
         icon: app.icon,

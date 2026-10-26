@@ -195,6 +195,7 @@ function handleDesktopIconContextMenu(e, appId) {
   if (!app) return;
   const isPinned = window.DesktopCustomizer ? window.DesktopCustomizer.isAppInDock(appId) : true;
   const items = [
+    { type: 'header', label: app.title, icon: app.icon, gradient: app.gradient },
     {
       label: `Open ${app.shortTitle || app.title}`,
       icon: app.icon,

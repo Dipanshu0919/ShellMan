@@ -1691,3 +1691,81 @@ body { font-feature-settings: 'cv11', 'ss01'; }
   word-break: break-word;
   line-height: 1.25;
 }
+
+/* ==========================================================================
+   PATCH 5 — vivid app tiles are back (original gradients), just cleaner
+   Replaces PATCH 4. No tinting, no recoloured glyphs: every app keeps its own colour.
+   ========================================================================== */
+
+/* hue per app — only used for the soft coloured shadow under each tile */
+.desktop-icon, .dock-item { --app-c: var(--sm-accent); }
+[data-app="overview"]  { --app-c: #0d9488; }
+[data-app="terminal"]  { --app-c: #334155; }
+[data-app="files"]     { --app-c: #2563eb; }
+[data-app="code"]      { --app-c: #6d4aed; }
+[data-app="docker"]    { --app-c: #0284c7; }
+[data-app="database"]  { --app-c: #059669; }
+[data-app="firewall"]  { --app-c: #dc2626; }
+[data-app="ssh_diag"]  { --app-c: #4f46e5; }
+[data-app="processes"] { --app-c: #059669; }
+[data-app="services"]  { --app-c: #ea580c; }
+[data-app="logs"]      { --app-c: #db2777; }
+[data-app="hardware"]  { --app-c: #7c3aed; }
+[data-app="network"]   { --app-c: #2563eb; }
+[data-app="nginx"]     { --app-c: #0d9488; }
+[data-app="domains"]   { --app-c: #d97706; }
+[data-app="sync"]      { --app-c: #0284c7; }
+[data-app="cron"]      { --app-c: #d97706; }
+[data-app="git"]       { --app-c: #e11d48; }
+[data-app="settings"]  { --app-c: #4f6ef0; }
+
+/* same squircle for every tile, soft shadow in the app's own colour = depth, not transparency */
+.desktop-icon-tile { width: 54px; height: 54px; border-radius: 17px; }
+.dock-tile { border-radius: 15px; }
+.desktop-icon-tile, .dock-tile {
+  border: 1px solid #ffffff1f;
+  box-shadow: inset 0 1px 0 #ffffff40,
+              0 12px 18px -12px color-mix(in srgb, var(--app-c) 85%, #000);
+}
+.desktop-icon:hover .desktop-icon-tile,
+.dock-item:hover .dock-tile {
+  border-color: #ffffff47;
+  box-shadow: inset 0 1px 0 #ffffff52,
+              0 16px 22px -12px color-mix(in srgb, var(--app-c) 95%, #000);
+}
+.desktop-icon:hover { background: transparent; border-color: transparent; }
+.desktop-icon.selected { background: var(--sm-surface); border-color: var(--sm-line-strong); }
+
+/* labels + dock running dot */
+.desktop-icon-label {
+  font-family: var(--font-sans);
+  font-size: .78rem; font-weight: 600; letter-spacing: .01em;
+  color: var(--sm-text);
+}
+.dock-item.running .running-dot { background: var(--sm-text-3); }
+.dock-item.active .running-dot  { background: var(--sm-accent); }
+
+/* phone: the swipeable metrics card must fit above the icon grid */
+@media (max-width: 720px) {
+  .desktop-widgets-panel .metric-sparkline-svg { display: none; }
+  .desktop-widgets-panel .widget-card { max-height: 236px; overflow: hidden; }
+}
+/* === CONTEXT MENU HEADER (apply_ctx_header.py) ===================================== */
+.ctx-header {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .55rem .6rem .65rem; margin-bottom: .25rem;
+  border-bottom: 1px solid var(--sm-line);
+  cursor: default;
+}
+.ctx-header-tile {
+  width: 32px; height: 32px; flex: 0 0 32px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #ffffff1f; box-shadow: inset 0 1px 0 #ffffff40;
+}
+.ctx-header-tile svg { width: 18px; height: 18px; }
+.ctx-header-title {
+  font-size: .9rem; font-weight: 700; line-height: 1.25;
+  color: var(--sm-accent);               /* follows the accent picked in Settings */
+  min-width: 0; overflow-wrap: anywhere;
+}
+

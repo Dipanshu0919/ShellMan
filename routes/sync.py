@@ -27,12 +27,22 @@ def execute_rsync_operation(server, src: str, dst: str, is_local_remote: bool, i
     archive_flag = '-a' if opts.get('archive', True) else '-r'
     compress_flag = '-z' if opts.get('compress', True) else ''
     dry_flag = '-n' if is_dry_run else ''
-    exclude_items = excludes if isinstance(excludes, list) else ['.git', 'node_modules', '__pycache__', '*.tmp']
-    exclude_str = " ".join([f"--exclude={shlex.quote(ex.strip())}" for ex in exclude_items if ex.strip()])
+    use_gitignore = bool(opts.get('gitignore', False))
+
+    exclude_items = list(excludes) if isinstance(excludes, list) else ['.git', 'node_modules', '__pycache__', '*.tmp']
+    if use_gitignore and '.git' not in [ex.strip() for ex in exclude_items if ex]:
+        exclude_items.append('.git')
 
     if not is_local_remote:
         # Server-to-Server Sync: Executed remotely via persistent SSH tunnel on remote host
-        rsync_cmd = f"rsync {archive_flag} -v {compress_flag} {dry_flag} --stats {delete_flag} {exclude_str} {shlex.quote(src)} {shlex.quote(dst)}"
+        parts = ['rsync', archive_flag, '-v', compress_flag, dry_flag, '--stats', delete_flag]
+        if use_gitignore:
+            parts.append(shlex.quote('--filter=:- .gitignore'))
+        for ex in exclude_items:
+            if ex.strip():
+                parts.append(f"--exclude={shlex.quote(ex.strip())}")
+        parts.extend([shlex.quote(src), shlex.quote(dst)])
+        rsync_cmd = " ".join([p for p in parts if p])
         code, stdout, stderr = ssh_manager.execute(server, rsync_cmd, timeout=120 if not is_dry_run else 30)
         return code, stdout or '', stderr or '', rsync_cmd
 
@@ -70,6 +80,8 @@ def execute_rsync_operation(server, src: str, dst: str, is_local_remote: bool, i
         if dry_flag: cmd_tokens.append(dry_flag)
         cmd_tokens.append('--stats')
         if delete_flag: cmd_tokens.append(delete_flag)
+        if use_gitignore:
+            cmd_tokens.append('--filter=:- .gitignore')
         for ex in exclude_items:
             if ex.strip():
                 cmd_tokens.append(f"--exclude={ex.strip()}")
@@ -86,7 +98,14 @@ def execute_rsync_operation(server, src: str, dst: str, is_local_remote: bool, i
         stdout, stderr = proc.communicate(timeout=120 if not is_dry_run else 30)
         code = proc.returncode
 
-        display_cmd = f"rsync {archive_flag} -v {compress_flag} {dry_flag} --stats {delete_flag} {exclude_str} -e 'ssh -p {server.port}' {src} {dst}"
+        disp_parts = ['rsync', archive_flag, '-v', compress_flag, dry_flag, '--stats', delete_flag]
+        if use_gitignore:
+            disp_parts.append(shlex.quote('--filter=:- .gitignore'))
+        for ex in exclude_items:
+            if ex.strip():
+                disp_parts.append(f"--exclude={shlex.quote(ex.strip())}")
+        disp_parts.extend([f"-e 'ssh -p {server.port}'", src, dst])
+        display_cmd = " ".join([p for p in disp_parts if p])
         return code, stdout or '', stderr or '', display_cmd
 
     except subprocess.TimeoutExpired:
