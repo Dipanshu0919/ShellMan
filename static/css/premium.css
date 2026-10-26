@@ -670,6 +670,132 @@ body { font-feature-settings: 'cv11', 'ss01'; }
   .files-places-sidebar { width: 150px; }
 }
 
+/* Desktop+tablet: keep the widgets panel above the dock on short screens */
+@media (min-width: 721px) {
+  .desktop-widgets-panel {
+    max-height: calc(100dvh - var(--sm-dock-h) - 56px);
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .desktop-widgets-panel::-webkit-scrollbar { display: none; }
+}
+
+/* Icons (721px and up): flow top to bottom by the available height, then wrap into a new column
+   (natural item heights, so labels are never clipped). Cells are wider than the tile so a name
+   fits on 2 lines. --ic is set by main.js (fitDesktopIcons): it only shrinks icons (CSS zoom)
+   when the columns would not fit, so none are ever hidden. */
+@media (min-width: 721px) {
+  .desktop-icons-container {
+    --ic: 1;
+    display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start;
+    gap: .5rem .35rem; max-height: none; overflow: auto; scrollbar-width: none;
+  }
+  .desktop-icons-container::-webkit-scrollbar { display: none; }
+  .desktop-icons-container .desktop-icon {
+    zoom: var(--ic); width: 112px; padding: .4rem .1rem; justify-content: flex-start; flex-shrink: 0;
+  }
+  .desktop-icons-container .desktop-icon-label {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    width: 100%; padding: 0 .15rem; font-size: .76rem; line-height: 1.25;
+  }
+}
+/* Wide screens: stay left of the centred branding */
+@media (min-width: 1601px) {
+  .desktop-icons-container { width: calc(50% - 280px - 1.25rem); }
+}
+
+/* Short screens (zoomed or small laptops): compact widgets so nothing is cut */
+@media (min-width: 721px) and (max-height: 900px) {
+  .desktop-widgets-panel .metric-sparkline-svg { display: none; }
+  .widget-time-main { font-size: 2.6rem; }
+  .widget-card { padding: .8rem 1rem; }
+  .widget-metric-row { margin-top: .4rem !important; }
+}
+
+/* Node dropdown must open above the widgets panel at every size */
+.desktop-wallpaper-center { z-index: 6; }
+
+/* Node switcher as a shell prompt (ShellMan = S, and "$" is the shell's S):
+   no pill, no badge. `$ CONNECTED NODE` / name / ip; hairline underneath.
+   The "$" goes grey when the node is offline. */
+.desktop-server-switcher-pill {
+  position: relative; background: none !important; border: 0 !important;
+  box-shadow: none !important; backdrop-filter: none !important;
+  padding: .45rem .5rem .6rem; border-radius: 0; text-shadow: 0 1px 14px #000;
+}
+.desktop-server-switcher-pill::after {
+  content: ""; position: absolute; left: 6%; right: 6%; bottom: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--sm-accent) 60%, transparent), transparent);
+  opacity: .55; transition: opacity .2s;
+}
+.desktop-server-switcher-pill:hover::after { opacity: 1; }
+.desktop-server-switcher-pill .status-dot,
+.desktop-server-switcher-pill .status-dot.connected,
+.desktop-server-switcher-pill .status-dot.disconnected {
+  width: auto; height: auto; border-radius: 0; background: none; box-shadow: none;
+  display: inline-block; animation: none;
+}
+.desktop-server-switcher-pill .status-dot::after {
+  content: "$"; font: 700 .9rem/1 var(--font-mono, ui-monospace, monospace); color: var(--sm-accent);
+}
+.desktop-server-switcher-pill .status-dot.disconnected::after { color: var(--sm-text-3); }
+.desktop-server-switcher-pill .switcher-prefix { order: -1; }
+.desktop-server-switcher-pill .status-dot { order: -2; margin-right: 7px; }
+
+/* Dropdown rows: same "$" prompt as the switcher, mono names. Grey "$" + dim = offline. */
+.server-dropdown-item .status-dot,
+.server-dropdown-item .status-dot.connected,
+.server-dropdown-item .status-dot.disconnected {
+  width: auto; height: auto; background: none; box-shadow: none; border-radius: 0; display: inline-block;
+}
+.server-dropdown-item .status-dot::after {
+  content: "$"; font: 700 .85rem/1 var(--font-mono, ui-monospace, monospace); color: var(--sm-accent);
+}
+.server-dropdown-item .status-dot.disconnected::after { color: var(--sm-text-3); }
+.server-dropdown-left { gap: .6rem; }
+.server-dropdown-name {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: .82rem; font-weight: 600; letter-spacing: .01em;
+}
+.server-dropdown-host { font-family: var(--font-mono, ui-monospace, monospace); font-size: .7rem; }
+.server-dropdown-item:has(.status-dot.disconnected) .server-dropdown-name,
+.server-dropdown-item:has(.status-dot.disconnected) .server-dropdown-host { opacity: .5; }
+
+/* Laptop / tablet (721–1280px): icons stay column-flow (top to bottom) on the
+   left, widgets on the right, logo + node pill centred between them. */
+@media (min-width: 721px) and (max-width: 1600px) {
+  .desktop-icons-container {
+    right: calc(50% + 140px);
+    bottom: calc(var(--sm-dock-h) + 16px);
+  }
+
+  .desktop-sub-mark { max-width: 260px; line-height: 1.5; text-align: center; }
+  .desktop-server-switcher-box { margin-top: .9rem; }
+
+  /* Node prompt: 3 centred lines — $ CONNECTED NODE / name / ip */
+  .desktop-server-switcher-pill {
+    display: grid; grid-template-columns: auto auto; justify-content: center; align-items: baseline;
+    column-gap: 0; row-gap: 4px; padding: .5rem 3.8rem .7rem; text-align: center;
+  }
+  .desktop-server-switcher-pill .status-dot { grid-column: 1; grid-row: 1; }
+  .desktop-server-switcher-pill .switcher-prefix { grid-column: 2; grid-row: 1; }
+  .desktop-server-switcher-pill .switcher-name { grid-column: 1 / 3; grid-row: 2; justify-self: center; }
+  .desktop-server-switcher-pill .switcher-host { grid-column: 1 / 3; grid-row: 3; justify-self: center; }
+  .desktop-server-switcher-pill .ip-mask-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
+  .desktop-server-switcher-pill .chevron-icon { position: absolute; right: 44px; top: 50%; transform: translateY(-50%); margin: 0; }
+}
+/* Narrow tablets: not enough width beside the icons — pill only, centred above the dock */
+@media (min-width: 721px) and (max-width: 1000px) {
+  .desktop-icons-container { right: calc(264px + 32px); bottom: calc(var(--sm-dock-h) + 84px); }
+  .desktop-wallpaper-center {
+    top: auto; bottom: calc(var(--sm-dock-h) + 28px); transform: translateX(-50%); animation: none;
+  }
+  .desktop-logo-mark, .desktop-title-mark, .desktop-sub-mark { display: none !important; }
+  .desktop-server-switcher-box { margin-top: 0; }
+}
+@media (min-width: 721px) and (max-width: 960px) {
+  .desktop-icons-container { right: calc(236px + 32px); }
+}
+
 /* Phone — One UI style: full-screen sheets + bottom navigation dock */
 @media (max-width: 720px) {
   :root { --sm-dock-h: calc(75px + var(--sm-safe-b)); }
@@ -790,7 +916,7 @@ body { font-feature-settings: 'cv11', 'ss01'; }
 /* Landscape phones: widgets off, grid wider */
 @media (max-height: 480px) and (max-width: 960px) {
   .desktop-widgets-panel { display: none; }
-  .desktop-icons-container { top: calc(64px + var(--sm-safe-t)); grid-template-columns: repeat(8, 1fr); }
+  .desktop-icons-container { top: calc(64px + var(--sm-safe-t)); right: 8px; grid-template-columns: repeat(8, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1769,3 +1895,40 @@ body { font-feature-settings: 'cv11', 'ss01'; }
   min-width: 0; overflow-wrap: anywhere;
 }
 
+
+/* Phone: no swipe row. Clock + CPU/RAM/Disk always visible, stacked. */
+@media (max-width: 720px) {
+  .desktop-widgets-panel {
+    flex-direction: column; gap: 8px; padding: 0 12px;
+    overflow: visible; scroll-snap-type: none; align-items: stretch;
+  }
+  .desktop-widgets-panel .widget-card {
+    flex: 0 0 auto; max-height: none; overflow: visible;
+    padding: .7rem 1rem; border-radius: 22px;
+  }
+  .widget-time-main { font-size: 2.4rem; }
+  .desktop-widgets-panel .widget-specs-card { display: none; }
+
+  .desktop-widgets-panel .widget-resources-card {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 6px;
+  }
+  .desktop-widgets-panel .widget-resources-card .widget-header { display: none; }
+  .desktop-widgets-panel .widget-resources-card .widget-metric-row { margin: 0 !important; min-width: 0; }
+  .desktop-widgets-panel .widget-resources-card .widget-metric-row:last-child { display: none; }
+  .desktop-widgets-panel .widget-resources-card .widget-progress-track,
+  .desktop-widgets-panel .widget-resources-card .metric-sparkline-svg { display: none; }
+  .desktop-widgets-panel .widget-resources-card .widget-metric-header {
+    flex-direction: column; align-items: center; gap: 2px; text-align: center;
+  }
+  .desktop-widgets-panel .widget-resources-card .widget-metric-header > div {
+    flex-direction: column; gap: 3px !important;
+  }
+  .desktop-widgets-panel .widget-resources-card .metric-label { font-size: .58rem; letter-spacing: .02em; }
+}
+
+/* Real dock: running apps that are not pinned show up after a divider; minimized apps are dimmed. */
+.dock-sep-temp { margin: 0 4px; opacity: .7; }
+.dock-item.dock-temp { animation: dockPop .28s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes dockPop { from { transform: scale(.4) translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+.dock-item.minimized .dock-tile { opacity: .55; filter: saturate(.7); }
+.dock-item.minimized .running-dot { background: transparent !important; box-shadow: inset 0 0 0 1px var(--sm-text-3); }

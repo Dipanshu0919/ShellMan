@@ -1060,8 +1060,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <div class="settings-card" style="margin-bottom:1.25rem;">
                 <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.75rem;">Preset Wallpapers</div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.85rem;">
-                  <div class="wallpaper-card" data-url="/static/images/wallpaper.jpg" style="border:2px solid var(--sm-accent); border-radius:6px; overflow:hidden; cursor:pointer; background:#070b14;">
-                    <div style="height:95px; background:url('/static/images/wallpaper.jpg') center/cover; position:relative;">
+                  <div class="wallpaper-card" data-url="/static/images/wallpaper-8k.jpg" style="border:2px solid var(--sm-accent); border-radius:6px; overflow:hidden; cursor:pointer; background:#070b14;">
+                    <div style="height:95px; background:url('/static/images/wallpaper-8k.jpg') center/cover; position:relative;">
                       <span style="position:absolute; bottom:4px; left:4px; font-size:0.68rem; background:rgba(0,0,0,0.7); color:#f8fafc; padding:2px 6px; border-radius:3px;">Default Studio</span>
                     </div>
                   </div>
@@ -1188,7 +1188,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
           const resetBtn = contentPane.querySelector(`#resetWallBtn_${setWinId}`);
           if (resetBtn) {
-            resetBtn.onclick = () => applyWall('/static/images/wallpaper.jpg');
+            resetBtn.onclick = () => applyWall('/static/images/wallpaper-8k.jpg');
           }
         };
 

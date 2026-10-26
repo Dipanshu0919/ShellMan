@@ -529,6 +529,7 @@ const DesktopDock = {
   dockEl: null,
   isHandlingClick: false,
   apps: [],
+  tempIds: [], // running apps that are not pinned (shown after the pinned apps)
 
   init(dockEl) {
     this.dockEl = dockEl || document.getElementById('desktopDock');
@@ -566,18 +567,58 @@ const DesktopDock = {
     }
   },
 
-  render() {
-    if (!this.dockEl) return;
-    this.apps = DesktopCustomizer.getDockApps();
+  // App entry for any appId: registry app, or a generic fallback built from the window title.
+  resolveApp(appId) {
+    const app = DesktopCustomizer.getApp(appId);
+    if (app) return app;
+    let title = appId;
+    if (window.WindowManager) {
+      window.WindowManager.windows.forEach(w => { if (w.appId === appId && w.titleEl) title = w.titleEl.textContent || title; });
+    }
+    return {
+      id: appId, title, shortTitle: title,
+      gradient: 'linear-gradient(135deg, #334155, #1e293b)',
+      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/></svg>'
+    };
+  },
 
-    const appsHtml = this.apps.map(app => `
-      <div class="dock-item" data-app="${app.id}" data-tooltip="${app.title}" onclick="DesktopDock.handleDockClick('${app.id}')" oncontextmenu="DesktopDock.handleContextMenu(event, '${app.id}')">
+  // Recompute running-but-unpinned apps from open windows. Returns true when the list changed.
+  syncTemp(windows) {
+    const pinned = new Set(this.apps.map(a => a.id));
+    const running = [];
+    if (windows) {
+      windows.forEach(w => {
+        if (!w.isClosing && w.appId && !pinned.has(w.appId) && !running.includes(w.appId)) running.push(w.appId);
+      });
+    }
+    // keep existing order, append newcomers
+    const next = this.tempIds.filter(id => running.includes(id)).concat(running.filter(id => !this.tempIds.includes(id)));
+    const changed = next.join('|') !== this.tempIds.join('|');
+    this.tempIds = next;
+    return changed;
+  },
+
+  dockItemHtml(app, temp) {
+    return `
+      <div class="dock-item${temp ? ' dock-temp' : ''}" data-app="${app.id}" data-tooltip="${app.title}" onclick="DesktopDock.handleDockClick('${app.id}')" oncontextmenu="DesktopDock.handleContextMenu(event, '${app.id}')">
         <div class="dock-tile" style="background: ${app.gradient};">
           ${app.icon}
         </div>
         <span class="running-dot"></span>
       </div>
-    `).join('');
+    `;
+  },
+
+  render() {
+    if (!this.dockEl) return;
+    this.apps = DesktopCustomizer.getDockApps();
+    this.syncTemp(window.WindowManager ? window.WindowManager.windows : null);
+
+    const pinnedHtml = this.apps.map(app => this.dockItemHtml(app, false)).join('');
+    const tempHtml = this.tempIds.length
+      ? '<div class="dock-sep dock-sep-temp"></div>' + this.tempIds.map(id => this.dockItemHtml(this.resolveApp(id), true)).join('')
+      : '';
+    const appsHtml = pinnedHtml + tempHtml;
 
     const toggleBtnHtml = `
       <div class="dock-sep"></div>
@@ -612,9 +653,12 @@ const DesktopDock = {
   handleContextMenu(e, appId) {
     e.preventDefault();
     e.stopPropagation();
-    const app = DesktopCustomizer.getApp(appId);
+    const app = this.resolveApp(appId);
     if (!app) return;
     const isOnDesktop = DesktopCustomizer.isAppOnDesktop(appId);
+    const isPinned = DesktopCustomizer.isAppInDock(appId);
+    const appWins = [];
+    if (window.WindowManager) window.WindowManager.windows.forEach(w => { if (w.appId === appId && !w.isClosing) appWins.push(w); });
     const items = [
       { type: 'header', label: app.title, icon: app.icon, gradient: app.gradient },
       {
@@ -628,11 +672,20 @@ const DesktopDock = {
         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>',
         action: () => DesktopCustomizer.toggleDesktopApp(appId, !isOnDesktop)
       },
-      {
+      isPinned ? {
         label: 'Unpin from Dock',
         icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
         action: () => DesktopCustomizer.toggleDockApp(appId, false)
+      } : {
+        label: 'Keep in Dock',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 17v5M8 3h8l-1 7 3 3H6l3-3-1-7z"/></svg>',
+        action: () => DesktopCustomizer.toggleDockApp(appId, true)
       },
+      ...(appWins.length ? [{
+        label: appWins.length > 1 ? `Close all windows (${appWins.length})` : 'Close window',
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 10l6 6M15 10l-6 6"/></svg>',
+        action: () => appWins.forEach(w => window.WindowManager.closeWindow(w.id))
+      }] : []),
       'separator',
       {
         label: 'Customize Desktop & Dock...',
@@ -653,11 +706,16 @@ const DesktopDock = {
 
   updateRunningIndicators(windows, activeId) {
     if (!this.dockEl) return;
+    // an unpinned app opened or closed: rebuild the dock (render() calls us again)
+    if (this.syncTemp(windows)) { this.render(); return; }
     const runningAppIds = new Set();
+    const visibleAppIds = new Set();
     let activeAppId = null;
 
     windows.forEach(win => {
+      if (win.isClosing) return;
       runningAppIds.add(win.appId);
+      if (!win.isMinimized) visibleAppIds.add(win.appId);
       if (win.id === activeId && !win.isMinimized) activeAppId = win.appId;
     });
 
@@ -669,6 +727,8 @@ const DesktopDock = {
       } else {
         item.classList.remove('running');
       }
+      // every window of this app is minimized
+      item.classList.toggle('minimized', runningAppIds.has(appId) && !visibleAppIds.has(appId));
 
       if (appId === activeAppId) {
         item.classList.add('active');

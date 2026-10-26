@@ -186,7 +186,37 @@ function renderDesktopIcons() {
       <span class="desktop-icon-label">${sc.title}</span>
     </div>
   `).join('');
+
+  fitDesktopIcons();
 }
+
+/**
+ * Desktop icons flow top-to-bottom and wrap into a new column. When there are too many for the
+ * free area (small window, browser zoom), shrink them just enough (--ic, 1 to .55) so none are hidden.
+ */
+function fitDesktopIcons() {
+  const c = document.getElementById('desktopIcons');
+  if (!c) return;
+  if (window.innerWidth <= 720) { c.style.removeProperty('--ic'); return; }  // phone layout scrolls
+  c.style.setProperty('--ic', '1');
+  const W = c.clientWidth, H = c.clientHeight, n = c.children.length;
+  if (!W || !H || !n) return;
+  const CELL_W = 124, CELL_H = 104;
+  let best = 0.55;
+  for (let s = 1; s >= 0.55; s -= 0.05) {
+    const rows = Math.max(1, Math.floor(H / (CELL_H * s)));
+    const cols = Math.ceil(n / rows);
+    if (cols * CELL_W * s <= W) { best = s; break; }
+  }
+  c.style.setProperty('--ic', best.toFixed(2));
+}
+window.fitDesktopIcons = fitDesktopIcons;
+
+let _fitIconsTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_fitIconsTimer);
+  _fitIconsTimer = setTimeout(fitDesktopIcons, 80);
+});
 
 function handleDesktopIconContextMenu(e, appId) {
   e.preventDefault();
@@ -708,5 +738,3 @@ function toggleDesktopIpMask(e) {
 }
 window.toggleDesktopIpMask = toggleDesktopIpMask;
 window.updateIpMaskUI = updateIpMaskUI;
-
-
