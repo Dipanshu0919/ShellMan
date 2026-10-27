@@ -1,9 +1,15 @@
 import json
+import threading
+import time
 from datetime import datetime, timezone
 import pyotp
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
 from models.server import encrypt_value, decrypt_value
+
+_used_totp = {}
+_used_lock = threading.Lock()
+
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -19,8 +25,14 @@ class User(db.Model):
     totp_enabled = db.Column(db.Boolean, default=False, nullable=False)
     backup_codes = db.Column(db.Text, nullable=True)  # Fernet encrypted JSON-encoded array
 
+    # Bumped on password change / 2FA change / "sign out other devices": older session cookies stop working
+    session_version = db.Column(db.Integer, default=1, nullable=False, server_default='1')
+
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
+
+    def bump_session_version(self):
+        self.session_version = (self.session_version or 1) + 1
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
@@ -61,7 +73,18 @@ class User(db.Model):
         clean_token = str(token).strip().replace(' ', '').replace('-', '')
         totp = pyotp.TOTP(sec)
         # allow 1 step before and after (30s window drift)
-        return bool(totp.verify(clean_token, valid_window=1))
+        if not totp.verify(clean_token, valid_window=1):
+            return False
+        # A code that already worked must not work again inside its validity window (shoulder-surf / replay).
+        now = time.time()
+        key = (self.id, clean_token)
+        with _used_lock:
+            for k in [k for k, t in _used_totp.items() if now - t > 120]:
+                _used_totp.pop(k, None)
+            if key in _used_totp:
+                return False
+            _used_totp[key] = now
+        return True
 
     def verify_and_consume_backup_code(self, code: str) -> bool:
         if not self.totp_enabled:

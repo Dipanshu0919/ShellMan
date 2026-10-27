@@ -1,3 +1,4 @@
-from flask_sqlalchemy import SQLAlchemy
+"""Data layer entry point: `from models import db`. See models/orm.py for the API (SQLite via the standard library)."""
+from models.orm import Database
 
-db = SQLAlchemy()
+db = Database()

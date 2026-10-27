@@ -1,8 +1,35 @@
 import os
 import logging
+
+
+def _tune_malloc():
+    """Make glibc hand freed memory back to the OS.
+
+    Without this, one password hash (scrypt needs ~32 MB scratch space) or one large upload
+    leaves tens of MB resident forever. Equivalent to MALLOC_MMAP_THRESHOLD_ / MALLOC_TRIM_THRESHOLD_.
+    Harmless no-op on musl, macOS and Windows. Set SHELLMAN_MALLOC_TUNE=0 to skip.
+    """
+    if os.environ.get('SHELLMAN_MALLOC_TUNE', '1') == '0':
+        return
+    try:
+        import ctypes
+        libc = ctypes.CDLL('libc.so.6')
+        libc.mallopt(-3, 64 * 1024)    # M_MMAP_THRESHOLD: big blocks use mmap and are returned on free
+        libc.mallopt(-1, 128 * 1024)   # M_TRIM_THRESHOLD: trim the heap top aggressively
+        libc.mallopt(-8, 2)            # M_ARENA_MAX: at most 2 per-thread arenas
+    except Exception:
+        pass
+
+
+_tune_malloc()
+
 from flask import Flask, redirect, url_for, request, jsonify, Request
+
 Request.max_form_parts = None
-Request.max_form_memory_size = None
+# Form fields (not files, those spool to disk) are held in RAM: cap them instead of allowing unlimited memory.
+Request.max_form_memory_size = int(os.environ.get('SHELLMAN_MAX_FORM_MB', '64')) * 1024 * 1024
+
+
 from flask_sock import Sock
 
 from config import Config
@@ -12,6 +39,8 @@ from models.server import Server
 from models.action import CustomAction
 from models.git_deployment import GitDeployment
 from models.domain import CloudflareSetting, Domain
+from models.audit import AuditLog
+from models.alert import AlertRule, AlertEvent, AlertChannel
 
 # Initialize Flask-Sock
 sock = Sock()
@@ -30,6 +59,9 @@ def create_app(config_class=Config):
     # Initialize extensions
     db.init_app(app)
     sock.init_app(app)
+
+    from security import init_security
+    init_security(app)
 
     # Register blueprints
     from routes.auth import auth_bp
@@ -54,6 +86,8 @@ def create_app(config_class=Config):
     from routes.docker import docker_bp
     from routes.database import database_bp
     from routes.firewall import firewall_bp
+    from routes.audit import audit_bp
+    from routes.alerts import alerts_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -77,6 +111,8 @@ def create_app(config_class=Config):
     app.register_blueprint(docker_bp)
     app.register_blueprint(database_bp)
     app.register_blueprint(firewall_bp)
+    app.register_blueprint(audit_bp)
+    app.register_blueprint(alerts_bp)
 
     # Register terminal websocket handler
     register_terminal_sock(sock)
@@ -110,26 +146,21 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+        try:
+            from services.audit import prune_now
+            prune_now()  # apply audit-log retention at startup
+        except Exception:
+            pass
         # Auto-migrate SQLite columns if table already existed
         try:
-            with db.engine.connect() as conn:
-                res = conn.execute(db.text("PRAGMA table_info(servers)")).fetchall()
-                cols = [r[1] for r in res]
-                if 'last_workspace' not in cols and len(cols) > 0:
-                    conn.execute(db.text("ALTER TABLE servers ADD COLUMN last_workspace VARCHAR(512)"))
-                    conn.commit()
-
-                # User 2FA columns migration
-                u_res = conn.execute(db.text("PRAGMA table_info(users)")).fetchall()
-                u_cols = [r[1] for r in u_res]
-                if len(u_cols) > 0:
-                    if 'totp_secret' not in u_cols:
-                        conn.execute(db.text("ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64)"))
-                    if 'totp_enabled' not in u_cols:
-                        conn.execute(db.text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT 0 NOT NULL"))
-                    if 'backup_codes' not in u_cols:
-                        conn.execute(db.text("ALTER TABLE users ADD COLUMN backup_codes TEXT"))
-                    conn.commit()
+            # Columns added after the first release: add them when an older database is opened.
+            if db.columns_of('servers'):
+                db.add_column_if_missing('servers', 'last_workspace', 'VARCHAR(512)')
+            if db.columns_of('users'):
+                db.add_column_if_missing('users', 'totp_secret', 'VARCHAR(64)')
+                db.add_column_if_missing('users', 'totp_enabled', 'BOOLEAN DEFAULT 0 NOT NULL')
+                db.add_column_if_missing('users', 'backup_codes', 'TEXT')
+                db.add_column_if_missing('users', 'session_version', 'INTEGER DEFAULT 1 NOT NULL')
         except Exception:
             # FIX: don't swallow schema errors silently — log so startup failures are visible
             logger.exception("Schema auto-migration failed (non-fatal, continuing startup)")
@@ -173,6 +204,14 @@ def create_app(config_class=Config):
                 return url_for('static', filename=filename)
 
         return dict(mask_ip=mask_ip_filter, static_v=static_v)
+
+    # Background alert engine (server-side checks + Telegram/Slack/Discord/webhook/e-mail notifications).
+    if not app.config.get('TESTING'):
+        try:
+            from services.alerts import engine
+            engine.start(app)
+        except Exception:
+            logger.exception("Alert engine failed to start")
 
     return app
 

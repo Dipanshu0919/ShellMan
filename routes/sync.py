@@ -22,6 +22,22 @@ def sanitize_path(path: str) -> str:
             return ''
     return path
 
+_MAX_HEAD = 4 * 1024 * 1024
+_MAX_TAIL = 256 * 1024
+
+
+def _read_bounded(f) -> str:
+    """Read a temp file but keep memory small: first 4 MB plus the last 256 KB (where rsync prints its stats)."""
+    size = f.seek(0, os.SEEK_END)
+    f.seek(0)
+    if size <= _MAX_HEAD + _MAX_TAIL:
+        return f.read().decode('utf-8', errors='replace')
+    head = f.read(_MAX_HEAD)
+    f.seek(size - _MAX_TAIL)
+    tail = f.read(_MAX_TAIL)
+    return head.decode('utf-8', errors='replace') + '\n[... %d MB of file list omitted ...]\n' % ((size - _MAX_HEAD - _MAX_TAIL) // 1048576) + tail.decode('utf-8', errors='replace')
+
+
 def execute_rsync_operation(server, src: str, dst: str, is_local_remote: bool, is_dry_run: bool, opts: dict, excludes: list):
     delete_flag = '--delete' if opts.get('delete') else ''
     archive_flag = '-a' if opts.get('archive', True) else '-r'
@@ -48,6 +64,7 @@ def execute_rsync_operation(server, src: str, dst: str, is_local_remote: bool, i
 
     # Local-to-Remote / Remote-to-Local: Executed on the host running ShellMan, tunneling to remote server
     temp_files_to_clean = []
+    proc = None
     env = os.environ.copy()
     ssh_opts = f"ssh -p {server.port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15"
 
@@ -87,16 +104,20 @@ def execute_rsync_operation(server, src: str, dst: str, is_local_remote: bool, i
                 cmd_tokens.append(f"--exclude={ex.strip()}")
         cmd_tokens.extend(['-e', ssh_opts, src, dst])
 
-        proc = subprocess.Popen(
-            cmd_tokens,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env,
-            start_new_session=True
-        )
-        stdout, stderr = proc.communicate(timeout=120 if not is_dry_run else 30)
-        code = proc.returncode
+        # Output goes to temp files (not pipes) so a transfer of millions of files cannot fill RAM;
+        # only the first part plus the final --stats block are read back.
+        with tempfile.TemporaryFile() as out_f, tempfile.TemporaryFile() as err_f:
+            proc = subprocess.Popen(
+                cmd_tokens,
+                stdout=out_f,
+                stderr=err_f,
+                env=env,
+                start_new_session=True
+            )
+            proc.wait(timeout=120 if not is_dry_run else 30)
+            code = proc.returncode
+            stdout = _read_bounded(out_f)
+            stderr = _read_bounded(err_f)
 
         disp_parts = ['rsync', archive_flag, '-v', compress_flag, dry_flag, '--stats', delete_flag]
         if use_gitignore:

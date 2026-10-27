@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, Response, redirect, url_for, stream_with_context
 from models.server import Server
 from routes.auth_helpers import login_required
+from services.audit import audit
 from services.sftp import SFTPService
 from services.progress_tracker import ProgressTracker
 import time
@@ -119,6 +120,7 @@ def delete_item(server_id):
     if not path:
         return jsonify({'success': False, 'error': 'Path required'}), 400
     ok, msg = SFTPService.delete(server, path, is_dir=is_dir)
+    audit('file.delete', target=f"{server.name}:{path}", detail='' if ok else msg, ok=ok)
     if not ok:
         return jsonify({'success': False, 'error': msg}), 400
     return jsonify({'success': True, 'message': msg})
@@ -132,6 +134,7 @@ def batch_delete(server_id):
     if not paths or not isinstance(paths, list):
         return jsonify({'success': False, 'error': 'No items specified for deletion'}), 400
     ok, msg = SFTPService.delete_multiple(server, paths)
+    audit('file.delete', target=f"{server.name}: {len(paths)} item(s)", detail=', '.join(str(x) for x in paths[:10]) + (' ...' if len(paths) > 10 else ''), ok=ok)
     if not ok:
         return jsonify({'success': False, 'error': msg}), 400
     return jsonify({'success': True, 'message': msg})

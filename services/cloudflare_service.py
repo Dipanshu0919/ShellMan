@@ -5,11 +5,6 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any, List, Optional, Tuple
 
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
-from cryptography.x509.oid import NameOID
 
 CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4"
 
@@ -410,6 +405,13 @@ class CloudflareService:
         """
         if not hostnames or len(hostnames) == 0:
             raise CloudflareAPIError("At least one hostname is required for Origin CA certificates.", status_code=400)
+
+        # Certificate libraries are imported on demand, they are only needed here.
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
+        from cryptography.x509.oid import NameOID
 
         # 1. Generate RSA 2048 private key locally
         private_key = rsa.generate_private_key(

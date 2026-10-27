@@ -29,7 +29,10 @@ EXPOSE 9874
 # Environment configurations
 ENV PYTHONUNBUFFERED=1 \
     HOST=0.0.0.0 \
-    PORT=9874
+    PORT=9874 \
+    MALLOC_ARENA_MAX=2 \
+    MALLOC_MMAP_THRESHOLD_=65536 \
+    MALLOC_TRIM_THRESHOLD_=131072
 
 # Persistent storage volume
 VOLUME ["/app/instance"]

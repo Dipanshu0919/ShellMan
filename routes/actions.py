@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, Response
 from routes.auth_helpers import login_required
+from services.audit import audit
 from models import db
 from models.action import CustomAction
 from models.server import Server
@@ -186,6 +187,7 @@ def execute_action(action_id):
         current_dir=data.get('current_dir', '/')
     )
 
+    audit('action.run', target=f"{action.name} on {server.name}", detail=str(data.get('selected_path') or data.get('current_dir') or ''), ok=bool(result['success']))
     return jsonify({
         'success': result['success'],
         'action_name': action.name,

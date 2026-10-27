@@ -276,7 +276,7 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **Repository Linking**: Link Git repositories to any server directory with branch tracking (`main`, `master`, `staging`) and interactive SFTP Directory Picker support.
 - **Live Git Inspection**: Inspect real-time branch status, remote origin URL, working tree clean/dirty state, and recent commit history (hash, author, relative time, message).
 - **1-Click Pull Latest**: Pull updates and automatically execute post-deployment commands (e.g. `npm install && npm run build` or `systemctl reload nginx`).
-- **Automated Deployment Webhooks**: Generates unique webhook URLs (`/api/deploy/webhook/<token>`) for GitHub and GitLab to automate deployment on `git push`.
+- **Automated Deployment Webhooks**: Generates unique webhook URLs (`POST /api/deploy/webhook/<token>`) for GitHub and GitLab to automate deployment on `git push`.
 - **Native 38px Utility Toolbar**: Filter across deployments, status badges, and deployment logs.
 
 ### 18. Docker & Container Manager
@@ -329,6 +329,31 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **`$` Prompt Node Switcher**: The active node is shown as a shell prompt (`$ Connected Node`, name, `user@host`). `$` is accent coloured when the node is reachable and grey when it is offline. Every status marker in the app uses the same `$`. Offline nodes are dimmed in the switcher list.
 - **Adapts to Any Screen**: Layouts for ultrawide, laptop, tablet, and phone. On phones the widgets stack, the node pill centres, and the dock and icon grid stay usable. Pages outside the desktop (system bar and node modal) share the same design.
 - **Installable & Persistent**: Window geometry, dock, icon size, accent, font scale, and terminal theme persist in browser storage.
+
+### 26. Server-Side Alerts & Notification Channels
+- **Runs Without a Browser**: A background engine checks every node on a fixed interval (`SHELLMAN_ALERT_INTERVAL`, default 60 s), so alerts fire even when no ShellMan tab is open. Set `SHELLMAN_ALERTS=0` to disable it. A file lock (`.alerts.lock`) ensures only one gunicorn worker runs the engine.
+- **Rules**: Presets for node offline, CPU, RAM, disk, load and more, each with a threshold, a sustained duration, a severity and a cooldown. An alert fires after consecutive breaches, resolves after two clean checks, and re-notifies only after the cooldown. Open incidents survive restarts.
+- **Channels**: Telegram, Slack, Discord, generic webhook (optional HMAC signature in `X-ShellMan-Signature`) and email (SMTP). Every channel has a Test button. Secrets are stored encrypted and never returned to the browser.
+- **Safe Outgoing Requests**: Webhook URLs must be http or https, link-local and cloud metadata addresses are blocked, and redirects are not followed.
+- **In-App Bell**: A notification bell shows open incidents with acknowledge, acknowledge-all and clear actions.
+
+### 27. Audit Log
+- **What Is Recorded**: Logins (success, failure, lockout, 2FA), password and 2FA changes, server add/edit/delete, terminal sessions, file writes and deletes, git and system actions, automation runs, backup export/import and alert changes. Each entry stores time, user, IP, action, target and result.
+- **Viewer and Export**: Settings → Audit Log filters by action, user and result, and exports CSV (formula-injection safe).
+- **Filters**: Search text, user, failures only, and a From/To date range with quick buttons (Today, 7 days, 30 days, All time). CSV export uses the same filters.
+- **Retention**: Settings → Audit Log → Retention & cleanup sets how many days to keep (default 180) and a maximum entry count (default 20,000). 0 means no limit. Cleanup runs at startup, at least hourly while the log is written, and on Save. You can also delete by age, by the selected date range, or everything; the purge itself is recorded. Writing the log never breaks the action being logged.
+
+### 28. Encrypted Full Backup & Restore
+- **One File**: `Settings → Backup → Encrypted full backup` creates a `.smbak` file with servers (including saved passwords and keys), actions, alert rules and channels, and preferences.
+- **Passphrase Encryption**: The file is encrypted with Fernet, using a key derived from your passphrase by PBKDF2-HMAC-SHA256 (600,000 iterations). Without the passphrase it cannot be read. A lost passphrase cannot be recovered.
+- **Restore**: Import asks for the passphrase and merges into the current install. A wrong passphrase changes nothing. Imported actions always require confirmation before they run.
+
+### 29. Lightweight SQLite Data Layer
+- **Standard-library only**: ShellMan talks to SQLite through Python's built-in `sqlite3`, with a small data layer in `models/orm.py` instead of SQLAlchemy. This saves about 20 MB of RAM and two dependencies, and existing databases open unchanged (same tables, columns and date format).
+- **Easy queries**: models read like before. `Server.query.get_or_404(3)`, `Server.query.filter_by(host=h).first()`, `AlertEvent.query.filter(AlertEvent.resolved_at.is_(None)).order_by(AlertEvent.id.desc()).all()`, `.count()`, `.update({...})`, `.delete()`. Changes to loaded objects are saved by `db.session.commit()`.
+- **Raw SQL when needed**: `db.rows(sql, params)`, `db.scalar(sql, params)` and `db.isolated(sql, params)` (own connection, used by the audit log). Parameters are always passed separately, never formatted into the SQL text.
+- **Safe under load**: one connection and one session per thread, writes use `BEGIN IMMEDIATE` with a 15 s busy timeout, and each request ends with a rollback of anything uncommitted.
+- **Adding a model**: subclass `db.Model`, declare `db.Column(...)` fields and import it in `app.py`; `db.create_all()` creates the table. Adding a column to an existing table: call `db.add_column_if_missing(table, column, ddl)` in the start-up migration block.
 
 ### 25. Extra Editing & File Shortcuts
 - **Search in Files**: The Code Workspace has a sidebar search across the opened workspace folder (`/workspace/search-code`).
@@ -420,7 +445,10 @@ To deploy a live read-only or sandbox demonstration of ShellMan for colleagues o
    ```ini
    HOST=0.0.0.0
    PORT=9874
-   SHELLMAN_SECRET_KEY=generate-a-strong-secret-key-here
+   # Optional: a random key is generated and stored in /app/instance if this is unset.
+   # SHELLMAN_SECRET_KEY=<at least 16 random characters>
+   SHELLMAN_COOKIE_SECURE=1
+   SHELLMAN_TRUST_PROXY=1
    ```
 3. **Persistent Volume**: Attach a persistent disk mount to `/app/instance` to retain the initialized demo account and sample sandbox nodes across restarts.
 4. **Security for Public Demos**:
@@ -496,6 +524,16 @@ Do **not** use your Cloudflare Global API Key or an R2 storage token (`cfat_...`
 - **IP Masking**: Server IP addresses in the top node pill are masked to prevent accidental leakage during screen shares or streaming, with an interactive toggle button to unmask when needed.
 - **Sanitized Backup Archives**: Settings and server configurations exported for portability are strictly scrubbed of passwords and private keys.
 - **Path Traversal Protection**: All SFTP path parameters are strictly normalized and sanitized against directory traversal attacks (`../`).
+- **Random Session Secret**: The Flask session key comes from `SHELLMAN_SECRET_KEY` or is generated per install and stored in `instance/.secret_key` (0600). Known example values from docs or older releases are rejected, so a session cookie cannot be forged from the source code.
+- **Login Brute-Force Protection**: Failed password attempts are throttled per IP and username with exponential lockout (HTTP 429); wrong 2FA codes are throttled separately. Sessions are renewed on login and expire after 24 h of inactivity (`SHELLMAN_SESSION_HOURS`).
+- **Password Policy and Session Invalidation**: There is no password strength rule: you choose your own password. Changing the password or disabling 2FA signs out every other session. `Settings → Security → Sign out other sessions` does it on demand.
+- **First-Run Setup Token**: Set `SHELLMAN_SETUP_TOKEN` and the first-run page asks for it, so nobody who finds a fresh instance can claim the admin account.
+- **2FA Hardening**: A TOTP code works once only (replay guard), 2FA disable and password change are rate limited, and backup codes are stored encrypted.
+- **SSH Host Key Pinning (TOFU)**: The first connection to a node pins its host key in `instance/known_hosts`. A changed key is refused with a clear warning instead of being trusted silently. After reinstalling a server, call `POST /api/servers/<id>/forget-host-key` and reconnect.
+- **Cross-Site Request Protection**: State-changing requests and the terminal WebSocket are rejected when `Origin` / `Sec-Fetch-Site` show they come from another website. Behind a proxy that rewrites `Host`, list your public origin in `SHELLMAN_TRUSTED_ORIGINS`.
+- **Safe Redirects and Headers**: `next=` only accepts same-site paths. Responses carry `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and `no-store` on login and API pages.
+- **POST-only Deploy Webhooks**: Webhook tokens are compared in constant time, failures are rate limited, and GET is no longer accepted so the token does not end up in logs or browser history.
+- **Localhost-only Docker Port**: `docker-compose.yml` publishes `127.0.0.1:9874` by default; put a TLS reverse proxy in front to expose it.
 - **Key Authentication**: Full support for standard password authentication as well as RSA and Ed25519 OpenSSH private key pairs (with passphrase support).
 
 ---

@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
-from sqlalchemy.exc import IntegrityError
+from sqlite3 import IntegrityError
 from models import db
 from models.user import User
+import hmac
+import os
+from security import login_throttle, login_ip_throttle, totp_throttle, client_ip, safe_next, password_problem
+from services.audit import audit
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -12,30 +16,39 @@ def setup():
         flash('Administrator account is already configured. Please sign in.', 'info')
         return redirect(url_for('auth.login'))
 
+    # Optional: set SHELLMAN_SETUP_TOKEN so a stranger who finds a fresh instance cannot claim the admin account.
+    setup_token = (os.environ.get('SHELLMAN_SETUP_TOKEN') or '').strip()
+
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
 
+        if setup_token and not hmac.compare_digest(request.form.get('setup_token', '').strip(), setup_token):
+            audit('setup.denied', detail='wrong setup token', ok=False, username=username)
+            flash('Setup token is missing or wrong.', 'danger')
+            return render_template('setup.html', username=username, require_token=True), 403
+
         if not username:
             flash('Administrator username is required.', 'danger')
-            return render_template('setup.html', username=username)
+            return render_template('setup.html', username=username, require_token=bool(setup_token))
 
         if len(username) < 3:
             flash('Username must be at least 3 characters long.', 'danger')
-            return render_template('setup.html', username=username)
+            return render_template('setup.html', username=username, require_token=bool(setup_token))
 
         if not password:
             flash('Password is required.', 'danger')
-            return render_template('setup.html', username=username)
+            return render_template('setup.html', username=username, require_token=bool(setup_token))
 
-        if len(password) < 6:
-            flash('Password must be at least 6 characters long.', 'danger')
-            return render_template('setup.html', username=username)
+        problem = password_problem(password, username)
+        if problem:
+            flash(problem, 'danger')
+            return render_template('setup.html', username=username, require_token=bool(setup_token))
 
         if password != confirm_password:
             flash('Passwords do not match. Please re-enter.', 'danger')
-            return render_template('setup.html', username=username)
+            return render_template('setup.html', username=username, require_token=bool(setup_token))
 
         admin = User(username=username)
         admin.set_password(password)
@@ -51,12 +64,16 @@ def setup():
             flash('Administrator account is already configured. Please sign in.', 'info')
             return redirect(url_for('auth.login'))
 
+        session.clear()
+        session.permanent = True
         session['user_id'] = admin.id
         session['username'] = admin.username
+        session['sv'] = admin.session_version
+        audit('setup.complete', target=admin.username)
         flash(f'Administrator account "{admin.username}" created successfully. Welcome to ShellMan!', 'success')
         return redirect(url_for('dashboard.index'))
 
-    return render_template('setup.html')
+    return render_template('setup.html', require_token=bool(setup_token))
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -74,23 +91,37 @@ def login():
             flash('Username and password are required.', 'danger')
             return render_template('login.html', username=username)
 
+        ip = client_ip()
+        ukey = f"u:{ip}:{username.lower()}"
+        wait = max(login_throttle.remaining(ukey), login_ip_throttle.remaining(ip))
+        if wait:
+            audit('login.locked', target=username, detail=f'locked for {wait}s', ok=False, username=username)
+            flash(f'Too many failed attempts. Try again in {wait} seconds.', 'danger')
+            return render_template('login.html', username=username), 429
+
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            login_throttle.reset(ukey)
             if user.totp_enabled:
+                session.clear()
                 session['2fa_pending_user_id'] = user.id
-                session['2fa_next_url'] = request.args.get('next') or url_for('dashboard.index')
+                session['2fa_next_url'] = safe_next(request.args.get('next'), url_for('dashboard.index'))
                 return redirect(url_for('auth.login_2fa'))
 
+            session.clear()
+            session.permanent = True
             session['user_id'] = user.id
             session['username'] = user.username
+            session['sv'] = user.session_version
             user.last_login = datetime.now(timezone.utc)
             db.session.commit()
+            audit('login.success', target=user.username)
 
-            next_page = request.args.get('next')
-            if next_page and next_page.startswith('/'):
-                return redirect(next_page)
-            return redirect(url_for('dashboard.index'))
+            return redirect(safe_next(request.args.get('next'), url_for('dashboard.index')))
         else:
+            login_throttle.fail(ukey)
+            login_ip_throttle.fail(ip)
+            audit('login.failed', target=username, ok=False, username=username)
             flash('Invalid username or password.', 'danger')
 
     return render_template('login.html')
@@ -108,6 +139,11 @@ def login_2fa():
 
     if request.method == 'POST':
         code = request.form.get('code', '').strip()
+        tkeys = (f"t:{pending_user_id}", f"tip:{client_ip()}")
+        wait = totp_throttle.remaining(*tkeys)
+        if wait:
+            flash(f'Too many wrong codes. Try again in {wait} seconds.', 'danger')
+            return render_template('login_2fa.html', user=user), 429
 
         authenticated = False
         # 1. First test TOTP if the code is 6 numeric digits
@@ -120,17 +156,20 @@ def login_2fa():
             authenticated = user.verify_and_consume_backup_code(code)
 
         if authenticated:
-            session.pop('2fa_pending_user_id', None)
+            totp_throttle.reset(*tkeys)
+            next_page = safe_next(session.get('2fa_next_url'), url_for('dashboard.index'))
+            session.clear()
+            session.permanent = True
             session['user_id'] = user.id
             session['username'] = user.username
+            session['sv'] = user.session_version
             user.last_login = datetime.now(timezone.utc)
             db.session.commit()
-
-            next_page = session.pop('2fa_next_url', None) or url_for('dashboard.index')
-            if next_page and next_page.startswith('/'):
-                return redirect(next_page)
-            return redirect(url_for('dashboard.index'))
+            audit('login.success', target=user.username, detail='with 2FA')
+            return redirect(next_page)
         else:
+            totp_throttle.fail(*tkeys)
+            audit('login.2fa_failed', target=user.username, ok=False, username=user.username)
             flash('Invalid 2FA code or backup code. Please try again.', 'danger')
 
     return render_template('login_2fa.html', user=user)
@@ -143,6 +182,8 @@ def login_2fa_cancel():
 
 @auth_bp.route('/logout', methods=['GET', 'POST'])
 def logout():
+    if session.get('user_id'):
+        audit('logout', target=session.get('username', ''))
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))

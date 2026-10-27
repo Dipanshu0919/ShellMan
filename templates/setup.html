@@ -109,6 +109,13 @@
     </div>
 
     <form method="POST" action="{{ url_for('auth.setup') }}">
+      {% if require_token %}
+      <div class="form-group">
+        <label class="form-label" for="setup_token">Setup token</label>
+        <input class="form-control" type="password" id="setup_token" name="setup_token" required placeholder="SHELLMAN_SETUP_TOKEN from the server environment" autocomplete="off">
+      </div>
+      {% endif %}
+
       <div class="form-group">
         <label class="form-label" for="username">Administrator Username</label>
         <input class="form-control" type="text" id="username" name="username" value="{{ username or '' }}" required autofocus placeholder="e.g. admin or your name" autocomplete="username">
@@ -116,7 +123,7 @@
 
       <div class="form-group">
         <label class="form-label" for="password">Password</label>
-        <input class="form-control" type="password" id="password" name="password" required placeholder="At least 6 characters" autocomplete="new-password">
+        <input class="form-control" type="password" id="password" name="password" required placeholder="Choose a password" autocomplete="new-password">
       </div>
 
       <div class="form-group">
@@ -134,3 +141,4 @@
   </div>
 </body>
 </html>
+

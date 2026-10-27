@@ -1,3 +1,4 @@
+import os
 import shlex
 import io
 import time
@@ -34,6 +35,53 @@ class SSHConnectionManager:
             if server_id not in self._server_locks:
                 self._server_locks[server_id] = threading.RLock()
             return self._server_locks[server_id]
+
+    # ── Host key pinning (trust on first use) ────────────────────────────────
+    @staticmethod
+    def _known_hosts_path() -> str:
+        base = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        d = os.path.join(base, 'instance')
+        os.makedirs(d, exist_ok=True)
+        return os.path.join(d, 'known_hosts')
+
+    _hostkey_lock = threading.Lock()
+
+    @staticmethod
+    def _host_label(host: str, port: int) -> str:
+        return host if int(port or 22) == 22 else f"[{host}]:{int(port)}"
+
+    def _load_host_keys(self, client: paramiko.SSHClient):
+        path = self._known_hosts_path()
+        if os.path.exists(path):
+            try:
+                client.load_host_keys(path)
+            except Exception as e:
+                logger.warning(f"Could not read {path}: {e}")
+
+    def _remember_host_key(self, client: paramiko.SSHClient):
+        """Persist keys learned on first connect. A later key change is refused by paramiko."""
+        path = self._known_hosts_path()
+        with self._hostkey_lock:
+            try:
+                client.save_host_keys(path)
+                os.chmod(path, 0o600)
+            except Exception as e:
+                logger.warning(f"Could not save host key to {path}: {e}")
+
+    def forget_host_key(self, host: str, port: int = 22) -> bool:
+        """Remove a pinned key (use after reinstalling a server, then reconnect to pin the new one)."""
+        path = self._known_hosts_path()
+        label = self._host_label(host, port)
+        with self._hostkey_lock:
+            hk = paramiko.HostKeys()
+            if not os.path.exists(path):
+                return False
+            hk.load(path)
+            if label not in hk:
+                return False
+            del hk[label]
+            hk.save(path)
+            return True
 
     def _create_client(self, server) -> paramiko.SSHClient:
         connect_kwargs = {
@@ -77,13 +125,25 @@ class SSHConnectionManager:
         # Attempt connection with resilience against transient SSH banner drops / connection resets
         for attempt in range(1, 3):
             client = paramiko.SSHClient()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self._load_host_keys(client)
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())   # first sight only; changed keys are rejected
             try:
                 client.connect(**connect_kwargs)
+                self._remember_host_key(client)
                 transport = client.get_transport()
                 if transport:
                     transport.set_keepalive(15)
                 return client
+            except paramiko.BadHostKeyException:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+                raise paramiko.SSHException(
+                    f"HOST KEY CHANGED for {server.host}:{server.port}. This can mean someone is intercepting "
+                    f"the connection. If you reinstalled the server, forget the old key (POST "
+                    f"/api/servers/{server.id}/forget-host-key) and connect again."
+                )
             except (paramiko.SSHException, socket.error, EOFError, ConnectionResetError) as e:
                 err_str = str(e).lower()
                 is_transient = (
@@ -131,6 +191,32 @@ class SSHConnectionManager:
             self._sftp.pop(server.id, None)
             return client
 
+    # A command can print gigabytes (cat of a big log, rsync -v of a huge tree). Keep the first part and drop the
+    # rest so one command cannot exhaust the memory of the whole ShellMan process.
+    MAX_OUTPUT_BYTES = int(os.environ.get('SHELLMAN_MAX_OUTPUT_MB', '16')) * 1024 * 1024
+    _TRUNC_NOTE = b"\n[... output truncated by ShellMan to protect server memory ...]\n"
+
+    @classmethod
+    def _append_capped(cls, buf: bytearray, chunk: bytes):
+        room = cls.MAX_OUTPUT_BYTES - len(buf)
+        if room > 0:
+            buf += chunk[:room]
+            if len(chunk) > room:
+                buf += cls._TRUNC_NOTE
+        elif chunk and not buf.endswith(cls._TRUNC_NOTE):
+            buf += cls._TRUNC_NOTE
+        # beyond the cap the data is read and discarded so the remote command never blocks on a full pipe
+
+    @classmethod
+    def _read_capped(cls, stream) -> bytes:
+        buf = bytearray()
+        while True:
+            chunk = stream.read(65536)
+            if not chunk:
+                break
+            cls._append_capped(buf, chunk)
+        return bytes(buf)
+
     def _run_cmd(self, client: paramiko.SSHClient, command: str, timeout: int, get_pty: bool,
                  cancel_check=None, on_cancel=None) -> Tuple[int, str, str]:
         stdin, stdout, stderr = client.exec_command(command, timeout=timeout, get_pty=get_pty)
@@ -143,9 +229,9 @@ class SSHConnectionManager:
                 deadline = time.time() + max(timeout, 3600)
                 while not chan.exit_status_ready():
                     if chan.recv_ready():
-                        out_buf += chan.recv(65536)
+                        self._append_capped(out_buf, chan.recv(65536))
                     if chan.recv_stderr_ready():
-                        err_buf += chan.recv_stderr(65536)
+                        self._append_capped(err_buf, chan.recv_stderr(65536))
                     if cancel_check():
                         if on_cancel:
                             try: on_cancel(client)
@@ -158,12 +244,12 @@ class SSHConnectionManager:
                         return -1, "", "Command timed out"
                     time.sleep(0.15)
                 exit_status = chan.recv_exit_status()
-                out_buf += stdout.read()
-                err_buf += stderr.read()
+                self._append_capped(out_buf, self._read_capped(stdout))
+                self._append_capped(err_buf, self._read_capped(stderr))
                 return exit_status, out_buf.decode('utf-8', errors='replace'), err_buf.decode('utf-8', errors='replace')
             exit_status = stdout.channel.recv_exit_status()
-            out_bytes = stdout.read()
-            err_bytes = stderr.read()
+            out_bytes = self._read_capped(stdout)
+            err_bytes = self._read_capped(stderr)
             out_str = out_bytes.decode('utf-8', errors='replace')
             err_str = err_bytes.decode('utf-8', errors='replace')
             return exit_status, out_str, err_str

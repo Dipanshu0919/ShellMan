@@ -3,6 +3,9 @@ from models.server import Server
 from models.user import User
 from routes.auth_helpers import login_required
 from services.terminal import TerminalSession
+from security import origin_allowed
+from routes.auth_helpers import session_is_valid
+from services.audit import audit
 
 terminal_bp = Blueprint('terminal', __name__)
 
@@ -18,8 +21,14 @@ def register_terminal_sock(sock):
     @sock.route('/ws/terminal/<int:server_id>')
     def terminal_socket(ws, server_id):
         # Verify authenticated session in Flask context
+        # Block cross-site WebSocket hijacking: a page on another origin must not drive a shell.
+        if not origin_allowed():
+            ws.send('{"type":"error","data":"Cross-origin connection refused\\r\\n"}')
+            ws.close()
+            return
+
         user_id = session.get('user_id')
-        if not user_id:
+        if not user_id or not session_is_valid():
             ws.send('{"type":"error","data":"Unauthorized: please log in\\r\\n"}')
             ws.close()
             return
@@ -45,6 +54,7 @@ def register_terminal_sock(sock):
         raw_cwd = request.args.get('cwd') or request.args.get('path') or None
         cwd = raw_cwd.strip() if raw_cwd else None
         
+        audit('terminal.open', target=server.name, detail=cwd or '')
         term_session = TerminalSession(ws, server, cols=cols, rows=rows, cwd=cwd)
         term_session.start()
 

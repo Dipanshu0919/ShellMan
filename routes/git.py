@@ -1,11 +1,16 @@
 import shlex
+import hmac
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from models import db
 from models.server import Server
 from models.git_deployment import GitDeployment
 from routes.auth_helpers import login_required
+from services.audit import audit
 from services.ssh_manager import ssh_manager
+from security import client_ip, LoginThrottle
+
+webhook_throttle = LoginThrottle(free_attempts=10, base_lock=60, max_lock=900)
 
 git_bp = Blueprint('git', __name__)
 
@@ -250,10 +255,15 @@ def clone_repo(server_id):
     })
 
 # Unauthenticated Webhook Receiver for GitHub/GitLab
-@git_bp.route('/api/deploy/webhook/<token>', methods=['POST', 'GET'])
+@git_bp.route('/api/deploy/webhook/<token>', methods=['POST'])
 def trigger_webhook(token):
+    # POST only: a GET with the secret in the URL ends up in proxy logs, browser history and link previews.
+    ip = client_ip()
+    if webhook_throttle.remaining(f"wh:{ip}"):
+        return jsonify({'success': False, 'error': 'Too many invalid attempts'}), 429
     dep = GitDeployment.query.filter_by(webhook_token=token).first()
-    if not dep:
+    if not dep or not hmac.compare_digest(dep.webhook_token or '', token):
+        webhook_throttle.fail(f"wh:{ip}")
         return jsonify({'success': False, 'error': 'Invalid webhook deployment token.'}), 404
 
     server = Server.query.get(dep.server_id)
@@ -280,6 +290,7 @@ def trigger_webhook(token):
     dep.last_log = full_output
     dep.last_deployed_at = datetime.now(timezone.utc)
     db.session.commit()
+    audit('deploy.webhook', target=f"{dep.name} on {server.name}", detail=f"branch {dep.branch}", ok=success, username='webhook')
 
     return jsonify({
         'success': success,

@@ -52,6 +52,10 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <span>Backup & Export</span>
             </div>
+            <div class="settings-nav-item" data-tab="audit" id="tabNav_audit_${setWinId}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <span>Audit Log</span>
+            </div>
             <div class="settings-nav-item" data-tab="pwa" id="tabNav_pwa_${setWinId}">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               <span>Desktop App (PWA)</span>
@@ -900,11 +904,11 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               statusBox.textContent = 'Current password is required.';
               return;
             }
-            if (new_password.length < 6) {
+            if (!new_password) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
               statusBox.style.color = '#f87171';
-              statusBox.textContent = 'New password must be at least 6 characters.';
+              statusBox.textContent = 'New password is required.';
               return;
             }
             if (new_password !== confirm_password) {
@@ -1219,6 +1223,9 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <h3 class="settings-section-title">Server Health & Notifications</h3>
               <p class="settings-section-desc">Configure automated alerts for offline nodes and customize resource threshold triggers for CPU and RAM.</p>
 
+              <!-- Server-side alerts: rules, channels (Telegram / Slack / Discord / webhook / e-mail) and incident history -->
+              <div id="serverAlertsMount_${setWinId}" style="margin-bottom:1.25rem;"></div>
+
               <!-- Channels Card -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
                 <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Alert Notification Channels</div>
@@ -1327,6 +1334,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               </div>
             </div>
           `;
+
+          if (window.ShellmanAlertsUI) ShellmanAlertsUI.mount(contentPane.querySelector('#serverAlertsMount_' + setWinId));
 
           // Handlers
           const chkToast = contentPane.querySelector(`#chkToastAlerts_${setWinId}`);
@@ -1755,10 +1764,19 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             el.classList.toggle('active', el.dataset.tab === tab);
           });
           if (tab === 'servers') renderServersTab();
-          else if (tab === 'admin') renderAdminTab();
+          else if (tab === 'admin') {
+            Promise.resolve(renderAdminTab()).then(() => { if (currentTab === 'admin' && window.ShellmanSecurityUI) ShellmanSecurityUI.appendSessionCard(contentPane); });
+          }
           else if (tab === 'appearance') renderAppearanceTab();
           else if (tab === 'alerts') renderAlertsTab();
-          else if (tab === 'backup') renderBackupTab();
+          else if (tab === 'backup') {
+            renderBackupTab();
+            if (window.ShellmanSecurityUI) ShellmanSecurityUI.appendEncryptedBackup(contentPane.firstElementChild || contentPane);
+          }
+          else if (tab === 'audit') {
+            contentPane.innerHTML = '<div><h3 class="settings-section-title">Audit Log</h3><div id="auditMount_' + setWinId + '"></div></div>';
+            if (window.ShellmanAuditUI) ShellmanAuditUI.mount(contentPane.querySelector('#auditMount_' + setWinId));
+          }
           else if (tab === 'about') renderAboutTab();
           else if (tab === 'pwa') renderPwaTab();
         };

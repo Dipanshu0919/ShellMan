@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from models import db
 from models.server import Server
 from routes.auth_helpers import login_required
+from services.audit import audit
 from services.ssh_manager import ssh_manager
 
 servers_bp = Blueprint('servers', __name__)
@@ -183,6 +184,7 @@ def api_add_server():
 
     db.session.add(server)
     db.session.commit()
+    audit('server.add', target=f"{server.name} ({server.username}@{server.host}:{server.port})", detail=f"auth={auth_type}")
     return jsonify({'success': True, 'server': server.to_dict()})
 
 @servers_bp.route('/api/servers/<int:server_id>/edit', methods=['POST'])
@@ -220,6 +222,7 @@ def api_edit_server(server_id):
 
     db.session.commit()
     ssh_manager.disconnect(server.id)
+    audit('server.edit', target=f"{server.name} ({server.username}@{server.host}:{server.port})")
     return jsonify({'success': True, 'server': server.to_dict()})
 
 @servers_bp.route('/api/servers/<int:server_id>/delete', methods=['POST'])
@@ -228,6 +231,18 @@ def api_delete_server(server_id):
     server = Server.query.get_or_404(server_id)
     name = server.name
     ssh_manager.disconnect(server.id)
+    desc = f"{name} ({server.username}@{server.host}:{server.port})"
     db.session.delete(server)
     db.session.commit()
+    audit('server.delete', target=desc)
     return jsonify({'success': True, 'message': f'Server "{name}" was deleted.'})
+
+@servers_bp.route('/api/servers/<int:server_id>/forget-host-key', methods=['POST'])
+@login_required
+def forget_host_key(server_id):
+    """Drop the pinned SSH host key (after a reinstall). The next connection pins the new key."""
+    server = Server.query.get_or_404(server_id)
+    removed = ssh_manager.forget_host_key(server.host, server.port)
+    ssh_manager.disconnect(server.id)
+    audit('server.forget_host_key', target=f"{server.host}:{server.port}", detail='SSH host key un-pinned')
+    return jsonify({'success': True, 'removed': removed})

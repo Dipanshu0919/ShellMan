@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from models.server import Server
 from routes.auth_helpers import login_required
+from services.audit import audit
 from services.monitoring import SystemMonitor
 from services.command import LinuxCommandService
 
@@ -29,4 +30,5 @@ def power_action(server_id):
         return jsonify({'success': False, 'error': 'Invalid action'}), 400
 
     ok, msg = LinuxCommandService.server_power(server, action)
+    audit(f'power.{action}', target=server.name, detail=msg if not ok else '', ok=ok)
     return jsonify({'success': ok, 'message': msg})
