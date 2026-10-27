@@ -45,6 +45,16 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
                   ${Object.values(SHELLMAN_TERMINAL_THEMES).map(t => `<option value="${t.id}" ${savedThemeKey === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
                 </select>
               </div>
+              <div style="display:flex; align-items:center; gap:0.25rem; margin-right:0.2rem;">
+                <span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-mono);">Idle:</span>
+                <select class="form-control" id="idle_${termWinId}" style="font-size:0.68rem; height:24px; padding:0 4px; background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.1); border-radius:4px; outline:none; cursor:pointer;" title="Auto-disconnect this session after no typing for a while. Off keeps the session open.">
+                  <option value="0" selected>Never disconnect</option>
+                  <option value="5">Disconnect after 5 min</option>
+                  <option value="15">Disconnect after 15 min</option>
+                  <option value="30">Disconnect after 30 min</option>
+                  <option value="60">Disconnect after 1 hour</option>
+                </select>
+              </div>
               <button class="btn btn-ghost btn-sm" id="newWin_${termWinId}" title="Open New Terminal Window">
                 <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 New
@@ -101,6 +111,21 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
         term.open(screenEl);
 
         let socket = null;
+        let pingTimer = null, idleTimer = null, idleMin = 0;
+        const idleSelect = bodyEl.querySelector(`#idle_${termWinId}`);
+
+        // Opt-in idle disconnect. Default is "Never": the session stays open until you close it.
+        const armIdle = () => {
+          clearTimeout(idleTimer); idleTimer = null;
+          if (!idleMin || !socket || socket.readyState !== WebSocket.OPEN) return;
+          idleTimer = setTimeout(() => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) return;
+            term.write(`\r\n[Disconnected: idle for ${idleMin} min. Press Reconnect to continue.]\r\n`);
+            try { socket.close(); } catch (_) {}
+            statusEl.textContent = 'Idle disconnect';
+          }, idleMin * 60 * 1000);
+        };
+        if (idleSelect) idleSelect.onchange = () => { idleMin = parseInt(idleSelect.value, 10) || 0; armIdle(); };
 
         const connectWS = () => {
           dotEl.className = 'status-dot';
@@ -112,12 +137,19 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
           }
 
           socket = new WebSocket(url);
+          const mySock = socket;
 
           socket.onopen = () => {
             dotEl.className = 'status-dot connected';
             statusEl.textContent = 'PTY Active';
             sendResize();
             term.focus();
+            // Keep-alive so proxies / NAT (nginx, Cloudflare, mobile networks) do not drop a quiet socket.
+            clearInterval(pingTimer);
+            pingTimer = setInterval(() => {
+              if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'ping' }));
+            }, 25000);
+            armIdle();
           };
 
           socket.onmessage = (evt) => {
@@ -135,8 +167,10 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
           };
 
           socket.onclose = () => {
+            if (mySock !== socket) return;   // stale socket from a Reconnect
+            clearInterval(pingTimer); clearTimeout(idleTimer);
             dotEl.className = 'status-dot disconnected';
-            statusEl.textContent = 'Disconnected';
+            if (statusEl.textContent !== 'Idle disconnect') statusEl.textContent = 'Disconnected';
           };
           socket.onerror = () => {
             dotEl.className = 'status-dot disconnected';
@@ -165,6 +199,7 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
                 e.preventDefault();
                 e.stopPropagation();
                 const code = key.charCodeAt(0) - 96;
+                armIdle();
                 if (socket && socket.readyState === WebSocket.OPEN) {
                   socket.send(JSON.stringify({ type: 'input', data: String.fromCharCode(code) }));
                 }
@@ -176,6 +211,7 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
         });
 
         term.onData((data) => {
+          armIdle();
           if (socket && socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: 'input', data: data }));
           }
@@ -211,6 +247,7 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
 
         winObj.onClose = () => {
           if (window._shellmanTerminals) window._shellmanTerminals.delete(term);
+          clearInterval(pingTimer); clearTimeout(idleTimer);
           if (socket) socket.close();
           term.dispose();
         };

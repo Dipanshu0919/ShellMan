@@ -3,6 +3,16 @@
    ========================================================================== */
 
 :root {
+  /* Defaults for pages that load only style.css (login, 2FA, setup). premium.css overrides on the dashboard. */
+  --sm-accent: #38bdf8;
+  --sm-accent-ink: #03131d;
+  --sm-accent-soft: #0e2a3b;
+  --sm-accent-line: #1d5473;
+  --sm-text: #f3f5f9;
+  --sm-text-2: #c3cad8;
+  --sm-text-3: #939db2;
+  --sm-line: #222838;
+  --sm-line-strong: #2f374b;
   /* Color Palette - Modern Midnight & Cyan */
   --bg-canvas: #0a0f18;         /* Deepest background */
   --bg-system: #0f1623;         /* Sidebar/Dock background */
@@ -2038,3 +2048,29 @@ input[type="checkbox"]:focus-visible {
   color: var(--accent-cyan, var(--sm-accent, #22d3ee));
 }
 .status-dot.disconnected::after, .status-dot:not(.connected)::after { color: var(--text-muted, var(--sm-text-3, #64748b)); }
+
+
+/* ---- Auth pages (login / 2FA / setup): readable fields, autofill-safe ---- */
+.login-card .form-control, .auth-card .form-control, .setup-card .form-control {
+  background-color: #0b111c;
+  border: 1px solid #2f374b;
+  color: #f3f5f9;
+  padding: .6rem .8rem;
+  font-size: .9rem;
+}
+.login-card .form-control::placeholder, .auth-card .form-control::placeholder, .setup-card .form-control::placeholder { color: #7c879c; opacity: 1; }
+.login-card .form-control:focus, .auth-card .form-control:focus, .setup-card .form-control:focus {
+  border-color: var(--sm-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sm-accent) 22%, transparent);
+}
+.login-card .form-label, .auth-card .form-label, .setup-card .form-label { color: #c3cad8; }
+input.form-control:-webkit-autofill,
+input.form-control:-webkit-autofill:hover,
+input.form-control:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f3f5f9;
+  caret-color: #f3f5f9;
+  -webkit-box-shadow: 0 0 0 1000px #0b111c inset;
+  box-shadow: 0 0 0 1000px #0b111c inset;
+  transition: background-color 9999s ease-out 0s;
+}
+.brand-title { color: #f3f5f9; }

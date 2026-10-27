@@ -2949,7 +2949,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                     <option value=".tar">.tar</option>
                   </select>
                 </div>
-                <div id="czBody_${fileWinId}" class="cz-body"><div class="cz-muted">Reading selection and .gitignore…</div></div>
+                <div id="czBody_${fileWinId}" class="cz-body"></div>
                 <div id="compressErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.4rem;"></div>
               </div>
             `,
@@ -3055,37 +3055,145 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             refreshCounts();
           };
 
-          const render = () => {
+          // ── Instant UI: chips come from the selected paths, the listing fills in a moment later ──
+          state.opts = {
+            loaded: false,
+            has_gitignore: false,
+            groups: paths.map(pth => ({ name: pth.split('/').filter(Boolean).pop() || pth, path: pth, is_dir: null, children: null, truncated: false }))
+          };
+          const git = { status: 'idle', err: '', info: '', files: 0, rules: 0, neg: 0, ctl: null, asked: false };
+
+          const gitRowHtml = () => {
             const o = state.opts;
-            const hasGit = o.gitignore_rules > 0;
-            state.gitOn = hasGit;
-            const gitInfo = hasGit
-              ? `${o.gitignore_rules} rules from ${o.gitignore_files.length} file(s): <span class="cz-mono">${esc(o.gitignore_files.slice(0, 3).join(', '))}${o.gitignore_files.length > 3 ? ', …' : ''}</span>${o.skipped_negations ? ` <span class="cz-muted">(${o.skipped_negations} “!” rule(s) not supported)</span>` : ''}`
-              : 'No .gitignore found in the selected folders.';
+            let sub;
+            if (git.status === 'loading') sub = '<span class="cz-spin"></span> Reading .gitignore…';
+            else if (git.status === 'done') sub = git.info;
+            else if (git.status === 'none') sub = 'No .gitignore found in the selected folders.';
+            else if (git.status === 'error') sub = `Could not read .gitignore (${esc(git.err || 'unknown error')}). You can still compress everything.`;
+            else if (o.loaded && o.has_gitignore) sub = 'A .gitignore was found in a selected folder. Tick to skip what it lists.';
+            else if (o.loaded) sub = 'Not checked by default. Tick to look for .gitignore files inside the selected folders.';
+            else sub = 'Optional. Tick to look for .gitignore files.';
+            return `
+              <input type="checkbox" id="czGit_${fileWinId}" ${state.gitOn ? 'checked' : ''}>
+              <span><b>Skip files listed in .gitignore</b><br><span class="cz-muted">${sub}</span></span>`;
+          };
 
-            const renderList = () => {
-              const gIdx = state.active;
-              const g = o.groups[gIdx];
-              if (!g) return '<div class="cz-muted">Nothing selected.</div>';
-              if (!g.is_dir) return `<div class="cz-muted"><span class="cz-mono">${esc(g.name)}</span> is a single file. It is included as is.</div>`;
-              if (!g.children.length) return '<div class="cz-muted">This folder is empty.</div>';
-              return `
-                <div class="cz-group-head"><span class="cz-mono">${esc(g.name)}/</span>
-                  <span class="cz-actions"><a href="#" data-gall="${gIdx}" data-v="1">all</a> · <a href="#" data-gall="${gIdx}" data-v="0">none</a></span></div>
-                ${g.children.map((c, ci) => `
-                  <label class="cz-row">
-                    <input type="checkbox" class="cz-child" data-g="${gIdx}" data-i="${ci}" ${childIncluded(c) ? 'checked' : ''}>
-                    <span class="cz-name">${esc(c.name)}${c.is_dir ? '/' : ''}</span>
-                    ${c.gitignored ? '<span class="cz-tag">gitignore</span>' : ''}
-                    <span class="cz-size">${c.is_dir ? '' : fmtSize(c.size)}</span>
-                  </label>`).join('')}
-                ${g.truncated ? '<div class="cz-muted">Showing the first 300 entries. Use the pattern box for the rest.</div>' : ''}`;
-            };
+          const paintGit = () => {
+            const row = body.querySelector('.cz-git');
+            if (!row) return;
+            row.innerHTML = gitRowHtml();
+            row.classList.toggle('cz-found', !!(state.opts.has_gitignore));
+            const cb = row.querySelector('input');
+            cb.onchange = () => onGitToggle(cb.checked);
+          };
 
+          const renderListHtml = () => {
+            const o = state.opts;
+            const gIdx = state.active;
+            const g = o.groups[gIdx];
+            if (!g) return '<div class="cz-muted">Nothing selected.</div>';
+            if (g.children === null) return '<div class="cz-muted"><span class="cz-spin"></span> Reading folder…</div>';
+            if (!g.is_dir) return `<div class="cz-muted"><span class="cz-mono">${esc(g.name)}</span> is a single file. It is included as is.</div>`;
+            if (!g.children.length) return '<div class="cz-muted">This folder is empty.</div>';
+            return `
+              <div class="cz-group-head"><span class="cz-mono">${esc(g.name)}/</span>
+                <span class="cz-actions"><a href="#" data-gall="${gIdx}" data-v="1">all</a> · <a href="#" data-gall="${gIdx}" data-v="0">none</a></span></div>
+              ${g.children.map((c, ci) => `
+                <label class="cz-row">
+                  <input type="checkbox" class="cz-child" data-g="${gIdx}" data-i="${ci}" ${childIncluded(c) ? 'checked' : ''}>
+                  <span class="cz-name">${esc(c.name)}${c.is_dir ? '/' : ''}</span>
+                  ${c.gitignored ? '<span class="cz-tag">gitignore</span>' : ''}
+                  <span class="cz-size">${c.is_dir ? '' : fmtSize(c.size)}</span>
+                </label>`).join('')}
+              ${g.truncated ? '<div class="cz-muted">Showing the first 400 entries. Use the pattern box for the rest.</div>' : ''}`;
+          };
+
+          const wireList = () => {
+            const o = state.opts;
+            body.querySelectorAll('input.cz-child').forEach(cb => {
+              cb.onchange = () => {
+                const c = o.groups[+cb.dataset.g].children[+cb.dataset.i];
+                state.manual[c.rel] = cb.checked;
+                refreshCounts();
+              };
+            });
+            body.querySelectorAll('a[data-gall]').forEach(a => {
+              a.onclick = (e) => {
+                e.preventDefault();
+                const v = a.dataset.v === '1';
+                o.groups[+a.dataset.gall].children.forEach(c => { state.manual[c.rel] = v; });
+                body.querySelectorAll(`input.cz-child[data-g="${a.dataset.gall}"]`).forEach(cb => { cb.checked = v; });
+                refreshCounts();
+              };
+            });
+          };
+
+          const paintList = () => {
+            const el = body.querySelector(`#czList_${fileWinId}`);
+            if (!el) return;
+            el.innerHTML = renderListHtml();
+            wireList();
+            refreshCounts();
+          };
+
+          const paintChipNames = () => {
+            body.querySelectorAll('.cz-chip-sel').forEach(chip => {
+              const g = state.opts.groups[+chip.dataset.g];
+              chip.querySelector('.cz-chip-name').textContent = g.name + (g.is_dir ? '/' : '');
+            });
+          };
+
+          const onGitToggle = async (on) => {
+            state.gitOn = on;
+            if (!on) {
+              if (git.ctl) { git.ctl.abort(); git.ctl = null; if (git.status === 'loading') git.status = 'idle'; }
+              paintGit(); syncChildBoxes(); return;
+            }
+            if (git.status === 'done') { paintGit(); syncChildBoxes(); return; }
+            // Opt-in lookup: one bounded `find` on the server, cancellable, never blocks other work.
+            git.status = 'loading';
+            paintGit();
+            const ctl = new AbortController();
+            git.ctl = ctl;
+            const onOuterAbort = () => ctl.abort();
+            signal.addEventListener('abort', onOuterAbort, { once: true });
+            const reqId = 'git_' + Date.now();
+            ctl.signal.addEventListener('abort', () => sendCancel(reqId), { once: true });
+            try {
+              const rels = [];
+              state.opts.groups.forEach(g => (g.children || []).forEach(c => rels.push(c.rel)));
+              const resp = await fetch(`/api/servers/${this.serverId}/files/archive-gitignore`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: ctl.signal,
+                body: JSON.stringify({ paths, rels, request_id: reqId })
+              });
+              const res = await resp.json();
+              if (git.ctl !== ctl) return;           // user unticked meanwhile
+              git.ctl = null;
+              if (!res.success) throw new Error(res.error || 'failed');
+              const flagged = new Set(res.flagged || []);
+              state.opts.groups.forEach(g => (g.children || []).forEach(c => { c.gitignored = flagged.has(c.rel); }));
+              if (!res.gitignore_files.length) {
+                git.status = 'none'; state.gitOn = false;
+              } else {
+                git.status = 'done';
+                git.info = `${res.gitignore_rules} rules from ${res.gitignore_files.length} file(s): <span class="cz-mono">${esc(res.gitignore_files.slice(0, 3).join(', '))}${res.gitignore_files.length > 3 ? ', …' : ''}</span>${res.skipped_negations ? ` <span class="cz-muted">(${res.skipped_negations} “!” rule(s) not supported)</span>` : ''}`;
+              }
+              paintGit(); paintList();
+            } catch (e) {
+              if (ctl.signal.aborted || signal.aborted) return;
+              git.ctl = null; git.status = 'error'; git.err = String(e.message || e); state.gitOn = false;
+              paintGit();
+            }
+          };
+
+          const renderShell = () => {
+            const o = state.opts;
             const chipsHtml = o.groups.map((g, gi) => `
               <div class="cz-chip-sel ${gi === state.active ? 'active' : ''}" data-g="${gi}" tabindex="0" role="button" title="Show contents of ${esc(g.name)}">
                 <input type="checkbox" class="cz-top" data-g="${gi}" checked title="Include ${esc(g.name)} in the archive">
-                <span class="cz-chip-name">${esc(g.name)}${g.is_dir ? '/' : ''}</span>
+                <span class="cz-chip-name">${esc(g.name)}</span>
                 <span class="cz-chip-badge" style="display:none"></span>
               </div>`).join('');
 
@@ -3093,17 +3201,14 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               <div class="cz-cols">
                 <div class="cz-left">
                   <div class="cz-sec-title">Choose what goes in <span class="cz-count cz-muted"></span></div>
-                  <div class="cz-list" id="czList_${fileWinId}">${renderList()}</div>
+                  <div class="cz-list" id="czList_${fileWinId}"></div>
                 </div>
                 <div class="cz-right">
                   <div>
                     <div class="cz-sec-title">Selected items <span class="cz-muted">(${o.groups.length}) · click one to edit its contents</span></div>
                     <div class="cz-chips">${chipsHtml}</div>
                   </div>
-                  <label class="cz-check cz-git ${hasGit ? '' : 'cz-disabled'}">
-                    <input type="checkbox" id="czGit_${fileWinId}" ${hasGit ? 'checked' : 'disabled'}>
-                    <span><b>Skip files listed in .gitignore</b><br><span class="cz-muted">${gitInfo}</span></span>
-                  </label>
+                  <label class="cz-check cz-git"></label>
                   <div>
                     <div class="cz-sec-title">Quick exclude</div>
                     <div class="cz-quick">
@@ -3112,40 +3217,17 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   </div>
                   <div>
                     <div class="cz-sec-title">Custom patterns</div>
-                    <textarea id="czCustom_${fileWinId}" class="form-control cz-ta" rows="4" placeholder="One per line, e.g.&#10;*.tmp&#10;uploads/cache&#10;secrets.json"></textarea>
+                    <textarea id="czCustom_${fileWinId}" class="form-control cz-ta" rows="3" placeholder="One per line, e.g.&#10;*.tmp&#10;uploads/cache&#10;secrets.json"></textarea>
                     <div class="cz-muted" style="margin-top:.25rem;">A name without “/” matches at any depth. Wildcards: * ?</div>
                   </div>
                 </div>
               </div>`;
 
-            const wireList = () => {
-              body.querySelectorAll('input.cz-child').forEach(cb => {
-                cb.onchange = () => {
-                  const c = o.groups[+cb.dataset.g].children[+cb.dataset.i];
-                  state.manual[c.rel] = cb.checked;
-                  refreshCounts();
-                };
-              });
-              body.querySelectorAll('a[data-gall]').forEach(a => {
-                a.onclick = (e) => {
-                  e.preventDefault();
-                  const v = a.dataset.v === '1';
-                  o.groups[+a.dataset.gall].children.forEach(c => { state.manual[c.rel] = v; });
-                  body.querySelectorAll(`input.cz-child[data-g="${a.dataset.gall}"]`).forEach(cb => { cb.checked = v; });
-                  refreshCounts();
-                };
-              });
-            };
-            wireList();
-
-            body.querySelector(`#czGit_${fileWinId}`).onchange = (e) => { state.gitOn = e.target.checked; syncChildBoxes(); };
             body.querySelectorAll('.cz-chip-sel').forEach(chip => {
               const pick = () => {
                 state.active = +chip.dataset.g;
                 body.querySelectorAll('.cz-chip-sel').forEach(c => c.classList.toggle('active', c === chip));
-                body.querySelector(`#czList_${fileWinId}`).innerHTML = renderList();
-                wireList();
-                refreshCounts();
+                paintList();
               };
               chip.onclick = (e) => { if (e.target.classList.contains('cz-top')) return; pick(); };
               chip.onkeydown = (e) => { if (e.target === chip && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick(); } };
@@ -3160,9 +3242,13 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             body.querySelectorAll('input.cz-q').forEach(cb => {
               cb.onchange = () => { cb.checked ? state.quick.add(cb.value) : state.quick.delete(cb.value); };
             });
-            refreshCounts();
+            paintGit();
+            paintList();
           };
 
+          renderShell();
+
+          // Quick listing only (one `find`, no lock, no .gitignore search).
           (async () => {
             try {
               const resp = await fetch(`/api/servers/${this.serverId}/files/archive-options`, {
@@ -3173,12 +3259,20 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               });
               const res = await resp.json();
               if (!res.success) throw new Error(res.error || 'Cannot read selection');
-              state.opts = res;
-              render();
+              state.opts.groups.forEach((g, i) => {
+                const r = res.groups.find(x => x.path === g.path) || res.groups[i];
+                if (r) Object.assign(g, { is_dir: r.is_dir, children: r.children, truncated: r.truncated, has_gitignore: r.has_gitignore });
+                else g.children = [];
+              });
+              state.opts.loaded = true;
+              state.opts.has_gitignore = !!res.has_gitignore;
+              paintChipNames(); paintGit(); paintList();
             } catch (e) {
               if (signal.aborted) return;
-              state.opts = null;
-              body.innerHTML = `<div class="cz-muted">Exclusion options unavailable (${esc(e.message || e)}). You can still compress everything.</div>`;
+              state.opts.groups.forEach(g => { if (g.children === null) g.children = []; g.is_dir = !!g.is_dir; });
+              state.opts.loaded = true;
+              body.querySelector(`#czList_${fileWinId}`).innerHTML = `<div class="cz-muted">Folder contents unavailable (${esc(e.message || e)}). You can still compress everything.</div>`;
+              paintGit();
             }
           })();
 

@@ -495,120 +495,164 @@ class SFTPService:
                             return True
         return False
 
+    @staticmethod
+    def _parse_gitignore(text: str, rel_dir: str) -> Tuple[List[str], int]:
+        """Convert .gitignore text to exclude patterns relative to the archive root."""
+        out: List[str] = []
+        skipped = 0
+        for raw in text.splitlines():
+            line = raw.rstrip()
+            if not line.strip() or line.lstrip().startswith('#'):
+                continue
+            if line.startswith('!'):
+                skipped += 1
+                continue
+            line = line.strip()
+            anchored = line.startswith('/') or ('/' in line.rstrip('/'))
+            line = line.strip('/')
+            if line.startswith('**/'):
+                line = line[3:]
+                anchored = '/' in line
+            if not line:
+                continue
+            prefix = f"{rel_dir}/" if rel_dir and rel_dir != '.' else ''
+            out.append(f"{prefix}{line}")
+            if not anchored:
+                out.append(f"{prefix}*/{line}")
+        return out, skipped
+
     @classmethod
-    def _gitignore_excludes(cls, server, clean_paths: List[str], max_files: int = 40, cancel_id: str = None) -> Tuple[List[str], int, List[str]]:
-        """Read .gitignore files inside the selected folders and convert them to exclude patterns
-        relative to the archive root (the parent of the first selected item).
+    def _gitignore_excludes(cls, server, clean_paths: List[str], max_files: int = 40, cancel_id: str = None, diag: Dict[str, Any] = None) -> Tuple[List[str], int, List[str]]:
+        """Find .gitignore files inside the selected folders with ONE bounded `find` (heavy dirs
+        pruned, depth-limited, timed out) and read them in the same command. No per-directory
+        SFTP round trips and no per-server lock, so it is fast and never blocks other requests.
         Returns (patterns, skipped_negation_rules, gitignore_files_used)."""
         excludes: List[str] = []
         skipped = 0
         used: List[str] = []
         base_dir = os.path.dirname(clean_paths[0])
-        try:
-            with ssh_manager.sftp_context(server) as sftp:
-                def walk(dir_abs, depth):
-                    nonlocal skipped
-                    if len(used) >= max_files or depth > 6 or ProgressTracker.is_cancelled(cancel_id):
-                        return
-                    rel_dir = os.path.relpath(dir_abs, base_dir).replace('\\', '/')
-                    try:
-                        entries = sftp.listdir_attr(dir_abs)
-                    except Exception:
-                        return
-                    names = {a.filename: a for a in entries}
-                    if '.gitignore' in names and not stat.S_ISDIR(names['.gitignore'].st_mode):
-                        try:
-                            with sftp.open(os.path.join(dir_abs, '.gitignore'), 'rb') as f:
-                                text = f.read(512 * 1024).decode('utf-8', 'replace')
-                        except Exception:
-                            text = ''
-                        used.append(os.path.join(rel_dir, '.gitignore'))
-                        for raw in text.splitlines():
-                            line = raw.rstrip()
-                            if not line.strip() or line.lstrip().startswith('#'):
-                                continue
-                            if line.startswith('!'):
-                                skipped += 1
-                                continue
-                            line = line.strip()
-                            anchored = line.startswith('/') or ('/' in line.rstrip('/'))
-                            line = line.strip('/')
-                            if line.startswith('**/'):
-                                line = line[3:]
-                                anchored = '/' in line
-                            if not line:
-                                continue
-                            if anchored:
-                                excludes.append(f"{rel_dir}/{line}")
-                            else:
-                                excludes.append(f"{rel_dir}/{line}")
-                                excludes.append(f"{rel_dir}/*/{line}")
-                    for n, a in names.items():
-                        if stat.S_ISDIR(a.st_mode) and not stat.S_ISLNK(a.st_mode) and n not in ('.git', 'node_modules', '.venv', 'venv', '__pycache__'):
-                            walk(os.path.join(dir_abs, n), depth + 1)
+        quoted = " ".join(shlex.quote(p) for p in clean_paths)
+        diag = diag if diag is not None else {}
 
-                for cp in clean_paths:
-                    try:
-                        if stat.S_ISDIR(sftp.stat(cp).st_mode):
-                            walk(cp, 0)
-                    except Exception:
-                        pass
-        except Exception as e:
-            logger.warning(f"gitignore scan failed: {e}")
+        def run(cmd, timeout):
+            try:
+                code, out, err = ssh_manager.execute(server, cmd, timeout=timeout, use_lock=False)
+            except Exception as e:
+                diag['error'] = str(e)
+                return None
+            if code == -2:
+                return None
+            if code not in (0, 1, 124) and not out:
+                diag['error'] = (err or '').strip()[:200] or f"exit {code}"
+            return out
+
+        # Step 1: list candidate .gitignore files. The top-level one is checked directly (cheap and
+        # certain); the rest come from one bounded `find` with heavy folders pruned.
+        list_cmd = (
+            "T=''; command -v timeout >/dev/null 2>&1 && T='timeout 20'; "
+            f"for d in {quoted}; do "
+            "if [ -d \"$d\" ]; then "
+            "[ -f \"$d/.gitignore\" ] && printf '%s\\n' \"$d/.gitignore\"; "
+            "$T find \"$d\" -maxdepth 5 \\( -name node_modules -o -name .git -o -name .venv -o -name venv "
+            "-o -name __pycache__ \\) -prune -o -name .gitignore -type f -print 2>/dev/null; "
+            "fi; done"
+        )
+        out = run(list_cmd, 40)
+        if out is None or ProgressTracker.is_cancelled(cancel_id):
+            return [], 0, []
+        files: List[str] = []
+        for line in out.split('\n'):
+            line = line.strip()
+            if line.endswith('/.gitignore') and line not in files:
+                files.append(line)
+        files = files[:max_files]
+        if not files:
+            return [], 0, []
+
+        # Step 2: read them all in one command.
+        qfiles = " ".join(shlex.quote(f) for f in files)
+        read_cmd = (
+            f"for f in {qfiles}; do printf '@@SMFILE@@%s\\n' \"$f\"; "
+            "head -c 524288 -- \"$f\" 2>/dev/null; printf '\\n'; done"
+        )
+        out = run(read_cmd, 30)
+        if out is None or ProgressTracker.is_cancelled(cancel_id):
+            return [], 0, []
+        for chunk in out.split('@@SMFILE@@')[1:]:
+            path, _, text = chunk.partition('\n')
+            path = path.strip()
+            rel_dir = os.path.relpath(os.path.dirname(path), base_dir).replace('\\', '/')
+            used.append(os.path.join(rel_dir, '.gitignore'))
+            ex, sk = cls._parse_gitignore(text, rel_dir)
+            excludes += ex
+            skipped += sk
         return cls._clean_excludes(excludes), skipped, used
 
     @classmethod
     def archive_options(cls, server, paths: List[str], cancel_id: str = None) -> Tuple[bool, Any]:
-        """Data for the Compress dialog: .gitignore rules found, and the first-level children of
-        every selected folder with a flag telling whether .gitignore would skip it."""
+        """Fast listing for the Compress dialog: first-level children of every selected folder
+        (one `find`, no lock, capped) and which folders have a top-level .gitignore.
+        The recursive .gitignore search is separate and opt-in (archive_gitignore)."""
         if not paths:
             return False, "No items selected"
         clean_paths = [cls._normalize_path(p, server) for p in paths]
         base_dir = os.path.dirname(clean_paths[0])
-        git_ex, skipped, used = cls._gitignore_excludes(server, clean_paths, cancel_id=cancel_id)
+        quoted = " ".join(shlex.quote(p) for p in clean_paths)
+        script = (
+            f"for p in {quoted}; do "
+            "if [ -d \"$p\" ]; then printf 'D\\t%s\\n' \"$p\"; "
+            "find \"$p\" -mindepth 1 -maxdepth 1 -printf '%y\\t%s\\t%f\\n' 2>/dev/null | head -n 400; "
+            "elif [ -e \"$p\" ]; then printf 'F\\t%s\\n' \"$p\"; fi; done"
+        )
+        code, out, err = ssh_manager.execute(server, script, timeout=20, use_lock=False)
+        if code == -2 or ProgressTracker.is_cancelled(cancel_id):
+            ProgressTracker.clear_cancel(cancel_id)
+            return False, "Cancelled"
+        if code != 0 and not out:
+            return False, f"Cannot read selection: {err.strip() or code}"
+        groups: List[Dict[str, Any]] = []
+        cur = None
+        for line in out.split('\n'):
+            if not line:
+                continue
+            parts = line.split('\t')
+            if parts[0] in ('D', 'F') and len(parts) == 2:
+                cur = {'name': os.path.basename(parts[1].rstrip('/')), 'path': parts[1], 'is_dir': parts[0] == 'D',
+                       'children': [], 'truncated': False, 'has_gitignore': False}
+                groups.append(cur)
+            elif cur is not None and len(parts) >= 3:
+                kind, size, name = parts[0], parts[1], '\t'.join(parts[2:])
+                is_dir = kind == 'd'
+                cur['children'].append({
+                    'name': name, 'rel': f"{cur['name']}/{name}", 'is_dir': is_dir,
+                    'size': 0 if is_dir else (int(size) if size.isdigit() else 0), 'gitignored': False,
+                })
+                if name == '.gitignore' and not is_dir:
+                    cur['has_gitignore'] = True
+        for g in groups:
+            g['children'].sort(key=lambda c: (not c['is_dir'], c['name'].lower()))
+            if len(g['children']) >= 400:
+                g['truncated'] = True
+        return True, {'groups': groups, 'base_dir': base_dir,
+                      'has_gitignore': any(g['has_gitignore'] for g in groups)}
+
+    @classmethod
+    def archive_gitignore(cls, server, paths: List[str], rels: List[str] = None, cancel_id: str = None) -> Tuple[bool, Any]:
+        """Opt-in .gitignore lookup. Returns the files used, rule count and which of `rels`
+        (children shown in the dialog) the rules would skip."""
+        if not paths:
+            return False, "No items selected"
+        clean_paths = [cls._normalize_path(p, server) for p in paths]
+        diag: Dict[str, Any] = {}
+        git_ex, skipped, used = cls._gitignore_excludes(server, clean_paths, cancel_id=cancel_id, diag=diag)
         if ProgressTracker.is_cancelled(cancel_id):
             ProgressTracker.clear_cancel(cancel_id)
             return False, "Cancelled"
-        groups = []
-        try:
-            with ssh_manager.sftp_context(server) as sftp:
-                for cp in clean_paths:
-                    if ProgressTracker.is_cancelled(cancel_id):
-                        break
-                    top = os.path.basename(cp)
-                    try:
-                        attr = sftp.stat(cp)
-                    except Exception:
-                        continue
-                    is_dir = stat.S_ISDIR(attr.st_mode)
-                    group = {'name': top, 'path': cp, 'is_dir': is_dir, 'children': [], 'truncated': False}
-                    if is_dir:
-                        try:
-                            kids = sorted(sftp.listdir_attr(cp), key=lambda a: (not stat.S_ISDIR(a.st_mode), a.filename.lower()))
-                        except Exception:
-                            kids = []
-                        for a in kids[:300]:
-                            rel = f"{top}/{a.filename}"
-                            group['children'].append({
-                                'name': a.filename,
-                                'rel': rel,
-                                'is_dir': stat.S_ISDIR(a.st_mode),
-                                'size': 0 if stat.S_ISDIR(a.st_mode) else a.st_size,
-                                'gitignored': cls._is_excluded(rel, git_ex),
-                            })
-                        group['truncated'] = len(kids) > 300
-                    else:
-                        group['gitignored'] = cls._is_excluded(top, git_ex)
-                    groups.append(group)
-        except Exception as e:
-            return False, f"Cannot read selection: {e}"
-        return True, {
-            'gitignore_files': used,
-            'gitignore_rules': len(git_ex),
-            'skipped_negations': skipped,
-            'groups': groups,
-            'base_dir': base_dir,
-        }
+        if diag.get('error') and not used:
+            return False, f"Could not search for .gitignore: {diag['error']}"
+        flagged = [r for r in (rels or [])[:5000] if cls._is_excluded(r, git_ex)]
+        return True, {'gitignore_files': used, 'gitignore_rules': len(git_ex),
+                      'skipped_negations': skipped, 'flagged': flagged}
 
     @classmethod
     def archive_multiple(cls, server, paths: List[str], dest_dir: str, archive_name: str, task_id: str = None,

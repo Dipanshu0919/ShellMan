@@ -213,6 +213,17 @@ def archive_options(server_id):
         return jsonify({'success': False, 'error': res}), 400
     return jsonify({'success': True, **res})
 
+@files_bp.route('/api/servers/<int:server_id>/files/archive-gitignore', methods=['POST'])
+@login_required
+def archive_gitignore(server_id):
+    server = Server.query.get_or_404(server_id)
+    data = request.json or {}
+    ok, res = SFTPService.archive_gitignore(server, data.get('paths', []), data.get('rels', []),
+                                            cancel_id=request.headers.get('X-Request-Id') or data.get('request_id'))
+    if not ok:
+        return jsonify({'success': False, 'error': res}), 400
+    return jsonify({'success': True, **res})
+
 @files_bp.route('/api/servers/<int:server_id>/files/extract', methods=['POST'])
 @login_required
 def extract_archive(server_id):

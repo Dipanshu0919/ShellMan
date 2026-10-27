@@ -2029,3 +2029,30 @@ body { font-feature-settings: 'cv11', 'ss01'; }
 .desktop-dock-wrapper.dock-autohide-active:not(.dock-peek) .dock-peek-trigger {
   transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: auto;
 }
+
+/* ---- Compress dialog v3: never taller than the screen, readable text, instant open ---- */
+.file-modal-box:has(.cz-wrap) {
+  /* The backdrop lives inside the Files window, so size against it, not the viewport. */
+  max-height: calc(100% - 1.5rem);
+  display: flex; flex-direction: column;
+}
+.file-modal-box:has(.cz-wrap) > .file-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.file-modal-box:has(.cz-wrap) > .file-modal-header,
+.file-modal-box:has(.cz-wrap) > .file-modal-footer { flex: 0 0 auto; }
+.cz-wrap { color: var(--sm-text-2, #c3cad8); }
+.cz-wrap, .cz-wrap .cz-sec-title, .cz-wrap b { color: var(--sm-text, #f3f5f9); }
+.cz-wrap .cz-label { color: var(--sm-text-2, #c3cad8); }
+.cz-wrap .cz-muted { color: var(--sm-text-3, #939db2); }
+.cz-wrap .cz-name, .cz-wrap .cz-chip-name, .cz-wrap .cz-chip .cz-mono, .cz-wrap .cz-row { color: var(--sm-text, #f3f5f9); }
+.cz-wrap .form-control, .cz-wrap select.form-control {
+  background: #0b111c; color: var(--sm-text, #f3f5f9); border: 1px solid var(--sm-line-strong, #2f374b);
+}
+.cz-wrap .form-control::placeholder { color: #7c879c; opacity: 1; }
+.cz-wrap .form-control:focus { border-color: var(--sm-accent); }
+.cz-list { max-height: min(44vh, 400px); }
+.cz-ta { min-height: 64px; }
+.cz-git.cz-found { border-color: var(--sm-accent-line, #1d5473); }
+.cz-spin { display: inline-block; width: .7rem; height: .7rem; border: 2px solid var(--sm-line-strong, #2f374b); border-top-color: var(--sm-accent); border-radius: 50%; vertical-align: -1px; animation: czSpin .8s linear infinite; }
+@keyframes czSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cz-spin { animation: none; } }
+@media (max-width: 720px) { .cz-list { max-height: 30vh; } }

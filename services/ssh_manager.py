@@ -215,12 +215,14 @@ class SSHConnectionManager:
         )
 
     def execute(self, server, command: str, timeout: int = 15, get_pty: bool = False,
-                cancel_check=None, on_cancel=None) -> Tuple[int, str, str]:
+                cancel_check=None, on_cancel=None, use_lock: bool = True) -> Tuple[int, str, str]:
         """
         Executes a command safely over SSH with channel lifecycle cleanup and concurrency locking.
         Cancellable: when the browser sends X-Request-Id and later calls /api/tasks/<id>/cancel
         (dialog closed, window closed, Cancel pressed) the remote job is killed, the per-server
         lock is released, and (-2, '', 'Cancelled') is returned.
+        use_lock=False runs on its own SSH channel without waiting for the per-server lock, so a
+        short read-only probe (ls/find) never queues behind, or blocks, other work on that server.
         Returns: (exit_status, stdout_str, stderr_str)
         """
         from services.progress_tracker import ProgressTracker
@@ -237,8 +239,10 @@ class SSHConnectionManager:
                 kill = self.kill_script(rid)
                 on_cancel = lambda client: client.exec_command(kill)
 
-        lock = self._get_server_lock(server.id)
-        if cancel_check is not None:
+        lock = self._get_server_lock(server.id) if use_lock else None
+        if lock is None:
+            pass
+        elif cancel_check is not None:
             # Wait for the server lock without blocking forever; give up if cancelled meanwhile.
             while not lock.acquire(timeout=0.2):
                 if cancel_check():
@@ -261,7 +265,8 @@ class SSHConnectionManager:
                 logger.error(f"SSH command execution failed completely for server {server.id}: {e}")
                 return -1, "", f"SSH Connection / Execution Error: {str(e)}"
         finally:
-            lock.release()
+            if lock is not None:
+                lock.release()
 
     def open_shell(self, server, term: str = 'xterm-256color', width: int = 80, height: int = 24) -> Tuple[paramiko.SSHClient, paramiko.Channel]:
         """
