@@ -41,6 +41,7 @@ from models.git_deployment import GitDeployment
 from models.domain import CloudflareSetting, Domain
 from models.audit import AuditLog
 from models.alert import AlertRule, AlertEvent, AlertChannel
+from models.timelimit import TimeLimit, ServerUsage
 
 # Initialize Flask-Sock
 sock = Sock()
@@ -87,6 +88,7 @@ def create_app(config_class=Config):
     from routes.database import database_bp
     from routes.firewall import firewall_bp
     from routes.audit import audit_bp
+    from routes.codespace import codespace_bp
     from routes.alerts import alerts_bp
 
     app.register_blueprint(auth_bp)
@@ -112,6 +114,7 @@ def create_app(config_class=Config):
     app.register_blueprint(database_bp)
     app.register_blueprint(firewall_bp)
     app.register_blueprint(audit_bp)
+    app.register_blueprint(codespace_bp)
     app.register_blueprint(alerts_bp)
 
     # Register terminal websocket handler
@@ -156,6 +159,9 @@ def create_app(config_class=Config):
             # Columns added after the first release: add them when an older database is opened.
             if db.columns_of('servers'):
                 db.add_column_if_missing('servers', 'last_workspace', 'VARCHAR(512)')
+                db.add_column_if_missing('servers', 'kind', "VARCHAR(20) DEFAULT 'ssh'")
+                db.add_column_if_missing('servers', 'codespace_name', 'VARCHAR(120)')
+                db.add_column_if_missing('servers', 'gh_token_enc', 'TEXT')
             if db.columns_of('users'):
                 db.add_column_if_missing('users', 'totp_secret', 'VARCHAR(64)')
                 db.add_column_if_missing('users', 'totp_enabled', 'BOOLEAN DEFAULT 0 NOT NULL')
@@ -181,6 +187,8 @@ def create_app(config_class=Config):
         if not val:
             return ''
         s = str(val).strip()
+        if s.startswith('codespace:'):
+            return 'GitHub Codespace'
         if ':' in s and not s.startswith('['):
             parts = s.split(':', 1)
             host_part, port_part = parts[0], parts[1]
@@ -203,7 +211,15 @@ def create_app(config_class=Config):
             except Exception:
                 return url_for('static', filename=filename)
 
-        return dict(mask_ip=mask_ip_filter, static_v=static_v)
+        def endpoint_label(server):
+            """Masked 'host:port' for SSH servers, 'GitHub Codespace <name>' for Codespaces."""
+            if server is None:
+                return ''
+            if getattr(server, 'is_codespace', False):
+                return f"GitHub Codespace {server.codespace_name}"
+            return f"{mask_ip_filter(server.host)}:{server.port}"
+
+        return dict(mask_ip=mask_ip_filter, static_v=static_v, endpoint_label=endpoint_label)
 
     # Background alert engine (server-side checks + Telegram/Slack/Discord/webhook/e-mail notifications).
     if not app.config.get('TESTING'):

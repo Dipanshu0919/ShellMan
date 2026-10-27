@@ -162,7 +162,7 @@
       <!-- Status Bar -->
       <div class="ws-statusbar">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span id="sbServerInfo">{{ selected_server.name }} ({{ selected_server.host|mask_ip }})</span>
+          <span id="sbServerInfo">{{ selected_server.name }} ({{ 'GitHub Codespace' if selected_server.is_codespace else selected_server.host|mask_ip }})</span>
           <span id="sbActiveFilePath">No file</span>
         </div>
         <div style="display: flex; align-items: center; gap: 0.75rem;">

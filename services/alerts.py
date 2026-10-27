@@ -35,7 +35,7 @@ logger = logging.getLogger('shellman.alerts')
 
 METRIC_LABELS = {
     'cpu': 'CPU usage', 'mem': 'Memory usage', 'disk': 'Disk usage', 'swap': 'Swap usage',
-    'load': 'Load average (1 min)', 'offline': 'Server unreachable',
+    'load': 'Load average (1 min)', 'offline': 'Server unreachable', 'quota': 'Time budget',
 }
 
 # Recommended starting rules (offered by the "Add recommended rules" button, never added on their own).
@@ -305,6 +305,11 @@ class AlertEngine:
 
     def tick(self):
         from services.monitoring import SystemMonitor
+        try:
+            from services import quota
+            quota.tick(self.app, self.interval)
+        except Exception:
+            logger.exception('quota tick failed')
         rules = AlertRule.query.filter_by(enabled=True).all()
         servers = {s.id: s for s in Server.query.all()}
         wanted = {}                      # server_id -> [rules]
@@ -318,6 +323,12 @@ class AlertEngine:
 
         for sid, rs in wanted.items():
             server = servers[sid]
+            if server.is_codespace:
+                # A stopped Codespace is not "down", and connecting to it would start it (and use quota).
+                from services import codespace as _cs
+                info = _cs.cached_state(server.id)
+                if info is None or not info['available']:
+                    continue
             try:
                 metrics = SystemMonitor.get_quick_metrics(server, force=True)
             except Exception as e:

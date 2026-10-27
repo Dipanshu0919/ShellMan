@@ -63,6 +63,9 @@ def execute_rsync_operation(server, src: str, dst: str, is_local_remote: bool, i
         return code, stdout or '', stderr or '', rsync_cmd
 
     # Local-to-Remote / Remote-to-Local: Executed on the host running ShellMan, tunneling to remote server
+    if getattr(server, 'is_codespace', False):
+        return -1, '', ('Local <-> Remote sync is not available for GitHub Codespaces yet. '
+                        'Use a Git deployment, the file manager upload, or sync between folders on the Codespace.'), 'rsync'
     temp_files_to_clean = []
     proc = None
     env = os.environ.copy()

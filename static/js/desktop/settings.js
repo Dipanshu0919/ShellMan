@@ -138,9 +138,11 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                         ${isCurrent ? '<span style="font:700 0.68rem/1 var(--font-mono, ui-monospace, monospace); color:var(--sm-accent); letter-spacing:.04em;">[ACTIVE]</span>' : ''}
                       </div>
                       <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
-                        <span>${escapeHtml(s.username)}@${escapeHtml(s.host)}:${s.port}</span>
+                        ${s.kind === 'codespace'
+                          ? `<span>GitHub Codespace: ${escapeHtml(s.codespace_name || '')}</span>`
+                          : `<span>${escapeHtml(s.username)}@${escapeHtml(s.host)}:${s.port}</span>
                         <span style="margin:0 4px;">&bull;</span>
-                        <span style="color:#94a3b8;">${s.auth_type === 'key' ? 'SSH Key' : 'Password'}</span>
+                        <span style="color:#94a3b8;">${s.auth_type === 'key' ? 'SSH Key' : 'Password'}</span>`}
                       </div>
                     </div>
                   </div>
@@ -150,6 +152,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                         Switch
                       </a>
                     ` : ''}
+                    ${s.kind === 'codespace' ? `<button class="btn btn-primary btn-xs cs-panel-btn" data-id="${s.id}" title="Start, stop and time budget">Time &amp; Power</button>` : ''}
                     <button class="btn btn-secondary btn-xs test-server-btn" data-id="${s.id}" title="Test SSH Connection">
                       Test SSH
                     </button>
@@ -170,6 +173,9 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           if (addBtn) addBtn.onclick = () => openServerModal();
 
           // Wire row action buttons
+          contentPane.querySelectorAll('.cs-panel-btn').forEach(btn => {
+            btn.onclick = () => { if (window.ShellmanCodespace) window.ShellmanCodespace.openPanel(parseInt(btn.dataset.id)); };
+          });
           contentPane.querySelectorAll('.edit-server-btn').forEach(btn => {
             btn.onclick = () => {
               const id = parseInt(btn.dataset.id);
@@ -241,26 +247,34 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           const modalBackdrop = document.createElement('div');
           modalBackdrop.className = 'file-modal-backdrop';
           modalBackdrop.innerHTML = `
-            <div class="file-modal-box" style="width:560px; max-width:92vw;">
+            <div class="file-modal-box" style="width:560px; max-width:92vw; max-height:calc(100% - 24px); display:flex; flex-direction:column; overflow:hidden;">
               <div class="file-modal-header" style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-weight:700; font-size:0.88rem; color:#f8fafc;">
                   ${isEdit ? `Edit Server Details: ${escapeHtml(serverToEdit.name)}` : 'Add New Server Node'}
                 </span>
                 <button class="win-btn win-close" id="srvMClose_${setWinId}">×</button>
               </div>
-              <div class="file-modal-body" style="padding:1.1rem; display:flex; flex-direction:column; gap:0.85rem; font-size:0.78rem;">
+              <div class="file-modal-body" style="padding:1.1rem; display:flex; flex-direction:column; gap:0.85rem; font-size:0.78rem; flex:1 1 auto; min-height:0; overflow-y:auto;">
+                ${isEdit ? '' : `
+                <div>
+                  <label style="display:block; font-weight:600; margin-bottom:0.35rem; color:#cbd5e1;">Server Type</label>
+                  <div style="display:flex; gap:1.25rem; align-items:center;">
+                    <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;"><input type="radio" name="mKind_${setWinId}" value="ssh" checked><span>SSH server (VPS)</span></label>
+                    <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;"><input type="radio" name="mKind_${setWinId}" value="codespace"><span>GitHub Codespace</span></label>
+                  </div>
+                </div>`}
                 <div style="display:flex; gap:0.75rem;">
                   <div style="flex:2;">
                     <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Server Friendly Name *</label>
                     <input type="text" class="form-control" id="mSrvName_${setWinId}" value="${isEdit ? escapeHtml(serverToEdit.name) : ''}" placeholder="e.g. Production Web App" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
                   </div>
-                  <div style="flex:1;">
+                  <div style="flex:1;" data-sshonly>
                     <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">SSH Port *</label>
                     <input type="number" class="form-control" id="mSrvPort_${setWinId}" value="${isEdit ? serverToEdit.port : '22'}" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
                   </div>
                 </div>
 
-                <div style="display:flex; gap:0.75rem;">
+                <div style="display:flex; gap:0.75rem;" data-sshonly>
                   <div style="flex:2;">
                     <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Host / IP Address *</label>
                     <input type="text" class="form-control" id="mSrvHost_${setWinId}" value="${isEdit ? escapeHtml(serverToEdit.host) : ''}" placeholder="e.g. 20.198.72.44 or vps.example.com" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
@@ -271,7 +285,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   </div>
                 </div>
 
-                <div>
+                <div data-sshonly>
                   <label style="display:block; font-weight:600; margin-bottom:0.35rem; color:#cbd5e1;">Authentication Method</label>
                   <div style="display:flex; gap:1.25rem; align-items:center;">
                     <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;">
@@ -286,7 +300,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 </div>
 
                 <!-- Password Auth Fields -->
-                <div id="mPasswordBox_${setWinId}" style="display:${(!isEdit || serverToEdit.auth_type === 'password') ? 'block' : 'none'};">
+                <div id="mPasswordBox_${setWinId}" data-sshonly style="display:${(!isEdit || serverToEdit.auth_type === 'password') ? 'block' : 'none'};">
                   <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">
                     ${isEdit ? 'Password (leave blank to keep current)' : 'Password *'}
                   </label>
@@ -299,7 +313,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 </div>
 
                 <!-- SSH Key Auth Fields -->
-                <div id="mKeyBox_${setWinId}" style="display:${(isEdit && serverToEdit.auth_type === 'key') ? 'block' : 'none'};">
+                <div id="mKeyBox_${setWinId}" data-sshonly style="display:${(isEdit && serverToEdit.auth_type === 'key') ? 'block' : 'none'};">
                   <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">
                     ${isEdit ? 'SSH Private Key (leave blank to keep current)' : 'SSH Private Key *'}
                   </label>
@@ -311,9 +325,49 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   <input type="password" class="form-control" id="mSrvPassphrase_${setWinId}" placeholder="Enter passphrase if key is encrypted" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="current-password">
                 </div>
 
+                <div id="mCsBox_${setWinId}" style="display:${(isEdit && serverToEdit.kind === 'codespace') ? 'block' : 'none'};">
+                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">GitHub token ${isEdit ? '(leave blank to keep current)' : '*'}</label>
+                  <input type="password" class="form-control" id="mCsToken_${setWinId}" placeholder="ghp_… or github_pat_… (needs Codespaces access)" autocomplete="off" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                  <div style="font-size:0.7rem; color:#94a3b8; margin:0.3rem 0 0.6rem;">Classic token: scope <b>codespace</b>. Fine-grained token: <b>Codespaces</b> read and write. It is stored encrypted and only used to start, stop and connect.</div>
+                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Codespace *</label>
+                  <div style="display:flex; gap:0.4rem;">
+                    <input type="text" class="form-control" id="mCsName_${setWinId}" value="${(isEdit && serverToEdit.codespace_name) ? escapeHtml(serverToEdit.codespace_name) : ''}" placeholder="e.g. fluffy-space-garbanzo-abc123" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="mCsFind_${setWinId}">Find my Codespaces</button>
+                  </div>
+                  <div id="mCsList_${setWinId}" style="margin-top:0.4rem; display:flex; flex-direction:column; gap:0.25rem;"></div>
+                  ${isEdit ? '' : `
+                  <button type="button" class="btn btn-ghost btn-xs" id="mCsNewToggle_${setWinId}" style="margin-top:0.5rem;">+ Create a new Codespace</button>
+                  <div id="mCsNew_${setWinId}" style="display:none; margin-top:0.5rem; padding:0.6rem; border:1px solid rgba(255,255,255,0.1); border-radius:8px;">
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Repository</label>
+                    <div style="display:flex; gap:0.4rem;">
+                      <div class="sm-combo" id="mCsCombo_${setWinId}">
+                        <input type="text" class="form-control" id="mCsRepo_${setWinId}" placeholder="owner/repo (type to filter)" autocomplete="off" style="font-size:0.8rem; padding:0.4rem 0.6rem;">
+                        <div class="sm-combo-list" id="mCsRepoList_${setWinId}"></div>
+                      </div>
+                      <button type="button" class="btn btn-secondary btn-sm" id="mCsRepoFind_${setWinId}">My repos</button>
+                    </div>
+                    <div style="display:flex; gap:0.4rem; margin-top:0.5rem; align-items:flex-end;">
+                      <div style="flex:1;"><label style="display:block; font-size:0.72rem; color:#94a3b8;">Branch (optional)</label>
+                        <input type="text" class="form-control" id="mCsRef_${setWinId}" placeholder="default branch" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;"></div>
+                      <div style="width:110px;"><label style="display:block; font-size:0.72rem; color:#94a3b8;">Idle stop (min)</label>
+                        <input type="number" class="form-control" id="mCsIdle_${setWinId}" value="30" min="5" max="240" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;"></div>
+                    </div>
+                    <div style="display:flex; gap:0.4rem; margin-top:0.5rem;">
+                      <select class="form-control" id="mCsMachine_${setWinId}" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;"><option value="">Machine size: load first</option></select>
+                      <button type="button" class="btn btn-secondary btn-sm" id="mCsMachLoad_${setWinId}">Load sizes</button>
+                    </div>
+                    <div style="font-size:0.7rem; color:#fbbf24; margin-top:0.5rem;">Creating starts the machine and its billing right away. A bigger machine uses more core-hours per hour.</div>
+                    <div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.5rem;">
+                      <button type="button" class="btn btn-primary btn-sm" id="mCsCreate_${setWinId}">Create Codespace</button>
+                      <span id="mCsNewMsg_${setWinId}" style="font-size:0.74rem;"></span>
+                    </div>
+                  </div>`}
+                  <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.5rem;">The Codespace needs an SSH server (the default GitHub image has one). The ShellMan host needs the <code>gh</code> CLI. A stopped Codespace is never started by ShellMan unless you press Start.</div>
+                </div>
+
                 <div id="mTestStatus_${setWinId}" style="display:none; padding:0.45rem 0.75rem; border-radius:4px; font-size:0.75rem;"></div>
               </div>
-              <div class="file-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 1.1rem; border-top:1px solid rgba(255,255,255,0.08);">
+              <div class="file-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 1.1rem; border-top:1px solid rgba(255,255,255,0.08); flex:0 0 auto;">
                 <button type="button" class="btn btn-secondary btn-sm" id="mTestBtn_${setWinId}">
                   Test Connection
                 </button>
@@ -345,6 +399,110 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               keyBox.style.display = isKey ? 'block' : 'none';
             };
           });
+
+          // Server type: SSH server or GitHub Codespace
+          const csBox = modalBackdrop.querySelector(`#mCsBox_${setWinId}`);
+          const sshOnly = modalBackdrop.querySelectorAll('[data-sshonly]');
+          let kind = (isEdit && serverToEdit.kind === 'codespace') ? 'codespace' : 'ssh';
+          sshOnly.forEach(el => { el.dataset.d = el.style.display || ''; });
+          const applyKind = () => {
+            const cs = kind === 'codespace';
+            csBox.style.display = cs ? 'block' : 'none';
+            sshOnly.forEach(el => { el.style.display = cs ? 'none' : el.dataset.d; });
+            if (!cs) {   // re-apply password/key box visibility for the selected auth method
+              const checked = modalBackdrop.querySelector(`input[name="mAuthType_${setWinId}"]:checked`);
+              if (checked) checked.onchange();
+            }
+            const t = modalBackdrop.querySelector(`#mTestBtn_${setWinId}`);
+            if (t) t.style.display = cs ? 'none' : '';
+          };
+          modalBackdrop.querySelectorAll(`input[name="mKind_${setWinId}"]`).forEach(r => {
+            r.onchange = () => { kind = r.value; applyKind(); };
+          });
+          applyKind();
+          const csFind = modalBackdrop.querySelector(`#mCsFind_${setWinId}`);
+          if (csFind) csFind.onclick = async () => {
+            const list = modalBackdrop.querySelector(`#mCsList_${setWinId}`);
+            list.innerHTML = '<span style="color:#94a3b8;font-size:0.74rem;">Asking GitHub…</span>';
+            const tokenVal = modalBackdrop.querySelector(`#mCsToken_${setWinId}`).value.trim();
+            const res = await (window.ShellmanCodespace ? window.ShellmanCodespace.discover(tokenVal) : { success: false, error: 'Codespace UI not loaded' });
+            if (!res.success) { list.innerHTML = `<span style="color:#f87171;font-size:0.74rem;">${escapeHtml(res.error || 'Failed')}</span>`; return; }
+            if (!res.codespaces.length) { list.innerHTML = '<span style="color:#94a3b8;font-size:0.74rem;">No Codespaces found for this token.</span>'; return; }
+            list.innerHTML = res.codespaces.map(c => `<button type="button" class="btn btn-ghost btn-xs" data-cs="${escapeHtml(c.name)}" style="text-align:left;justify-content:flex-start;"><b>${escapeHtml(c.display_name)}</b> &nbsp;<span style="color:#94a3b8">${escapeHtml(c.repository)} · ${c.cpus} cores · ${escapeHtml(c.state)}</span></button>`).join('');
+            list.querySelectorAll('[data-cs]').forEach(b => b.onclick = () => {
+              modalBackdrop.querySelector(`#mCsName_${setWinId}`).value = b.dataset.cs;
+              const nm = modalBackdrop.querySelector(`#mSrvName_${setWinId}`);
+              if (!nm.value.trim()) nm.value = 'Codespace ' + b.querySelector('b').textContent;
+            });
+          };
+
+          // Create a brand new Codespace from a repository
+          const csNewToggle = modalBackdrop.querySelector(`#mCsNewToggle_${setWinId}`);
+          if (csNewToggle) {
+            const q = id => modalBackdrop.querySelector(`#${id}_${setWinId}`);
+            const say = (text, color) => { const m = q('mCsNewMsg'); m.textContent = text; m.style.color = color || '#94a3b8'; };
+            const token = () => q('mCsToken').value.trim();
+            csNewToggle.onclick = () => { const box = q('mCsNew'); box.style.display = box.style.display === 'none' ? 'block' : 'none'; };
+            // Repo picker: our own dropdown, filtered as you type
+            let repoItems = [], activeIdx = -1;
+            const combo = q('mCsCombo'), repoInp = q('mCsRepo'), repoList = q('mCsRepoList');
+            const paintRepos = () => {
+              const f = repoInp.value.trim().toLowerCase();
+              const shown = repoItems.filter(r => !f || r.full_name.toLowerCase().includes(f)).slice(0, 40);
+              activeIdx = shown.length ? 0 : -1;
+              repoList.innerHTML = shown.length
+                ? shown.map((r, i) => `<button type="button" class="sm-combo-item${i === 0 ? ' active' : ''}" data-repo="${escapeHtml(r.full_name)}"><span>${escapeHtml(r.full_name)}</span><em>${r.private ? 'private' : 'public'}</em></button>`).join('')
+                : `<div class="sm-combo-empty">${repoItems.length ? 'No match. You can still type owner/repo.' : 'Press "My repos" to load your repositories.'}</div>`;
+            };
+            const pick = name => { repoInp.value = name; combo.classList.remove('open'); };
+            repoList.addEventListener('mousedown', e => { const b = e.target.closest('[data-repo]'); if (b) { e.preventDefault(); pick(b.dataset.repo); } });
+            const openRepos = () => { paintRepos(); combo.classList.add('open'); requestAnimationFrame(() => repoList.scrollIntoView({ block: 'nearest' })); };
+            repoInp.addEventListener('focus', openRepos);
+            repoInp.addEventListener('input', openRepos);
+            repoInp.addEventListener('blur', () => setTimeout(() => combo.classList.remove('open'), 120));
+            repoInp.addEventListener('keydown', e => {
+              const items = [...repoList.querySelectorAll('[data-repo]')];
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault(); if (!items.length) return;
+                activeIdx = (activeIdx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+                items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+                items[activeIdx].scrollIntoView({ block: 'nearest' });
+              } else if (e.key === 'Enter' && combo.classList.contains('open') && items[activeIdx]) {
+                e.preventDefault(); pick(items[activeIdx].dataset.repo);
+              } else if (e.key === 'Escape') { combo.classList.remove('open'); }
+            });
+            const loadRepos = async () => {
+              say('Asking GitHub…');
+              const res = await window.ShellmanCodespace.repos(token(), '');
+              if (!res.success) return say(res.error || 'Failed', '#f87171');
+              repoItems = res.repos;
+              say(repoItems.length ? `${repoItems.length} repositories loaded.` : 'No repos found for this token.');
+              repoInp.focus(); openRepos();
+            };
+            q('mCsRepoFind').onclick = loadRepos;
+            q('mCsMachLoad').onclick = async () => {
+              say('Loading sizes…');
+              const res = await window.ShellmanCodespace.machines(token(), q('mCsRepo').value.trim(), q('mCsRef').value.trim());
+              if (!res.success) return say(res.error || 'Failed', '#f87171');
+              if (!res.machines.length) return say('No machine sizes available for this repo.', '#f87171');
+              q('mCsMachine').innerHTML = res.machines.map(m => `<option value="${escapeHtml(m.name)}">${escapeHtml(m.display_name)}: ${m.cpus} cores, ${m.memory_gb} GB RAM, ${m.storage_gb} GB disk</option>`).join('');
+              say('Pick a size, then Create.');
+            };
+            q('mCsCreate').onclick = async () => {
+              const machine = q('mCsMachine').value;
+              if (!machine) return say('Load and pick a machine size first.', '#f87171');
+              const btn = q('mCsCreate'); btn.disabled = true; say('Creating…');
+              const res = await window.ShellmanCodespace.create({
+                gh_token: token(), repo: q('mCsRepo').value.trim(), machine, ref: q('mCsRef').value.trim(),
+                idle_timeout_minutes: parseInt(q('mCsIdle').value) || 30
+              });
+              btn.disabled = false;
+              if (!res.success) return say(res.error || 'Failed', '#f87171');
+              q('mCsName').value = res.codespace.name;
+              const nm = q('mSrvName'); if (!nm.value.trim()) nm.value = 'Codespace ' + res.codespace.display_name;
+              say(`Created ${res.codespace.name} (${res.codespace.state}). It may take a few minutes to start; press Create Server to save it.`, '#34d399');
+            };
+          }
 
           // Toggle password visibility
           const passInp = modalBackdrop.querySelector(`#mSrvPassword_${setWinId}`);
@@ -419,11 +577,12 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             const private_key = modalBackdrop.querySelector(`#mSrvKey_${setWinId}`).value;
             const passphrase = modalBackdrop.querySelector(`#mSrvPassphrase_${setWinId}`).value;
 
-            if (!name || !host || !username) {
+            const isCs = kind === 'codespace';
+            if (isCs ? !name : (!name || !host || !username)) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
               statusBox.style.color = '#f87171';
-              statusBox.textContent = 'Name, Host, and Username are required.';
+              statusBox.textContent = isCs ? 'A friendly name is required.' : 'Name, Host, and Username are required.';
               return;
             }
 
@@ -435,7 +594,9 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               const resp = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, host, port, username, auth_type, password, private_key, passphrase })
+                body: JSON.stringify(isCs
+                  ? { name, kind: 'codespace', codespace_name: modalBackdrop.querySelector(`#mCsName_${setWinId}`).value.trim(), gh_token: modalBackdrop.querySelector(`#mCsToken_${setWinId}`).value.trim() }
+                  : { name, host, port, username, auth_type, password, private_key, passphrase })
               });
               const res = await resp.json();
               if (res.success) {

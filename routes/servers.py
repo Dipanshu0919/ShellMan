@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from models import db
@@ -7,6 +8,21 @@ from services.audit import audit
 from services.ssh_manager import ssh_manager
 
 servers_bp = Blueprint('servers', __name__)
+
+_CS_NAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{2,99}$')
+
+
+def _codespace_fields(data, server=None):
+    """Validate the Codespace part of an add/edit request. Returns (name, token, error)."""
+    name = (data.get('codespace_name') or (server.codespace_name if server else '') or '').strip()
+    token = (data.get('gh_token') or '').strip()
+    if not _CS_NAME.match(name):
+        return None, None, 'Enter the Codespace name (for example "fluffy-space-garbanzo-abc123").'
+    if not token and not (server and server.gh_token_enc):
+        return None, None, 'A GitHub token with Codespaces access is required.'
+    if token and (len(token) < 20 or any(c.isspace() for c in token)):
+        return None, None, 'That does not look like a GitHub token.'
+    return name, token, None
 
 @servers_bp.route('/servers')
 @login_required
@@ -166,6 +182,25 @@ def api_add_server():
     private_key = data.get('private_key', '')
     passphrase = data.get('passphrase', '')
 
+    if data.get('kind') == 'codespace':
+        if not name:
+            return jsonify({'success': False, 'error': 'Name is required.'}), 400
+        cs_name, token, err = _codespace_fields(data)
+        if err:
+            return jsonify({'success': False, 'error': err}), 400
+        server = Server(name=name, host=f'codespace:{cs_name}', port=22, username='codespace',
+                        auth_type='codespace', kind='codespace', codespace_name=cs_name)
+        server.gh_token = token
+        try:
+            from services import codespace
+            codespace.get_state(server, fresh=True)      # proves the name and token work before saving
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
+        db.session.add(server)
+        db.session.commit()
+        audit('server.add', target=f"{server.name} (GitHub Codespace {cs_name})", detail='kind=codespace')
+        return jsonify({'success': True, 'server': server.to_dict()})
+
     if not name or not host or not username:
         return jsonify({'success': False, 'error': 'Name, host, and username are required.'}), 400
 
@@ -197,6 +232,22 @@ def api_edit_server(server_id):
     port = int(data.get('port', 22))
     username = data.get('username', '').strip()
     auth_type = data.get('auth_type', server.auth_type)
+
+    if server.is_codespace:
+        if not name:
+            return jsonify({'success': False, 'error': 'Name is required.'}), 400
+        cs_name, token, err = _codespace_fields(data, server)
+        if err:
+            return jsonify({'success': False, 'error': err}), 400
+        server.name = name
+        server.codespace_name = cs_name
+        server.host = f'codespace:{cs_name}'
+        if token:
+            server.gh_token = token
+        db.session.commit()
+        ssh_manager.disconnect(server.id)
+        audit('server.edit', target=f"{server.name} (GitHub Codespace {cs_name})")
+        return jsonify({'success': True, 'server': server.to_dict()})
 
     if not name or not host or not username:
         return jsonify({'success': False, 'error': 'Name, host, and username are required.'}), 400
@@ -232,6 +283,9 @@ def api_delete_server(server_id):
     name = server.name
     ssh_manager.disconnect(server.id)
     desc = f"{name} ({server.username}@{server.host}:{server.port})"
+    from models.timelimit import TimeLimit, ServerUsage
+    TimeLimit.query.filter_by(server_id=server.id).delete()
+    ServerUsage.query.filter_by(server_id=server.id).delete()
     db.session.delete(server)
     db.session.commit()
     audit('server.delete', target=desc)

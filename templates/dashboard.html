@@ -41,8 +41,9 @@
   <script>
     window.DesktopConfig = {
       serverId: {{ selected_server.id if selected_server else 'null' }},
+      serverKind: "{{ selected_server.kind if selected_server and selected_server.kind else 'ssh' }}",
       serverName: "{{ selected_server.name if selected_server else '' }}",
-      serverHost: "{{ selected_server.host|mask_ip if selected_server else '' }}:{{ selected_server.port if selected_server else '' }}",
+      serverHost: "{{ endpoint_label(selected_server) if selected_server else '' }}",
       username: "{{ selected_server.username if selected_server else '' }}",
       initialApp: "{{ initial_app or '' }}"
     };
@@ -55,6 +56,7 @@
           host: "{{ s.host }}",
           port: {{ s.port }},
           username: "{{ s.username }}",
+          kind: "{{ s.kind or 'ssh' }}",
           is_online: {{ 'true' if s.is_online else 'false' }}
         }{% if not loop.last %},{% endif %}
       {% endfor %}
@@ -502,6 +504,7 @@
 <script src="{{ static_v('js/desktop/domains.js') }}"></script>
 <script src="{{ static_v('js/desktop/settings.js') }}"></script>
 <script src="{{ static_v('js/desktop/alerts_audit.js') }}"></script>
+<script src="{{ static_v('js/desktop/codespace.js') }}"></script>
 <script src="{{ static_v('js/desktop/apps_ext.js') }}"></script>
 <script src="{{ static_v('js/desktop/main.js') }}"></script>
 

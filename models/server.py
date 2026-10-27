@@ -122,6 +122,11 @@ class Server(db.Model):
     os_cache = db.Column(db.String(255), nullable=True)
     kernel_cache = db.Column(db.String(255), nullable=True)
     last_workspace = db.Column(db.String(512), nullable=True)
+
+    # Kind of node: 'ssh' (normal server) or 'codespace' (GitHub Codespace reached through the `gh` CLI tunnel)
+    kind = db.Column(db.String(20), default='ssh', nullable=True)
+    codespace_name = db.Column(db.String(120), nullable=True)
+    gh_token_enc = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     @property
@@ -131,6 +136,18 @@ class Server(db.Model):
     @password.setter
     def password(self, val: str):
         self.password_enc = encrypt_value(val) if val else None
+
+    @property
+    def gh_token(self) -> str:
+        return decrypt_value(self.gh_token_enc)
+
+    @gh_token.setter
+    def gh_token(self, val: str):
+        self.gh_token_enc = encrypt_value(val) if val else None
+
+    @property
+    def is_codespace(self) -> bool:
+        return (self.kind or 'ssh') == 'codespace'
 
     @property
     def private_key(self) -> str:
@@ -165,6 +182,9 @@ class Server(db.Model):
             'os': self.os_cache or 'Linux',
             'kernel': self.kernel_cache or 'Unknown',
             'last_workspace': self.last_workspace,
+            'kind': self.kind or 'ssh',
+            'codespace_name': self.codespace_name,
+            'has_gh_token': bool(self.gh_token_enc),
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
         return d

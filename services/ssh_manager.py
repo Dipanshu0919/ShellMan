@@ -83,7 +83,28 @@ class SSHConnectionManager:
             hk.save(path)
             return True
 
+    def _create_codespace_client(self, server) -> paramiko.SSHClient:
+        """GitHub Codespace: connect through `gh codespace ssh --stdio` (GitHub authenticates the tunnel itself,
+        so no host key is pinned: a Codespace gets a new key every time it is rebuilt)."""
+        from services import codespace
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            codespace.open_ssh_client(server, client)
+        except Exception:
+            try:
+                client.close()
+            except Exception:
+                pass
+            raise
+        transport = client.get_transport()
+        if transport:
+            transport.set_keepalive(15)
+        return client
+
     def _create_client(self, server) -> paramiko.SSHClient:
+        if getattr(server, 'is_codespace', False):
+            return self._create_codespace_client(server)
         connect_kwargs = {
             'hostname': server.host,
             'port': server.port,

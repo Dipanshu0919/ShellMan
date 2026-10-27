@@ -74,7 +74,7 @@
 <script>
   const serverId = {{ selected_server.id }};
   const serverName = "{{ selected_server.name }}";
-  const serverHost = "{{ selected_server.host|mask_ip }}:{{ selected_server.port }}";
+  const serverHost = "{{ endpoint_label(selected_server) }}";
 
   // Tab state collection
   // Map of tabId -> { id, title, term, fitAddon, socket, containerEl, pillEl, status, cols, rows }
