@@ -286,6 +286,8 @@ def api_delete_server(server_id):
     from models.timelimit import TimeLimit, ServerUsage
     TimeLimit.query.filter_by(server_id=server.id).delete()
     ServerUsage.query.filter_by(server_id=server.id).delete()
+    from services import history
+    history.forget_server(server.id)
     db.session.delete(server)
     db.session.commit()
     audit('server.delete', target=desc)

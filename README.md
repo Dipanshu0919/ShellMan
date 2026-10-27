@@ -368,6 +368,25 @@ Your remote servers dedicate **100% of their compute and memory to your workload
 - **It is an estimate**: ShellMan counts the time it sees the Codespace running. GitHub's own billing page is the final number, and storage is billed separately and is not included. Set the budget a little below your real limit.
 - **Limits**: local to remote rsync (File Sync) is not available for Codespaces yet. A rebuilt Codespace gets a new host key; ShellMan does not pin Codespace host keys because the GitHub tunnel already authenticates the machine. `SHELLMAN_GITHUB_API` overrides the API address (for GitHub Enterprise or tests).
 
+### 31. Read-only Users (Viewer Accounts)
+- **Two roles**: an **Administrator** can do everything. A **Viewer** can only look: the dashboard, Fleet & History, system overview, processes, services, logs, network info, Docker lists and alerts. A viewer cannot open a terminal, read or change files, run commands, change firewall, cron, Nginx, Git, database or Cloudflare settings, add or edit servers, see the audit log or export backups.
+- **Manage people**: Settings, Admin & Security, "People who can sign in". Add a person with a username, password and role, change a role, reset a password or delete an account. Changing a role or password signs that person out of every browser. ShellMan always keeps at least one administrator, and you cannot delete the account you are signed in with.
+- **Closed by default**: every request from a viewer is checked in one place (`roles.py`) against a short allow-list, so a feature added later stays closed to viewers until you add it to that list on purpose. Viewers may still change their own password and manage their own 2FA.
+- **Existing accounts stay administrators.** The new `role` column is added automatically when ShellMan starts.
+
+### 32. Terminal Session Recording
+- **What is saved**: each command a person types in the ShellMan terminal is written to the Audit Log as `terminal.command`, with who typed it, which server, the time and the person's IP. Each session also logs `terminal.open` and `terminal.close` (number of commands and length).
+- **What is not saved**: the screen output is never stored, so secrets that programs print stay out. Text typed at a password prompt (sudo, ssh, mysql and similar) is replaced by `[hidden input]`, and values that look like secrets (`password=...`, `--token ...`, `-pSECRET`) are replaced by `***`.
+- **Honest limits**: it records what was typed, so a line completed with Tab is marked `[Tab]` and a line taken from history with the arrow keys is marked `[history recall]`, because the final command is not visible from keystrokes alone. Text typed inside a full-screen program (vim, htop) is recorded as typed lines too.
+- **Control**: turn it off or on under Audit Log, "Record typed terminal commands". The normal audit retention (days and maximum entries) applies, so recordings clean themselves up.
+
+### 33. Fleet Dashboard & Metric History
+- **Fleet**: one page with a card for every server showing CPU, memory and disk bars, load, a one-hour CPU sparkline and when it was last read. Cards that need attention (offline, or any value at 75% or more) sort first. Click a card to open its graphs.
+- **History**: CPU, memory and disk graphs for the last 1 hour, 6 hours, 24 hours, 7 days or 30 days, with a hover tooltip. Gaps appear where a server was off or stopped.
+- **No extra load**: the background alert engine already reads each server once per check, so history stores one reading per server per minute from the same read. The Fleet page and graphs read stored data and never open their own SSH connections. Stopped GitHub Codespaces are skipped and never woken.
+- **Small and self-cleaning**: readings are plain SQLite rows (about 0.4 MB per server per week). By default 7 days are kept; administrators can choose 1 to 90 days, switch recording off or clear it in the History tab. Graphs are averaged into at most 240 points.
+- **Needs the alert engine**: do not set `SHELLMAN_ALERTS=0` if you want Fleet and History to fill in. `SHELLMAN_ALERT_INTERVAL` (default 60 seconds) controls how often servers are read; history keeps at most one reading per minute.
+
 ### 25. Extra Editing & File Shortcuts
 - **Search in Files**: The Code Workspace has a sidebar search across the opened workspace folder (`/workspace/search-code`).
 - **File Manager Keyboard Control**: Navigate, rename, and delete from the keyboard (see the shortcut table below).

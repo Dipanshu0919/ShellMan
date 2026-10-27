@@ -3087,3 +3087,16 @@ input[type="file"]::file-selector-button:hover {
   border-radius: 12px;
   flex-shrink: 0;
 }
+/* Drag to rearrange Dock and Desktop icons */
+.dock-item.dragging,.desktop-icon.dragging{opacity:.35}
+.dock-item.drop-before{box-shadow:-3px 0 0 0 var(--sm-accent,#38bdf8)}
+.dock-item.drop-after{box-shadow:3px 0 0 0 var(--sm-accent,#38bdf8)}
+.desktop-icon.drop-before{box-shadow:0 -3px 0 0 var(--sm-accent,#38bdf8)}
+.desktop-icon.drop-after{box-shadow:0 3px 0 0 var(--sm-accent,#38bdf8)}
+
+/* Dock name label (script-positioned so a narrow or scrolling dock cannot clip it) */
+.dock-item[data-tooltip]::after{display:none !important}
+.dock-tip{position:fixed;z-index:100000;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease;
+  background:var(--sm-raised,rgba(15,23,42,.96));color:var(--sm-text,#f8fafc);border:1px solid var(--sm-line-strong,#2f374b);border-radius:8px;
+  padding:.35rem .7rem;font-size:.8rem;font-weight:600;white-space:nowrap;box-shadow:0 8px 24px -8px #000}
+.dock-tip.show{opacity:1;transform:none}

@@ -203,6 +203,17 @@ window.SHELLMAN_APPS = [
     defaultDesktop: true
   },
   {
+    id: 'fleet',
+    title: 'Fleet & History',
+    shortTitle: 'Fleet',
+    desc: 'All servers on one page, plus CPU, memory and disk graphs for the last hours or days',
+    category: 'core',
+    gradient: 'linear-gradient(135deg, #0891b2, #0e7490)',
+    icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#ffffff" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#ffffff" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#ffffff" stroke-width="1.8"/><polyline points="14 19 17 15 20 17" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    defaultDock: true,
+    defaultDesktop: true
+  },
+  {
     id: 'settings',
     title: 'System Settings',
     shortTitle: 'Settings',
@@ -223,8 +234,37 @@ const DesktopCustomizer = {
   STORAGE_KEY_DOCK: 'shellman_dock_apps',
   STORAGE_KEY_DESKTOP_SIZE: 'shellman_desktop_icon_size',
 
+  // A read-only account only gets the apps that just look.
+  VIEWER_APPS: ['overview', 'processes', 'services', 'logs', 'hardware', 'network', 'docker', 'fleet', 'settings'],
+  // Apps added after a person saved their own layout are appended once, so they do not stay invisible.
+  NEW_APPS: ['fleet'],
+
+  isViewer() {
+    return !!(window.DesktopConfig && window.DesktopConfig.userRole === 'viewer');
+  },
+
   getAllApps() {
-    return window.SHELLMAN_APPS || [];
+    const all = window.SHELLMAN_APPS || [];
+    return this.isViewer() ? all.filter(a => this.VIEWER_APPS.includes(a.id)) : all;
+  },
+
+  _addNewApps() {
+    if (this._newAppsDone) return;
+    this._newAppsDone = true;
+    try {
+      const seen = JSON.parse(localStorage.getItem('shellman_seen_apps') || '[]');
+      const fresh = this.NEW_APPS.filter(id => !seen.includes(id));
+      if (!fresh.length) return;
+      [this.STORAGE_KEY_DESKTOP, this.STORAGE_KEY_DOCK].forEach(key => {
+        const raw = localStorage.getItem(key);
+        if (!raw) return;
+        const ids = JSON.parse(raw);
+        if (!Array.isArray(ids)) return;
+        fresh.forEach(id => { if (!ids.includes(id)) ids.push(id); });
+        localStorage.setItem(key, JSON.stringify(ids));
+      });
+      localStorage.setItem('shellman_seen_apps', JSON.stringify(seen.concat(fresh)));
+    } catch (_) {}
   },
 
   getApp(appId) {
@@ -232,6 +272,7 @@ const DesktopCustomizer = {
   },
 
   getDesktopApps() {
+    this._addNewApps();
     const raw = localStorage.getItem(this.STORAGE_KEY_DESKTOP);
     if (!raw) {
       return this.getAllApps().filter(a => a.defaultDesktop !== false);
@@ -246,6 +287,7 @@ const DesktopCustomizer = {
   },
 
   getDockApps() {
+    this._addNewApps();
     const raw = localStorage.getItem(this.STORAGE_KEY_DOCK);
     if (!raw) {
       return this.getAllApps().filter(a => a.defaultDock !== false);
@@ -275,6 +317,60 @@ const DesktopCustomizer = {
   setDockApps(appIds) {
     localStorage.setItem(this.STORAGE_KEY_DOCK, JSON.stringify(appIds));
     this.applyChanges();
+  },
+
+  // Move appId next to targetId (before or after it) in the Dock or Desktop order and save it.
+  moveApp(kind, appId, targetId, after) {
+    if (!appId || !targetId || appId === targetId) return;
+    const dock = kind === 'dock';
+    const ids = (dock ? this.getDockApps() : this.getDesktopApps()).map(a => a.id).filter(id => id !== appId);
+    const at = ids.indexOf(targetId);
+    if (at < 0) return;
+    ids.splice(at + (after ? 1 : 0), 0, appId);
+    if (dock) this.setDockApps(ids); else this.setDesktopApps(ids);
+  },
+
+  /**
+   * Drag-to-reorder for a container of icons. Items need draggable="true" and a data-app id.
+   * Dropping on the first half of an item puts the dragged icon before it, on the second half after it.
+   * `vertical` is true for the Desktop (icons flow top to bottom), false for the Dock.
+   */
+  enableReorder(container, kind, itemSelector, vertical) {
+    if (!container || container._reorderWired) return;
+    container._reorderWired = true;
+    let dragId = null;
+    const clear = () => container.querySelectorAll('.drop-before,.drop-after,.dragging').forEach(e => e.classList.remove('drop-before', 'drop-after', 'dragging'));
+    const half = (el, e) => {
+      const r = el.getBoundingClientRect();
+      return vertical ? e.clientY > r.top + r.height / 2 : e.clientX > r.left + r.width / 2;
+    };
+    container.addEventListener('dragstart', (e) => {
+      const it = e.target.closest && e.target.closest(itemSelector);
+      if (!it || !it.dataset.app) return;
+      dragId = it.dataset.app;
+      it.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', dragId); } catch (_) {}
+    });
+    container.addEventListener('dragover', (e) => {
+      if (!dragId) return;
+      const it = e.target.closest && e.target.closest(itemSelector);
+      if (!it || it.dataset.app === dragId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      container.querySelectorAll('.drop-before,.drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after'));
+      it.classList.add(half(it, e) ? 'drop-after' : 'drop-before');
+    });
+    container.addEventListener('drop', (e) => {
+      if (!dragId) return;
+      const it = e.target.closest && e.target.closest(itemSelector);
+      if (!it) { clear(); dragId = null; return; }
+      e.preventDefault();
+      const id = dragId, target = it.dataset.app, after = half(it, e);
+      clear(); dragId = null;
+      DesktopCustomizer.moveApp(kind, id, target, after);
+    });
+    container.addEventListener('dragend', () => { clear(); dragId = null; });
   },
 
   toggleDesktopApp(appId, enable) {
@@ -538,12 +634,14 @@ const DesktopDock = {
 
     this.apps = DesktopCustomizer.getDockApps();
     this.render();
+    DesktopCustomizer.enableReorder(this.dockEl, 'dock', '.dock-item[draggable="true"]', false);
 
     // Restore saved dock visibility state
     if (localStorage.getItem('shellman_dock_hidden') === 'true' && this.wrapperEl) {
       this.wrapperEl.classList.add('dock-hidden');
     }
 
+    this.initTooltip();
     this.initAutoHide();
     this.applyAutoHide();
 
@@ -553,6 +651,35 @@ const DesktopDock = {
         this.updateRunningIndicators(windows, activeId);
       };
     }
+  },
+
+  // Name label above the hovered icon. It is a fixed-position element, so a scrolling or narrow dock cannot clip it.
+  initTooltip() {
+    if (!this.dockEl || this._tipWired) return;
+    this._tipWired = true;
+    let tip = document.getElementById('dockTip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'dockTip';
+      tip.className = 'dock-tip';
+      document.body.appendChild(tip);
+    }
+    const hide = () => tip.classList.remove('show');
+    this.dockEl.addEventListener('pointerover', (e) => {
+      if (e.pointerType && e.pointerType !== 'mouse') return;
+      const it = e.target.closest && e.target.closest('.dock-item[data-tooltip]');
+      if (!it || !this.dockEl.contains(it)) return;
+      tip.textContent = it.dataset.tooltip;
+      tip.classList.add('show');
+      const r = it.getBoundingClientRect(), w = tip.offsetWidth;
+      tip.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px';
+      tip.style.top = Math.max(4, r.top - tip.offsetHeight - 14) + 'px';
+    });
+    this.dockEl.addEventListener('pointerout', (e) => {
+      const to = e.relatedTarget;
+      if (!to || !to.closest || !to.closest('.dock-item[data-tooltip]')) hide();
+    });
+    ['pointerdown', 'dragstart', 'wheel'].forEach(ev => this.dockEl.addEventListener(ev, hide, { passive: true }));
   },
 
   // ── Auto-hide: dock slides away while any visible window is maximized; hover the bottom
@@ -677,7 +804,7 @@ const DesktopDock = {
 
   dockItemHtml(app, temp) {
     return `
-      <div class="dock-item${temp ? ' dock-temp' : ''}" data-app="${app.id}" data-tooltip="${app.title}" onclick="DesktopDock.handleDockClick('${app.id}')" oncontextmenu="DesktopDock.handleContextMenu(event, '${app.id}')">
+      <div class="dock-item${temp ? ' dock-temp' : ''}"${temp ? '' : ' draggable="true"'} data-app="${app.id}" data-tooltip="${app.title}" onclick="DesktopDock.handleDockClick('${app.id}')" oncontextmenu="DesktopDock.handleContextMenu(event, '${app.id}')">
         <div class="dock-tile" style="background: ${app.gradient};">
           ${app.icon}
         </div>

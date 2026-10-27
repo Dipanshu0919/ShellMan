@@ -26,6 +26,22 @@ class SystemMonitor:
         return f"{bytes_num:.2f} EB"
 
     @staticmethod
+    def latest_metrics(server, max_age: float = 3.0) -> Dict[str, Any]:
+        """The most recent reading for this server if it is at most max_age seconds old, else a fresh one.
+
+        The desktop widget and System Overview refresh the same cache every 2 seconds, so a screen that
+        asks through here shows exactly the reading they just showed instead of taking a second,
+        slightly different CPU sample.
+        """
+        sid = getattr(server, 'id', None)
+        if sid:
+            with SystemMonitor._cache_lock:
+                cached = SystemMonitor._metrics_cache.get(sid)
+            if cached and time.time() - cached.get('timestamp', 0) <= max_age:
+                return cached['data']
+        return SystemMonitor.get_quick_metrics(server, force=True)
+
+    @staticmethod
     def get_quick_metrics(server, force: bool = False) -> Dict[str, Any]:
         """
         Gathers CPU, Memory, Swap, Disk, Uptime, and Load in a single ultra-fast SSH pipeline.

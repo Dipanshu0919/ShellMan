@@ -179,7 +179,7 @@ function renderDesktopIcons() {
   container.className = `desktop-icons-container size-${size}`;
 
   container.innerHTML = shortcuts.map(sc => `
-    <div class="desktop-icon" data-app="${sc.id}" onclick="handleDesktopIconClick(this, '${sc.id}')" oncontextmenu="handleDesktopIconContextMenu(event, '${sc.id}')">
+    <div class="desktop-icon" draggable="true" data-app="${sc.id}" title="Drag to rearrange" onclick="handleDesktopIconClick(this, '${sc.id}')" oncontextmenu="handleDesktopIconContextMenu(event, '${sc.id}')">
       <div class="desktop-icon-tile" style="background: ${sc.gradient};">
         ${sc.icon}
       </div>
@@ -187,6 +187,7 @@ function renderDesktopIcons() {
     </div>
   `).join('');
 
+  if (window.DesktopCustomizer) window.DesktopCustomizer.enableReorder(container, 'desktop', '.desktop-icon', true);
   fitDesktopIcons();
 }
 

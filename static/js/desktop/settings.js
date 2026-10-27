@@ -1926,7 +1926,11 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           });
           if (tab === 'servers') renderServersTab();
           else if (tab === 'admin') {
-            Promise.resolve(renderAdminTab()).then(() => { if (currentTab === 'admin' && window.ShellmanSecurityUI) ShellmanSecurityUI.appendSessionCard(contentPane); });
+            Promise.resolve(renderAdminTab()).then(() => {
+              if (currentTab !== 'admin') return;
+              if (window.ShellmanSecurityUI) ShellmanSecurityUI.appendSessionCard(contentPane);
+              if (window.ShellmanUsersUI) ShellmanUsersUI.append(contentPane);
+            });
           }
           else if (tab === 'appearance') renderAppearanceTab();
           else if (tab === 'alerts') renderAlertsTab();
@@ -1950,6 +1954,14 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
         winObj._switchTab = (tab) => renderTab(tab);
 
         // Initial tab render
+        // A read-only account only gets its own sign-in, appearance and the About page.
+        if (window.DesktopConfig && window.DesktopConfig.userRole === 'viewer') {
+          ['servers', 'alerts', 'backup', 'audit'].forEach(t => {
+            const n = bodyEl.querySelector(`.settings-nav-item[data-tab="${t}"]`);
+            if (n) n.style.display = 'none';
+          });
+          if (['servers', 'alerts', 'backup', 'audit'].includes(currentTab)) currentTab = 'admin';
+        }
         renderTab(currentTab);
       }
     });

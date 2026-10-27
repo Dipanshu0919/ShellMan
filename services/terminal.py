@@ -3,6 +3,8 @@ import logging
 import threading
 import time
 from services.ssh_manager import ssh_manager
+from services.recorder import LineRecorder
+from services.audit import audit, get_config as audit_config
 
 logger = logging.getLogger('shellman.terminal')
 
@@ -12,7 +14,7 @@ class TerminalSession:
     Handles duplex communication, terminal resizing, and thread lifecycle.
     """
 
-    def __init__(self, ws, server, cols=80, rows=24, term='xterm-256color', cwd=None):
+    def __init__(self, ws, server, cols=80, rows=24, term='xterm-256color', cwd=None, username=''):
         self.ws = ws
         self.server = server
         try:
@@ -27,11 +29,22 @@ class TerminalSession:
             self.rows = 24
         self.term = term
         self.cwd = cwd
+        self.username = username or ''
+        self.recorder = None
+        self._closed_logged = False
+        try:
+            if audit_config().get('record_terminal', 1):
+                self.recorder = LineRecorder(self._record_line)
+        except Exception:
+            self.recorder = None
         self.client = None
         self.channel = None
         self.alive = True
         self._send_lock = threading.Lock()
         self.thread = None
+
+    def _record_line(self, text):
+        audit('terminal.command', target=self.server.name, detail=text, username=self.username)
 
     def _send(self, payload):
         with self._send_lock:
@@ -94,7 +107,10 @@ class TerminalSession:
                     if not data:
                         break
                     try:
-                        payload = json.dumps({'type': 'data', 'data': data.decode('utf-8', errors='replace')})
+                        text_out = data.decode('utf-8', errors='replace')
+                        if self.recorder:
+                            self.recorder.note_output(text_out)
+                        payload = json.dumps({'type': 'data', 'data': text_out})
                         self._send(payload)
                     except Exception as e:
                         logger.debug(f"WS send error: {e}")
@@ -124,6 +140,8 @@ class TerminalSession:
             if mtype == 'input':
                 data = msg.get('data', '')
                 if data and self.channel and not self.channel.closed:
+                    if self.recorder:
+                        self.recorder.feed(data)
                     self.channel.send(data.encode('utf-8'))
 
             elif mtype == 'resize':
@@ -154,6 +172,11 @@ class TerminalSession:
 
     def close(self):
         self.alive = False
+        if self.recorder and not self._closed_logged:
+            self._closed_logged = True
+            audit('terminal.close', target=self.server.name,
+                  detail=f'{self.recorder.count} command(s), {int(time.time() - self.recorder.started)} s',
+                  username=self.username)
         if self.channel:
             try:
                 self.channel.close()

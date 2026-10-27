@@ -272,7 +272,13 @@ class DesktopAppsController {
       window.DesktopDock.bounce(appId);
     }
 
-    if (!this.serverId && appId !== 'servers' && appId !== 'settings') {
+    if (window.DesktopCustomizer && window.DesktopCustomizer.isViewer && window.DesktopCustomizer.isViewer()
+        && !window.DesktopCustomizer.VIEWER_APPS.includes(appId)) {
+      if (window.showToast) window.showToast('This is a read-only account. That app is not available.', 'warning');
+      return;
+    }
+
+    if (!this.serverId && appId !== 'servers' && appId !== 'settings' && appId !== 'fleet' && appId !== 'history') {
       this.launchSettings({ tab: 'servers' });
       return;
     }
@@ -301,6 +307,9 @@ class DesktopAppsController {
       case 'sync':
       case 'rsync':
         return this.launchSync(params);
+      case 'fleet':
+      case 'history':
+        return this.launchFleet(params);
       case 'cron':
         return this.launchCron(params);
       case 'git':

@@ -55,7 +55,7 @@ def register_terminal_sock(sock):
         cwd = raw_cwd.strip() if raw_cwd else None
         
         audit('terminal.open', target=server.name, detail=cwd or '')
-        term_session = TerminalSession(ws, server, cols=cols, rows=rows, cwd=cwd)
+        term_session = TerminalSession(ws, server, cols=cols, rows=rows, cwd=cwd, username=session.get('username', ''))
         term_session.start()
 
         try:

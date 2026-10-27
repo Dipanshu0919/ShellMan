@@ -42,6 +42,7 @@ from models.domain import CloudflareSetting, Domain
 from models.audit import AuditLog
 from models.alert import AlertRule, AlertEvent, AlertChannel
 from models.timelimit import TimeLimit, ServerUsage
+from models.metric_sample import MetricSample, AppSetting
 
 # Initialize Flask-Sock
 sock = Sock()
@@ -63,6 +64,8 @@ def create_app(config_class=Config):
 
     from security import init_security
     init_security(app)
+    from roles import init_roles
+    init_roles(app)
 
     # Register blueprints
     from routes.auth import auth_bp
@@ -90,6 +93,8 @@ def create_app(config_class=Config):
     from routes.audit import audit_bp
     from routes.codespace import codespace_bp
     from routes.alerts import alerts_bp
+    from routes.users import users_bp
+    from routes.history import history_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -116,6 +121,8 @@ def create_app(config_class=Config):
     app.register_blueprint(audit_bp)
     app.register_blueprint(codespace_bp)
     app.register_blueprint(alerts_bp)
+    app.register_blueprint(users_bp)
+    app.register_blueprint(history_bp)
 
     # Register terminal websocket handler
     register_terminal_sock(sock)
@@ -163,6 +170,7 @@ def create_app(config_class=Config):
                 db.add_column_if_missing('servers', 'codespace_name', 'VARCHAR(120)')
                 db.add_column_if_missing('servers', 'gh_token_enc', 'TEXT')
             if db.columns_of('users'):
+                db.add_column_if_missing('users', 'role', "VARCHAR(20) DEFAULT 'admin' NOT NULL")
                 db.add_column_if_missing('users', 'totp_secret', 'VARCHAR(64)')
                 db.add_column_if_missing('users', 'totp_enabled', 'BOOLEAN DEFAULT 0 NOT NULL')
                 db.add_column_if_missing('users', 'backup_codes', 'TEXT')
@@ -219,7 +227,14 @@ def create_app(config_class=Config):
                 return f"GitHub Codespace {server.codespace_name}"
             return f"{mask_ip_filter(server.host)}:{server.port}"
 
-        return dict(mask_ip=mask_ip_filter, static_v=static_v, endpoint_label=endpoint_label)
+        def user_role():
+            try:
+                from routes.auth_helpers import get_current_user
+                u = get_current_user()
+                return (u.role or 'admin') if u else 'admin'
+            except Exception:
+                return 'admin'
+        return dict(mask_ip=mask_ip_filter, static_v=static_v, endpoint_label=endpoint_label, user_role=user_role)
 
     # Background alert engine (server-side checks + Telegram/Slack/Discord/webhook/e-mail notifications).
     if not app.config.get('TESTING'):

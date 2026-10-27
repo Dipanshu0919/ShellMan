@@ -321,6 +321,15 @@ class AlertEngine:
 
         self._close_orphans(rules, servers)
 
+        # Servers without alert rules are still read once per check so their history graphs and the fleet page fill.
+        try:
+            from services import history
+            if history.enabled():
+                for sid in servers:
+                    wanted.setdefault(sid, [])
+        except Exception:
+            logger.exception('history setup failed')
+
         for sid, rs in wanted.items():
             server = servers[sid]
             if server.is_codespace:
@@ -341,6 +350,12 @@ class AlertEngine:
                 db.session.commit()
             except Exception:
                 db.session.rollback()
+            if not offline:
+                try:
+                    from services import history
+                    history.record(sid, metrics)
+                except Exception:
+                    logger.exception('history record failed')
             for r in rs:
                 self._evaluate(r, server, metrics, offline)
 

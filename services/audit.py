@@ -11,8 +11,8 @@ from models.orm import DateTime
 
 logger = logging.getLogger('shellman.audit')
 
-DEFAULTS = {'retention_days': 180, 'max_rows': 20000}
-LIMITS = {'retention_days': (0, 3650), 'max_rows': (0, 5000000)}  # 0 means "no limit"
+DEFAULTS = {'retention_days': 180, 'max_rows': 20000, 'record_terminal': 1}
+LIMITS = {'retention_days': (0, 3650), 'max_rows': (0, 5000000), 'record_terminal': (0, 1)}  # 0 means "no limit" (record_terminal: 1 = on)
 PRUNE_EVERY_SECONDS = 3600
 _DT = DateTime()
 _counter = 0

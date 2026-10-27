@@ -304,6 +304,10 @@
           <div><label>Delete entries older than (days)</label><input class="form-control" id="auDays" type="number" min="0" max="3650" value="${c.retention_days ?? 180}"></div>
           <div><label>Keep at most (entries)</label><input class="form-control" id="auMax" type="number" min="0" max="5000000" value="${c.max_rows ?? 20000}"></div>
         </div>
+        <label style="display:flex;align-items:flex-start;gap:.5rem;margin:.1rem 0 .7rem;cursor:pointer;font-size:.76rem;color:var(--text-primary,#f3f5f9)">
+          <input type="checkbox" id="auRecord" ${(c.record_terminal ?? 1) ? 'checked' : ''} style="margin-top:2px">
+          <span><b>Record typed terminal commands.</b> Each command a person types in the terminal is saved here as "terminal.command", with who, which server and when. Screen output is never stored, and text typed at password prompts is replaced by [hidden input].</span>
+        </label>
         <button class="btn btn-primary sa-btn" id="auSave">Save &amp; clean now</button>
         <hr style="border:0;border-top:1px solid var(--border-color,#2f374b);margin:.9rem 0">
         <div class="sa-sub" style="margin-bottom:.4rem">Delete manually (cannot be undone — export CSV first if you need a copy):</div>
@@ -316,7 +320,7 @@
       const msg = (t, ok) => { const e = box.querySelector('#auKeepMsg'); e.textContent = t; e.style.color = ok ? '#34d399' : '#ff8a93'; };
       const done = (r) => { if (r && r.success) { msg(`Removed ${r.removed} entries.`, true); this.state.offset = 0; this.load(); this.loadMeta(); } else msg((r && r.error) || 'Failed'); };
       box.querySelector('#auSave').onclick = async () => {
-        done(await api('/api/audit/settings', 'PUT', { retention_days: box.querySelector('#auDays').value, max_rows: box.querySelector('#auMax').value }));
+        done(await api('/api/audit/settings', 'PUT', { retention_days: box.querySelector('#auDays').value, max_rows: box.querySelector('#auMax').value, record_terminal: box.querySelector('#auRecord').checked ? 1 : 0 }));
       };
       box.querySelector('#auPurgeAge').onclick = async () => {
         const d = box.querySelector('#auPurgeDays').value;

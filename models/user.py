@@ -25,8 +25,15 @@ class User(db.Model):
     totp_enabled = db.Column(db.Boolean, default=False, nullable=False)
     backup_codes = db.Column(db.Text, nullable=True)  # Fernet encrypted JSON-encoded array
 
+    # 'admin' can do everything; 'viewer' can only look (metrics, logs, fleet, history). Existing accounts stay admin.
+    role = db.Column(db.String(20), default='admin', nullable=False, server_default='admin')
+
     # Bumped on password change / 2FA change / "sign out other devices": older session cookies stop working
     session_version = db.Column(db.Integer, default=1, nullable=False, server_default='1')
+
+    @property
+    def is_admin(self) -> bool:
+        return (self.role or 'admin') == 'admin'
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
@@ -109,6 +116,7 @@ class User(db.Model):
         return {
             'id': self.id,
             'username': self.username,
+            'role': self.role or 'admin',
             'totp_enabled': bool(self.totp_enabled),
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None

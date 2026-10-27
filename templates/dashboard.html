@@ -42,6 +42,7 @@
     window.DesktopConfig = {
       serverId: {{ selected_server.id if selected_server else 'null' }},
       serverKind: "{{ selected_server.kind if selected_server and selected_server.kind else 'ssh' }}",
+      userRole: "{{ user_role() }}",
       serverName: "{{ selected_server.name if selected_server else '' }}",
       serverHost: "{{ endpoint_label(selected_server) if selected_server else '' }}",
       username: "{{ selected_server.username if selected_server else '' }}",
@@ -435,6 +436,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
       <span>File Sync (Rsync over SSH)</span>
     </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('fleet'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><path d="M14 17h7M14 20h4"></path></svg>
+      <span>Fleet &amp; History</span>
+    </div>
     <div class="ctx-item" onclick="DesktopApps.launch('cron'); toggleStartMenu();">
       <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
       <span>Cron Job Manager (Scheduler)</span>
@@ -504,6 +509,8 @@
 <script src="{{ static_v('js/desktop/domains.js') }}"></script>
 <script src="{{ static_v('js/desktop/settings.js') }}"></script>
 <script src="{{ static_v('js/desktop/alerts_audit.js') }}"></script>
+<script src="{{ static_v('js/desktop/users.js') }}"></script>
+<script src="{{ static_v('js/desktop/fleet.js') }}"></script>
 <script src="{{ static_v('js/desktop/codespace.js') }}"></script>
 <script src="{{ static_v('js/desktop/apps_ext.js') }}"></script>
 <script src="{{ static_v('js/desktop/main.js') }}"></script>
