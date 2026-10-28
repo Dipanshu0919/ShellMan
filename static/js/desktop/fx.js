@@ -14,7 +14,7 @@
   if (window.ShellmanFX) return;
 
   const KEY = 'shellman_fx';
-  const NAMES = ['livewall', 'materialize', 'filefx', 'constellation', 'universe'];
+  const NAMES = ['livewall', 'materialize', 'filefx', 'constellation', 'universe', 'workspace'];
   const reduceMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
 
   // ---------- settings store ----------
@@ -437,6 +437,7 @@
     materialize: ['Materialize windows', 'Windows resolve in with a scanline decode and dissolve into their dock icon when closed.'],
     filefx: ['File manager effects', 'Transfer beams, depth zoom when opening folders, shredding on delete, folding on compress.'],
     constellation: ['Fleet constellation', 'Adds a 3D view to Fleet & History: servers orbit by load, comets fly on rsync and deploys.'],
+    workspace: ['3D workspace switch', 'A cube or slide turns the windows when you switch virtual desktops. Off = instant switch.'],
     universe: ['Process universe', 'Adds a view to the Task Manager: processes as bodies sized by CPU and RAM, with collapse on kill.']
   };
   FX.settingsCard = function () {
@@ -448,11 +449,12 @@
       '<div style="display:flex;gap:.4rem;align-items:center;font-size:.75rem;color:var(--text-muted);">Quality ' +
       '<select class="form-control" id="fxQuality" style="font-size:.75rem;padding:.25rem .5rem;width:auto;"><option value="full"' + (cfg.quality === 'full' ? ' selected' : '') + '>Full</option><option value="light"' + (cfg.quality === 'light' ? ' selected' : '') + '>Light (lower GPU use)</option></select>' +
       '<button type="button" class="btn btn-secondary btn-sm" id="fxAllOn">All on</button><button type="button" class="btn btn-secondary btn-sm" id="fxAllOff">All off</button></div></div>' +
-      '<div style="font-size:.72rem;color:var(--text-muted);margin-bottom:.6rem;">Every effect is optional and costs nothing while it is off. They pause when the tab is hidden.</div>' + rows + '</div>';
+      '<div style="font-size:.72rem;color:var(--text-muted);margin-bottom:.6rem;">Every effect is optional and costs nothing while it is off. They pause when the tab is hidden.</div>' + rows + (window.Workspaces ? window.Workspaces.settingsHtml() : '') + '</div>';
   };
   FX.bindSettings = function (root) {
     const card = root && root.querySelector('#fxCard');
     if (!card) return;
+    if (window.Workspaces) window.Workspaces.bindSettings(card);
     const sync = () => card.querySelectorAll('.fx-chk').forEach(c => { c.checked = FX.on(c.dataset.fx); });
     card.querySelectorAll('.fx-chk').forEach(c => { c.onchange = () => FX.set(c.dataset.fx, c.checked); });
     const q = card.querySelector('#fxQuality'); if (q) q.onchange = () => { FX.set('quality', q.value); wallStop(); FX.refreshWall(); };

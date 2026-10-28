@@ -504,7 +504,7 @@ Settings, Appearance, Wallpaper holds up to 10 presets. Upload an image or a vid
 
 <a id="effects"></a>
 
-## 39. Effects: living wallpaper, 3D fleet, process universe
+## 39. Effects and virtual desktops: living wallpaper, 3D fleet, process universe, 3D workspace switch
 
 Settings, Appearance, Effects has one switch per effect, a Quality setting (Full or Light) and All on / All off buttons. An effect that is off costs nothing, every effect pauses while the browser tab is hidden, and all of them start switched off when the system asks for reduced motion. The choices are stored in this browser (`shellman_fx`).
 
@@ -513,6 +513,7 @@ Settings, Appearance, Effects has one switch per effect, a Quality setting (Full
 - **File manager effects.** A beam travels from the file row to its destination for each progress step of a transfer (the existing SSE stream), folders open with a depth zoom, deleted rows are shredded into strips, and compressed rows fold into the first row.
 - **Fleet constellation.** A third tab in Fleet & History. ShellMan is the centre and each server is a body on its own orbit: CPU sets the orbit speed and the size, offline servers go dark, hovering shows CPU, RAM and disk, and clicking flies the camera to that server and opens its history. While an rsync or a Git deployment runs, a comet flies from the centre to that server. Three.js is vendored in `static/vendor/three` and loaded only when this tab opens.
 - **Process universe.** A view in the Task Manager (the Universe button). Processes are bodies sized by RAM and coloured by CPU, busy ones circle faster, zombies drift to the rim, stopped processes get a dashed ring, and a killed process collapses and bursts. Click a body for the normal process menu.
+- **3D workspace switch.** The desktop has virtual desktops (2 to 6, default 4). Each window lives on one workspace; the others are hidden, not closed. `Ctrl+Alt+Left/Right` switches, `Ctrl+Alt+1..9` jumps, `Ctrl+Alt+Shift+Left/Right` carries the active window along, and a right-click on a title bar offers Move to workspace. The pill at the top centre also switches. With the effect on, the windows turn as a 3D cube or a 3D slide (pick one in Settings); with it off the switch is instant. Opening an app that is already running on another workspace jumps to it.
 
-In light mode every effect is flat: no glow and no shadow. Code: `static/js/desktop/fx.js` (switches, shader, window and file effects), `fleet3d.js`, `procuniverse.js`.
+In light mode every effect is flat: no glow and no shadow. Code: `static/js/desktop/fx.js` (switches, shader, window and file effects), `workspaces.js`, `fleet3d.js`, `procuniverse.js`.
 

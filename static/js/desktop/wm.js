@@ -247,7 +247,8 @@ class DesktopWindowManager {
       restoreRect: null,
       onResize,
       onClose,
-      scope: reqScope
+      scope: reqScope,
+      ws: window.Workspaces ? window.Workspaces.current : 0
     };
 
     this.windows.set(id, winObj);
@@ -287,6 +288,11 @@ class DesktopWindowManager {
   focusWindow(id) {
     if (!this.windows.has(id)) return;
     const targetWin = this.windows.get(id);
+
+    // a window on another virtual desktop: go there first
+    if (window.Workspaces && targetWin.ws !== undefined && targetWin.ws !== window.Workspaces.current) {
+      window.Workspaces.go(targetWin.ws);
+    }
 
     if (targetWin.isMinimized) {
       this.restoreWindow(id);

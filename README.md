@@ -201,7 +201,7 @@ Each feature name links to its full description in [docs/features.md](docs/featu
 | :---: | :--- | :--- |
 | <img src="docs/assets/icons/sun.svg" width="22" height="22" alt=""> | **[Light and dark](docs/features.md#theme)** | A flat, quiet light theme and the original dark one, switched with an animated toggle. |
 | <img src="docs/assets/icons/image.svg" width="22" height="22" alt=""> | **[Wallpapers](docs/features.md#wallpapers)** | Up to 10 presets. Upload images, GIFs or videos and give dark and light mode their own. |
-| <img src="docs/assets/icons/globe.svg" width="22" height="22" alt=""> | **[Live effects](docs/features.md#effects)** | Living wallpaper shader, windows that materialize, a 3D fleet constellation, a process universe and file-manager beams. Each is a switch in Settings. |
+| <img src="docs/assets/icons/globe.svg" width="22" height="22" alt=""> | **[Live effects](docs/features.md#effects)** | Living wallpaper shader, windows that materialize, a 3D fleet constellation, a process universe, file-manager beams and 3D virtual-desktop switching. Each is a switch in Settings. |
 | <img src="docs/assets/icons/type.svg" width="22" height="22" alt=""> | **[Fonts and look](docs/features.md#fonts)** | Pick fonts, font scale, icon size and corner roundness. |
 | <img src="docs/assets/icons/phone.svg" width="22" height="22" alt=""> | **[Installable app](docs/features.md#pwa)** | Install it as a PWA and use it without browser chrome. |
 | <img src="docs/assets/icons/layout.svg" width="22" height="22" alt=""> | **[Widgets and layout](docs/features.md#widgets)** | Clock and resource widgets, dock customizer, ultrawide to phone layouts. |
