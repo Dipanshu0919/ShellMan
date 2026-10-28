@@ -290,3 +290,6 @@ html.sm-flip .desktop-dock-wrapper, html.sm-flip #desktopIcons, html.sm-flip #de
 :root[data-theme="light"] .widget-card * { text-shadow: none !important; }
 :root[data-theme="light"] .widget-card { backdrop-filter: none; -webkit-backdrop-filter: none; transform: none; }
 :root[data-theme="light"] .widget-card:hover { transform: none; }
+
+/* effects: flat in light mode, no glow on the window-open scan bar */
+:root[data-theme="light"] .fx-decode-bar::before { display: none; }

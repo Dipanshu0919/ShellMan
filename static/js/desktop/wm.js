@@ -251,6 +251,7 @@ class DesktopWindowManager {
     };
 
     this.windows.set(id, winObj);
+    if (window.ShellmanFX) { try { window.ShellmanFX.windowOpen(winObj); } catch (_) {} }
 
     // Setup interactive handlers
     this.setupWindowDragging(winObj);
@@ -437,7 +438,8 @@ class DesktopWindowManager {
     win.isClosing = true;
     // Cancel every request this window started (and kill the remote jobs behind them)
     if (win.scope && window.RequestScope) window.RequestScope.abortScope(win.scope);
-    win.el.classList.add('closing');
+    const fxMs = window.ShellmanFX ? window.ShellmanFX.windowClose(win) : 0;
+    if (!fxMs) win.el.classList.add('closing');
 
     if (win.taskbarPill && win.taskbarPill.parentNode) {
       win.taskbarPill.parentNode.removeChild(win.taskbarPill);
@@ -474,7 +476,7 @@ class DesktopWindowManager {
 
       this.windows.delete(id);
       this.notifyStateChange();
-    }, 140);
+    }, fxMs || 140);
   }
 
   setWindowTitle(id, newTitle) {

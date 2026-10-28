@@ -225,12 +225,14 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
               b.disabled = true;
               b.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></span> Pulling...`;
               try {
+                if (window.ShellmanFX) window.ShellmanFX.transfer(this.serverId, 'deploy', 'out', 'start');
                 const resp = await fetch(`/api/servers/${this.serverId}/git/pull`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ id })
                 });
                 const res = await resp.json();
+                if (window.ShellmanFX) window.ShellmanFX.transfer(this.serverId, 'deploy', 'out', 'end');
                 if (res.success) {
                   if (window.showToast) window.showToast('Git deployment pulled successfully!', 'success');
                   if (res.log && res.log.trim()) {
@@ -253,6 +255,7 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
                 }
                 loadDeployments();
               } catch (e) {
+                if (window.ShellmanFX) window.ShellmanFX.transfer(this.serverId, 'deploy', 'out', 'end');
                 if (window.showToast) window.showToast('Pull error: ' + e, 'danger');
                 else DesktopModal.alert({ title: 'Pull Error', message: String(e), type: 'danger' });
               } finally {

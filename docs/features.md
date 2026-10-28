@@ -501,3 +501,18 @@ For developers: all theme colors are CSS variables. `static/css/light.css` holds
 ## 38. Wallpapers: one per theme, uploads and live wallpapers
 
 Settings, Appearance, Wallpaper holds up to 10 presets. Upload an image or a video from your device, or add a URL, and it becomes a preset; every preset has Dark, Light and Both buttons, so each theme can use its own wallpaper and you can change it at any time. Deleting a preset that a theme is using puts that theme back on the default wallpaper. Animated GIFs and short videos (MP4, WebM, MOV, OGV) play as a live wallpaper: they are muted, loop, and pause while the browser tab is hidden or when the system asks for reduced motion. Uploads are stored in `instance/wallpapers` under random names, only whitelisted image and video types are accepted (the file header must match its extension, and SVG is refused), images are limited to 40 MB and videos to 300 MB. Deleting an uploaded preset also deletes the file. Presets and the dark/light choice are stored in this browser (`shellman_wall_presets`, `shellman_wall_dark`, `shellman_wall_light`); uploaded files that are missing from a browser's presets reappear there while there is room. Only administrators can upload or delete; viewer accounts still see the wallpaper. Routes: `GET /wallpapers/<name>`, `GET /api/wallpapers`, `POST /api/wallpapers/upload`, `DELETE /api/wallpapers/<name>`. Code: `routes/wallpapers.py`, `static/js/desktop/wallpaper.js`, and the Appearance tab in `static/js/desktop/settings.js`.
+
+<a id="effects"></a>
+
+## 39. Effects: living wallpaper, 3D fleet, process universe
+
+Settings, Appearance, Effects has one switch per effect, a Quality setting (Full or Light) and All on / All off buttons. An effect that is off costs nothing, every effect pauses while the browser tab is hidden, and all of them start switched off when the system asks for reduced motion. The choices are stored in this browser (`shellman_fx`).
+
+- **Living wallpaper.** A WebGL fragment shader drawn over the wallpaper, at reduced resolution. CPU load sets the flow speed, RAM sets the fog density, network traffic sets the ripples, and a critical alert shifts the colour to red until it is resolved.
+- **Materialize windows.** A window resolves in with a scanline decode led by a `$` bar, and dissolves into its dock icon when it is closed.
+- **File manager effects.** A beam travels from the file row to its destination for each progress step of a transfer (the existing SSE stream), folders open with a depth zoom, deleted rows are shredded into strips, and compressed rows fold into the first row.
+- **Fleet constellation.** A third tab in Fleet & History. ShellMan is the centre and each server is a body on its own orbit: CPU sets the orbit speed and the size, offline servers go dark, hovering shows CPU, RAM and disk, and clicking flies the camera to that server and opens its history. While an rsync or a Git deployment runs, a comet flies from the centre to that server. Three.js is vendored in `static/vendor/three` and loaded only when this tab opens.
+- **Process universe.** A view in the Task Manager (the Universe button). Processes are bodies sized by RAM and coloured by CPU, busy ones circle faster, zombies drift to the rim, stopped processes get a dashed ring, and a killed process collapses and bursts. Click a body for the normal process menu.
+
+In light mode every effect is flat: no glow and no shadow. Code: `static/js/desktop/fx.js` (switches, shader, window and file effects), `fleet3d.js`, `procuniverse.js`.
+

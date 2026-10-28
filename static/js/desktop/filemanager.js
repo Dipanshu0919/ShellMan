@@ -43,6 +43,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
       const tc = document.getElementById('toastContainer');
       if (tc) tc.appendChild(toast);
 
+      const fxBeam = window.ShellmanFX ? window.ShellmanFX.files.beam(title, fileWinId) : null;
       const eventSource = new EventSource(`/api/tasks/${taskId}/progress`);
       const cancelBtn = toast.querySelector('.sse-cancel');
       if (cancelBtn) cancelBtn.onclick = () => {
@@ -69,6 +70,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         try {
           const data = JSON.parse(event.data);
           if (data.status === 'waiting') return;
+          if (fxBeam) fxBeam.tick(data);
 
           if (data.transferred !== lastTransferred) {
             lastTransferred = data.transferred;
@@ -106,6 +108,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
           }
 
           if (data.status === 'done') {
+            if (fxBeam) fxBeam.done();
             clearInterval(stallCheck);
             eventSource.close();
             toast.className = 'desktop-toast success';
@@ -1814,6 +1817,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             renderBreadcrumb(currentPath);
             renderViews();
             updatePropertiesPane();
+            if (window.ShellmanFX && previousCurrentPath && previousCurrentPath !== currentPath) window.ShellmanFX.files.depth(fileWinId, currentPath.length > previousCurrentPath.length && currentPath.startsWith(previousCurrentPath));
           } catch (e) {
             if (e.name === 'AbortError') return;
             items = previousItems;
@@ -2986,6 +2990,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
               const taskId = 'zip_' + Date.now();
               archTaskId = taskId;
+              if (window.ShellmanFX) window.ShellmanFX.files.fold(fileWinId, Array.from(selectedPaths));
               startProgressToast(
                 taskId,
                 `Compressing into ${archiveFullName}`,
@@ -3393,6 +3398,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 res = await resp.json();
                 if (res.success) {
                   if (window.showToast) window.showToast(`Deleted ${isSingle ? `"${singleName}"` : `${count} items`}`, 'info');
+                  if (window.ShellmanFX) window.ShellmanFX.files.shred(fileWinId, paths);
                   paths.forEach(p => selectedPaths.delete(p));
                   loadDir(currentPath, false);
                   return true;
@@ -3954,6 +3960,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   const batchBytes = batch.reduce((acc, it) => acc + (it.file.size || 0), 0);
                   uploadedBytes += batchBytes;
                   updateProgress(uploadedCount, uploadedBytes);
+                  if (window.ShellmanFX) window.ShellmanFX.files.pulse(fileWinId, 'up');
                 }
               } catch (batchErr) {
                 if (isCancelled || batchErr.name === 'AbortError') break;

@@ -288,6 +288,7 @@ const ServerHealthAlerts = {
     return this.states[serverId];
   },
   triggerAlert(title, message, severity = 'warning') {
+    if (window.ShellmanFX) window.ShellmanFX.alert(severity);
     // 1. In-App Desktop Toast
     const toastAllowed = localStorage.getItem('shellman_toast_alerts') !== 'false';
     if (toastAllowed && typeof window.showToast === 'function') {
@@ -482,6 +483,7 @@ window.DesktopSparklines = {
 };
 
 function updateDesktopWidgets(metrics) {
+  if (window.ShellmanFX) window.ShellmanFX.feed(metrics);
   // Sync remote SSH server time
   if (metrics.server_time && metrics.server_time.epoch) {
     const serverEpochMs = metrics.server_time.epoch * 1000;

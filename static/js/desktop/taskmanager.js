@@ -216,6 +216,7 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
                 </div>
               </div>
 
+              <button class="btn btn-secondary btn-xs" id="procUniBtn" style="padding:0.25rem 0.6rem; display:none;" title="Show processes as a small universe">Universe</button>
               <button class="btn btn-secondary btn-xs" id="procRefreshBtn" style="padding:0.25rem 0.6rem;">Refresh</button>
             </div>
           </div>
@@ -232,10 +233,12 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
               </tbody>
             </table>
           </div>
+          <div id="procUni" style="flex:1; position:relative; display:none; min-height:0; overflow:hidden;"></div>
         </div>
       `,
       onInit: (bodyEl, winObj) => {
         let procs = [];
+        let uni = null;
         let sortCol = 'cpu';
         let sortDir = 'desc';
         let activeCtxMenu = null;
@@ -430,11 +433,13 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
           menu.querySelector('#ctx_term').onclick = async () => {
             hideCtxMenu();
             const ok = await DesktopApps.killProcess(this.serverId, proc.pid, 'SIGTERM', proc.comm);
+            if (ok && uni) uni.collapse(proc.pid);
             if (ok) fetchProcs();
           };
           menu.querySelector('#ctx_kill').onclick = async () => {
             hideCtxMenu();
             const ok = await DesktopApps.killProcess(this.serverId, proc.pid, 'SIGKILL', proc.comm);
+            if (ok && uni) uni.collapse(proc.pid);
             if (ok) fetchProcs();
           };
           menu.querySelector('#ctx_stop').onclick = async () => {
@@ -597,6 +602,7 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
             if (res.success) {
               procs = res.processes || [];
               render(procs);
+              if (uni) uni.update(procs);
             }
           } catch (_) {}
         };
@@ -700,6 +706,25 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
         });
 
         input.oninput = () => render(procs);
+
+        // optional "Universe" view (effects setting)
+        const uniBtn = bodyEl.querySelector('#procUniBtn');
+        const uniBox = bodyEl.querySelector('#procUni');
+        const tableBox = bodyEl.querySelector('.table-responsive');
+        const uniOk = () => !!(window.ShellmanFX && window.ShellmanFX.on('universe') && window.ShellmanProcUniverse);
+        const showUni = (on) => {
+          if (on && uniOk()) {
+            tableBox.style.display = 'none'; uniBox.style.display = 'block'; uniBtn.textContent = 'Table';
+            if (!uni) { uni = window.ShellmanProcUniverse.mount(uniBox, { onContext: (x, y, p) => showProcContextMenu(x, y, p) }); uni.update(procs); }
+          } else {
+            if (uni) { uni.destroy(); uni = null; }
+            tableBox.style.display = ''; uniBox.style.display = 'none'; uniBtn.textContent = 'Universe';
+          }
+        };
+        const syncUniBtn = () => { uniBtn.style.display = uniOk() ? '' : 'none'; if (!uniOk() && uni) showUni(false); };
+        uniBtn.onclick = () => showUni(!uni);
+        window.addEventListener('shellman-fx-change', syncUniBtn);
+        syncUniBtn();
         bodyEl.querySelector('#procRefreshBtn').onclick = () => {
           fetchProcs();
           if (window.DesktopTelemetry) window.DesktopTelemetry.poll(true);
@@ -715,6 +740,8 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
         }, 8000);
         winObj.onClose = () => {
           clearInterval(timer);
+          if (uni) { uni.destroy(); uni = null; }
+          window.removeEventListener('shellman-fx-change', syncUniBtn);
           if (unsubProcMetrics) unsubProcMetrics();
           hideCtxMenu();
           document.removeEventListener('pointerdown', onDocPointerDown);

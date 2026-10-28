@@ -1302,8 +1302,11 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   <button class="btn btn-primary btn-sm" id="applyWallBtn_${setWinId}">Add</button>
                 </div>
               </div>
+
+              ${window.ShellmanFX ? window.ShellmanFX.settingsCard() : ''}
             </div>
           `;
+          if (window.ShellmanFX) window.ShellmanFX.bindSettings(contentPane);
 
           const paintThemeBtns = () => contentPane.querySelectorAll('.theme-mode-btn').forEach(b => {
             const on = window.ShellmanTheme && ShellmanTheme.mode() === b.dataset.mode;

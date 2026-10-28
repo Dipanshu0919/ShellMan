@@ -575,12 +575,15 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           logArea.textContent = `[Live Rsync Transfer Started]\n${desc}\nExecuting rsync...\n`;
 
           try {
+            const fxT = (ph) => { if (window.ShellmanFX) window.ShellmanFX.transfer(this.serverId, 'rsync', payload.direction === 'pull' ? 'in' : 'out', ph); };
+            fxT('start');
             const resp = await fetch(`/api/servers/${this.serverId}/sync/execute`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
             });
             const res = await resp.json();
+            fxT('end');
             if (res.success) {
               badge.textContent = 'SUCCESS';
               badge.style.background = 'rgba(16,185,129,0.15)';
@@ -597,6 +600,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
             badge.textContent = 'FAILED';
             badge.style.background = 'rgba(239,68,68,0.15)';
             badge.style.color = 'var(--c-bad)';
+            if (window.ShellmanFX) window.ShellmanFX.transfer(this.serverId, 'rsync', 'out', 'end');
             logArea.textContent = `Network error during live sync: ${e}`;
           } finally {
             execBtn.disabled = false;

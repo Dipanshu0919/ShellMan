@@ -43,6 +43,7 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
       .fl-live i::before{content:"$"}
       .fl-live.off{color:var(--c-warn)}.fl-live.off i{animation:none}
       @keyframes flPulse{0%,100%{opacity:1}50%{opacity:.3}}
+      .fl-body.orbit{padding:0;overflow:hidden}.fl-body.orbit [data-pane],.fl-orbit{height:100%}.fl-orbit{min-height:300px}
       .fl-sum{margin-left:auto;font-size:.8rem;color:var(--text-muted,var(--text-muted))}
       .fl-body{flex:1;overflow:auto;padding:1rem}
       .fl-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1rem}
@@ -92,6 +93,10 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
   }
 
   let tab = 'fleet';
+  let orbit = null;
+  const fleetish = () => tab === 'fleet' || tab === 'orbit';
+  const orbitOk = () => !!(window.ShellmanFX && window.ShellmanFX.on('constellation') && window.ShellmanFleet3D);
+  const killOrbit = () => { if (orbit) { orbit.destroy(); orbit = null; } };
   let servers = [];           // from /api/fleet
   let histServer = null;
   let range = '24h';
@@ -117,6 +122,22 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
   const paintFleet = () => {
     const pane = bodyRef.querySelector('[data-pane]');
     const sum = bodyRef.querySelector('[data-sum]');
+    if (tab === 'orbit') {
+      const el = pane.querySelector('[data-orbit]');
+      if (!el || !orbitOk()) return;
+      const stt = (x) => {
+        if (!x.sample) return x.online ? 'stale' : 'off';
+        if (!x.online) return 'off';
+        if (x.stale) return 'stale';
+        const mm = Math.max(x.sample.cpu, x.sample.mem, x.sample.disk);
+        return mm >= 90 ? 'crit' : mm >= 75 ? 'warn' : 'ok';
+      };
+      if (!orbit) orbit = window.ShellmanFleet3D.mount(el, { onOpen: (sid) => showHistory(sid) });
+      orbit.update(servers, stt);
+      const att = servers.filter(x => ['off', 'crit', 'warn'].includes(stt(x))).length;
+      sum.textContent = servers.length + ' server' + (servers.length === 1 ? '' : 's') + ' · ' + (att ? att + ' need attention' : 'all healthy');
+      return;
+    }
     if (!servers.length) {
       pane.innerHTML = '<div class="fl-empty">No servers yet. Add one in Settings, then come back.</div>';
       sum.textContent = '';
@@ -162,7 +183,7 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
   const telOwns = (sid) => !!(tel() && tel().serverId === sid && tel().lastMetrics && servers.some(x => x.id === sid && x.online));
   const applyTelemetry = (m) => {
     const T = tel();
-    if (!bodyRef || tab !== 'fleet' || !T || !m || !m.memory || !m.disk) return;
+    if (!bodyRef || !fleetish() || !T || !m || !m.memory || !m.disk) return;
     const s = servers.find(x => x.id === T.serverId);
     if (!s) return;
     s.online = true; s.stale = false;
@@ -171,6 +192,7 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
     paintFleet();
   };
   let unsubTel = null;
+  let onFx = null;
   const setLive = (ok) => {
     const el = bodyRef && bodyRef.querySelector('[data-live]');
     if (!el) return;
@@ -178,11 +200,11 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
     el.lastChild.textContent = ok ? 'LIVE' : 'PAUSED';
   };
   const liveTick = async () => {
-    if (liveBusy || !bodyRef || tab !== 'fleet' || document.hidden) { if (document.hidden) setLive(false); return; }
+    if (liveBusy || !bodyRef || !fleetish() || document.hidden) { if (document.hidden) setLive(false); return; }
     liveBusy = true;
     const r = await api('/api/fleet/live');
     liveBusy = false;
-    if (!bodyRef || tab !== 'fleet') return;
+    if (!bodyRef || !fleetish()) return;
     if (!r.success) { setLive(false); return; }
     setLive(true);
     (r.servers || []).forEach(u => {
@@ -201,7 +223,7 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
   let fleetEngineOn = null;
   const loadFleet = async () => {
     const r = await api('/api/fleet');
-    if (!bodyRef || tab !== 'fleet') return;
+    if (!bodyRef || !fleetish()) return;
     if (!r.success) { bodyRef.querySelector('[data-pane]').innerHTML = `<div class="fl-empty">${esc(r.error || 'Could not load')}</div>`; return; }
     servers = r.servers || [];
     fleetEngineOn = r.engine_running;
@@ -317,11 +339,18 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
   };
 
   const setTab = (t) => {
+    if (t === 'orbit' && !orbitOk()) t = 'fleet';
     tab = t;
+    killOrbit();
     bodyRef.querySelectorAll('.fl-tab').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+    const bd = bodyRef.querySelector('[data-body]'); if (bd) bd.classList.toggle('orbit', t === 'orbit');
     clearInterval(fleetTimer);
     const lv0 = bodyRef.querySelector('[data-live]'); if (lv0) lv0.style.display = '';
-    if (t === 'fleet') {
+    if (t === 'orbit') {
+      bodyRef.querySelector('[data-pane]').innerHTML = '<div class="fl-orbit" data-orbit></div>';
+      loadFleet();
+      fleetTimer = setInterval(liveTick, LIVE_MS);
+    } else if (t === 'fleet') {
       bodyRef.querySelector('[data-pane]').innerHTML = '<div class="fl-empty">Loading…</div>';
       loadFleet();
       fleetTimer = setInterval(liveTick, LIVE_MS);
@@ -343,15 +372,21 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
     minWidth: 560,
     minHeight: 380,
     contentHtml: `<div class="fl" id="${id}">
-      <div class="fl-top"><button class="fl-tab on" data-t="fleet">Fleet</button><button class="fl-tab" data-t="history">History</button><span class="fl-live" data-live title="Updates every 2 seconds, like the desktop widget"><i></i>LIVE</span><span class="fl-sum" data-sum></span></div>
+      <div class="fl-top"><button class="fl-tab on" data-t="fleet">Fleet</button><button class="fl-tab" data-t="orbit" data-orbit-tab style="display:none">Constellation</button><button class="fl-tab" data-t="history">History</button><span class="fl-live" data-live title="Updates every 2 seconds, like the desktop widget"><i></i>LIVE</span><span class="fl-sum" data-sum></span></div>
       <div class="fl-body" data-body><div data-pane></div></div></div>`,
     onInit: (bodyEl) => {
       bodyRef = bodyEl.querySelector('#' + id);
       bodyRef.querySelectorAll('.fl-tab').forEach(b => { b.onclick = () => setTab(b.dataset.t); });
+      const syncOrbitTab = () => {
+        const b = bodyRef && bodyRef.querySelector('[data-orbit-tab]'); if (!b) return;
+        b.style.display = orbitOk() ? '' : 'none';
+        if (!orbitOk() && tab === 'orbit') setTab('fleet');
+      };
+      onFx = syncOrbitTab; window.addEventListener('shellman-fx-change', onFx); syncOrbitTab();
       if (tel() && tel().subscribe) unsubTel = tel().subscribe(applyTelemetry);
       if (params.server_id) showHistory(Number(params.server_id)); else setTab('fleet');
     },
-    onClose: () => { clearInterval(fleetTimer); if (unsubTel) unsubTel(); bodyRef = null; }
+    onClose: () => { clearInterval(fleetTimer); killOrbit(); if (onFx) window.removeEventListener('shellman-fx-change', onFx); if (unsubTel) unsubTel(); bodyRef = null; }
   });
   if (win) win._showHistory = showHistory;
   return win;
