@@ -11,10 +11,10 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
     }
 
     const syncWinId = 'sync_' + Date.now();
-    const defaultServerSrc = params.src || '/var/www/';
-    const defaultServerDst = params.dst || '/var/backups/www/';
+    const defaultServerSrc = params.src || '/home/';
+    const defaultServerDst = params.dst || '/home/backup/';
     const defaultLocalPath = params.local_path || '~/';
-    const defaultRemotePath = params.remote_path || '/var/www/';
+    const defaultRemotePath = params.remote_path || '/home/';
 
     const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
@@ -41,7 +41,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
               </button>
             </div>
             <div style="display:flex; align-items:center; gap:0.5rem;">
-              <span style="font-size:0.72rem; color:var(--text-muted);">Host: <code style="color:#cbd5e1; font-family:var(--font-mono);">${this.serverHost}</code></span>
+              <span style="font-size:0.72rem; color:var(--text-muted);">Host: <code style="color:var(--text-secondary); font-family:var(--font-mono);">${this.serverHost}</code></span>
               <button class="btn btn-secondary btn-xs" id="btnClearLog_${syncWinId}" style="padding:0.2rem 0.5rem; font-size:0.72rem;">Clear Output</button>
             </div>
           </div>
@@ -49,13 +49,13 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
           <!-- Body: Two-column layout -->
           <div style="flex:1; display:flex; overflow:hidden;">
             <!-- Left Config Pane -->
-            <div style="width:420px; min-width:360px; border-right:1px solid var(--border-subtle); padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.85rem; background:rgba(0,0,0,0.15);">
+            <div style="width:420px; min-width:360px; border-right:1px solid var(--border-subtle); padding:1rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.85rem; background:rgba(var(--shade),0.15);">
               
               <!-- MODE 1: LOCAL <-> REMOTE CONTAINER -->
               <div id="paneLocalRemote_${syncWinId}" style="display:flex; flex-direction:column; gap:0.85rem;">
                 <!-- Direction Toggle -->
                 <div>
-                  <label style="display:block; font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:0.35rem; letter-spacing:0.04em;">Transfer Direction</label>
+                  <label style="display:block; font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.35rem; letter-spacing:0.04em;">Transfer Direction</label>
                   <div style="display:flex; gap:0.4rem;">
                     <button type="button" class="btn btn-secondary btn-xs sync-dir-btn active" id="btnDirPush_${syncWinId}" style="flex:1; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.4rem 0.5rem; font-size:0.74rem; font-weight:600; border-color:var(--sm-accent); color:var(--sm-accent); background:color-mix(in srgb, var(--sm-accent) 15%, transparent);">
                       <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -70,7 +70,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
 
                 <!-- Local Directory Input -->
                 <div>
-                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
+                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.3rem;">
                     <span style="display:flex; align-items:center; gap:0.35rem;">
                       <svg style="width:13px;height:13px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                       <span id="lblLocal_${syncWinId}">Local Machine Directory (Source)</span>
@@ -94,14 +94,14 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
 
                 <!-- Remote Directory Input with Browse Button -->
                 <div>
-                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
+                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.3rem;">
                     <span style="display:flex; align-items:center; gap:0.35rem;">
-                      <svg style="width:13px;height:13px;color:#34d399;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                      <svg style="width:13px;height:13px;color:var(--c-ok);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
                       <span id="lblRemote_${syncWinId}">Remote Server Directory (Destination)</span>
                     </span>
                   </label>
                   <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
-                    <input type="text" id="rsyncRemotePath_${syncWinId}" value="${defaultRemotePath}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/var/www/ or /opt/app/">
+                    <input type="text" id="rsyncRemotePath_${syncWinId}" value="${defaultRemotePath}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/home/ or /opt/app/">
                     <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseRemote_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Server Folders">
                       <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       Browse...
@@ -109,9 +109,9 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                   </div>
                   <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
                     <span style="font-size:0.68rem; color:var(--text-muted); align-self:center; margin-right:2px;">Quick:</span>
+                    <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/home/">/home/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/var/www/">/var/www/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/opt/">/opt/</button>
-                    <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/home/">/home/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-remote" data-val="/etc/">/etc/</button>
                   </div>
                 </div>
@@ -121,14 +121,14 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
               <div id="paneServerServer_${syncWinId}" style="display:none; flex-direction:column; gap:0.85rem;">
                 <!-- Server Source Directory -->
                 <div>
-                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
+                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.3rem;">
                     <span style="display:flex; align-items:center; gap:0.35rem;">
                       <svg style="width:13px;height:13px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       Source Directory on Server
                     </span>
                   </label>
                   <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
-                    <input type="text" id="rsyncServerSrc_${syncWinId}" value="${defaultServerSrc}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/var/www/">
+                    <input type="text" id="rsyncServerSrc_${syncWinId}" value="${defaultServerSrc}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/home/">
                     <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseServerSrc_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Server Folders">
                       <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       Browse...
@@ -136,8 +136,8 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                   </div>
                   <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
                     <span style="font-size:0.68rem; color:var(--text-muted); align-self:center; margin-right:2px;">Quick:</span>
-                    <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/var/www/">/var/www/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/home/">/home/</button>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/var/www/">/var/www/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/opt/">/opt/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-server-src" data-val="/etc/nginx/">/etc/nginx/</button>
                   </div>
@@ -155,14 +155,14 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
 
                 <!-- Server Destination Directory -->
                 <div>
-                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">
+                  <label style="display:flex; align-items:center; justify-content:space-between; font-size:0.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.3rem;">
                     <span style="display:flex; align-items:center; gap:0.35rem;">
-                      <svg style="width:13px;height:13px;color:#34d399;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      <svg style="width:13px;height:13px;color:var(--c-ok);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       Destination Directory on Server
                     </span>
                   </label>
                   <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
-                    <input type="text" id="rsyncServerDst_${syncWinId}" value="${defaultServerDst}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/var/backups/www/">
+                    <input type="text" id="rsyncServerDst_${syncWinId}" value="${defaultServerDst}" class="form-control" style="flex:1; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/home/backup/">
                     <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseServerDst_${syncWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Server Folders">
                       <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       Browse...
@@ -170,6 +170,7 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                   </div>
                   <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
                     <span style="font-size:0.68rem; color:var(--text-muted); align-self:center; margin-right:2px;">Quick:</span>
+                    <button type="button" class="btn btn-secondary btn-xs preset-server-dst" data-val="/home/backup/">/home/backup/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-server-dst" data-val="/var/backups/">/var/backups/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-server-dst" data-val="/opt/replica/">/opt/replica/</button>
                     <button type="button" class="btn btn-secondary btn-xs preset-server-dst" data-val="/tmp/sync-preview/">/tmp/sync-preview/</button>
@@ -178,8 +179,8 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
               </div>
 
               <!-- Options -->
-              <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
-                <div style="font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.45rem;">Transfer Options</div>
+              <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+                <div style="font-size:0.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.45rem;">Transfer Options</div>
                 <div style="display:flex; flex-direction:column; gap:0.45rem; font-size:0.75rem;">
                   <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                     <input type="checkbox" id="chkArchive_${syncWinId}" checked>
@@ -195,14 +196,14 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
                   </label>
                   <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
                     <input type="checkbox" id="chkDelete_${syncWinId}">
-                    <span style="color:#fca5a5;">Mirror Delete (<code style="color:#f87171;">--delete</code>: remove target files not in source)</span>
+                    <span style="color:var(--c-bad);">Mirror Delete (<code style="color:var(--c-bad);">--delete</code>: remove target files not in source)</span>
                   </label>
                 </div>
               </div>
 
               <!-- Excludes -->
               <div>
-                <label style="display:block; font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.3rem;">Ignore / Exclude Patterns</label>
+                <label style="display:block; font-size:0.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.3rem;">Ignore / Exclude Patterns</label>
                 <input type="text" id="rsyncExclude_${syncWinId}" value=".git, node_modules, __pycache__, *.tmp, .DS_Store" class="form-control" style="width:100%; font-size:0.75rem; padding:0.35rem 0.5rem;">
               </div>
 
@@ -220,16 +221,16 @@ DesktopAppsController.prototype.launchSync = function (params = {}) {
             </div>
 
             <!-- Right Output Pane -->
-            <div style="flex:1; display:flex; flex-direction:column; background:#0b111c; overflow:hidden;">
-              <div style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border-subtle); padding:0.45rem 0.9rem; display:flex; align-items:center; justify-content:space-between;">
+            <div style="flex:1; display:flex; flex-direction:column; background:var(--bg-system); overflow:hidden;">
+              <div style="background:rgba(var(--wash),0.03); border-bottom:1px solid var(--border-subtle); padding:0.45rem 0.9rem; display:flex; align-items:center; justify-content:space-between;">
                 <div style="display:flex; align-items:center; gap:0.6rem;">
-                  <span style="font-size:0.74rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">Sync Output</span>
-                  <span id="syncStatusBadge_${syncWinId}" style="font-size:0.68rem; padding:0.12rem 0.45rem; border-radius:3px; background:rgba(255,255,255,0.05); color:#94a3b8; font-family:var(--font-mono);">IDLE</span>
+                  <span style="font-size:0.74rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Sync Output</span>
+                  <span id="syncStatusBadge_${syncWinId}" style="font-size:0.68rem; padding:0.12rem 0.45rem; border-radius:3px; background:rgba(var(--wash),0.05); color:var(--text-muted); font-family:var(--font-mono);">IDLE</span>
                 </div>
               </div>
 
               <!-- Terminal log display -->
-              <div id="syncLogArea_${syncWinId}" style="flex:1; padding:0.85rem; font-family:monospace; font-size:0.8rem; line-height:1.45; overflow-y:auto; color:#cbd5e1; white-space:pre-wrap; word-break:break-all;">
+              <div id="syncLogArea_${syncWinId}" style="flex:1; padding:0.85rem; font-family:monospace; font-size:0.8rem; line-height:1.45; overflow-y:auto; color:var(--text-secondary); white-space:pre-wrap; word-break:break-all;">
 Ready. Choose your sync mode and folders on the left, then click "Preview Changes" to inspect differences or "Sync Now" to start transferring.
               </div>
             </div>
@@ -282,7 +283,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           if (mode === 'local_remote') {
             tabLR.classList.add('active');
             tabLR.style.borderColor = '#38bdf8';
-            tabLR.style.color = '#38bdf8';
+            tabLR.style.color = 'var(--c-teal)';
             tabLR.style.background = 'rgba(2,132,199,0.15)';
 
             tabSS.classList.remove('active');
@@ -295,7 +296,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           } else {
             tabSS.classList.add('active');
             tabSS.style.borderColor = '#38bdf8';
-            tabSS.style.color = '#38bdf8';
+            tabSS.style.color = 'var(--c-teal)';
             tabSS.style.background = 'rgba(2,132,199,0.15)';
 
             tabLR.classList.remove('active');
@@ -317,7 +318,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           if (dir === 'push') {
             btnPush.classList.add('active');
             btnPush.style.borderColor = '#38bdf8';
-            btnPush.style.color = '#38bdf8';
+            btnPush.style.color = 'var(--c-teal)';
             btnPush.style.background = 'rgba(2,132,199,0.15)';
 
             btnPull.classList.remove('active');
@@ -330,7 +331,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           } else {
             btnPull.classList.add('active');
             btnPull.style.borderColor = '#38bdf8';
-            btnPull.style.color = '#38bdf8';
+            btnPull.style.color = 'var(--c-teal)';
             btnPull.style.background = 'rgba(2,132,199,0.15)';
 
             btnPush.classList.remove('active');
@@ -418,7 +419,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           logArea.textContent = 'Cleared.';
           badge.textContent = 'IDLE';
           badge.style.background = 'rgba(255,255,255,0.05)';
-          badge.style.color = '#94a3b8';
+          badge.style.color = 'var(--sm-accent)';
         };
 
         // Construct request payload
@@ -472,7 +473,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           dryBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Previewing...`;
           badge.textContent = 'ANALYZING';
           badge.style.background = 'rgba(2,132,199,0.15)';
-          badge.style.color = '#38bdf8';
+          badge.style.color = 'var(--c-teal)';
 
           const targetDesc = payload.sync_mode === 'local_remote'
             ? (payload.direction === 'push' ? `[Local: ${payload.local_path}] -> [Remote: ${payload.remote_path}]` : `[Remote: ${payload.remote_path}] -> [Local: ${payload.local_path}]`)
@@ -490,7 +491,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
             if (res.success) {
               badge.textContent = 'PREVIEW OK';
               badge.style.background = 'rgba(16,185,129,0.15)';
-              badge.style.color = '#34d399';
+              badge.style.color = 'var(--c-ok)';
 
               let summary = `\nMode: ${payload.sync_mode === 'local_remote' ? `Local <-> Remote (${payload.direction.toUpperCase()})` : 'Server Backup & Mirror'}\n`;
               summary += `Command: ${res.command}\n`;
@@ -515,13 +516,13 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
             } else {
               badge.textContent = 'ERROR';
               badge.style.background = 'rgba(239,68,68,0.15)';
-              badge.style.color = '#f87171';
+              badge.style.color = 'var(--c-bad)';
               logArea.textContent = `[Rsync Error]\n${res.error || res.raw_output || 'Unknown error occurred during preview.'}`;
             }
           } catch (e) {
             badge.textContent = 'FAILED';
             badge.style.background = 'rgba(239,68,68,0.15)';
-            badge.style.color = '#f87171';
+            badge.style.color = 'var(--c-bad)';
             logArea.textContent = `Network error during preview: ${e}`;
           } finally {
             dryBtn.disabled = false;
@@ -570,7 +571,7 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
           execBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Transferring...`;
           badge.textContent = 'SYNCING';
           badge.style.background = 'rgba(245,158,11,0.15)';
-          badge.style.color = '#fbbf24';
+          badge.style.color = 'var(--c-warn)';
           logArea.textContent = `[Live Rsync Transfer Started]\n${desc}\nExecuting rsync...\n`;
 
           try {
@@ -583,19 +584,19 @@ Ready. Choose your sync mode and folders on the left, then click "Preview Change
             if (res.success) {
               badge.textContent = 'SUCCESS';
               badge.style.background = 'rgba(16,185,129,0.15)';
-              badge.style.color = '#34d399';
+              badge.style.color = 'var(--c-ok)';
               logArea.textContent = `[Live Sync Completed Successfully]\nCommand: ${res.command}\n\n${res.raw_output}`;
               if (window.showToast) window.showToast('Rsync transfer completed successfully!', 'success');
             } else {
               badge.textContent = 'FAILED';
               badge.style.background = 'rgba(239,68,68,0.15)';
-              badge.style.color = '#f87171';
+              badge.style.color = 'var(--c-bad)';
               logArea.textContent = `[Live Sync Failed - Exit Code ${res.exit_code}]\n\n${res.raw_output || res.error || 'Transfer failed.'}`;
             }
           } catch (e) {
             badge.textContent = 'FAILED';
             badge.style.background = 'rgba(239,68,68,0.15)';
-            badge.style.color = '#f87171';
+            badge.style.color = 'var(--c-bad)';
             logArea.textContent = `Network error during live sync: ${e}`;
           } finally {
             execBtn.disabled = false;

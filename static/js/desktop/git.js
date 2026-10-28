@@ -50,28 +50,28 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
           </div>
 
           <!-- Modal for Link/Edit Repo -->
-          <div id="gitModal_${gitWinId}" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(3px); z-index:100; align-items:center; justify-content:center; padding:1.5rem;">
+          <div id="gitModal_${gitWinId}" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(var(--shade),0.65); backdrop-filter:blur(3px); z-index:100; align-items:center; justify-content:center; padding:1.5rem;">
             <div style="width:100%; max-width:540px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden;">
               <div style="padding:0.85rem 1.25rem; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
-                <span id="gitModalTitle_${gitWinId}" style="font-weight:700; font-size:0.9rem; color:#f8fafc;">Link Git Repository</span>
+                <span id="gitModalTitle_${gitWinId}" style="font-weight:700; font-size:0.9rem; color:var(--text-primary);">Link Git Repository</span>
                 <button class="btn btn-secondary btn-xs" id="btnCancelGitModal_${gitWinId}">&times;</button>
               </div>
               <div style="padding:1.25rem; display:flex; flex-direction:column; gap:0.85rem;">
                 <div>
-                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Project Identifier</label>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Project Identifier</label>
                   <input type="text" id="gitNameInp_${gitWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="e.g. Production Web Service">
                 </div>
 
                 <div>
-                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Repository Clone URL</label>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Repository Clone URL</label>
                   <input type="text" id="gitRepoInp_${gitWinId}" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="width:100%; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="https://github.com/owner/repository.git">
                 </div>
 
                 <div style="display:grid; grid-template-columns:2fr 1fr; gap:0.75rem;">
                   <div>
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Target Server Directory</label>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Target Server Directory</label>
                     <div style="display:flex; gap:0.4rem;">
-                      <input type="text" id="gitPathInp_${gitWinId}" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="flex:1; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/var/www/my-app">
+                      <input type="text" id="gitPathInp_${gitWinId}" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="flex:1; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/home/user/my-app">
                       <button type="button" class="btn btn-secondary btn-xs" id="btnBrowseGitPath_${gitWinId}" style="display:inline-flex; align-items:center; gap:0.3rem; padding:0 0.65rem;" title="Browse Server Folders">
                         <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                         Browse...
@@ -79,25 +79,25 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
                     </div>
                   </div>
                   <div>
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Branch</label>
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Branch</label>
                     <input type="text" id="gitBranchInp_${gitWinId}" value="main" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="width:100%; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="main">
                   </div>
                 </div>
 
                 <div>
-                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Post-Deployment Command (Optional)</label>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Post-Deployment Command (Optional)</label>
                   <input type="text" id="gitPostCmdInp_${gitWinId}" class="form-control" spellcheck="false" autocomplete="off" autocapitalize="off" style="width:100%; font-family:monospace; font-variant-ligatures:none; font-feature-settings:'liga' 0, 'calt' 0; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="npm install && npm run build">
                   <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.25rem;">Executed automatically in target directory after git pull completes successfully.</div>
                 </div>
 
-                <div id="gitCloneOptBox_${gitWinId}" style="display:flex; align-items:center; gap:0.5rem; background:rgba(255,255,255,0.02); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
+                <div id="gitCloneOptBox_${gitWinId}" style="display:flex; align-items:center; gap:0.5rem; background:rgba(var(--wash),0.02); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid var(--border-color);">
                   <input type="checkbox" id="gitCloneNowInp_${gitWinId}">
-                  <label for="gitCloneNowInp_${gitWinId}" style="font-size:0.75rem; color:#cbd5e1; cursor:pointer;">
+                  <label for="gitCloneNowInp_${gitWinId}" style="font-size:0.75rem; color:var(--text-secondary); cursor:pointer;">
                     Clone repository immediately into target folder if not already cloned
                   </label>
                 </div>
               </div>
-              <div style="padding:0.75rem 1.25rem; border-top:1px solid var(--border-subtle); background:rgba(0,0,0,0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
+              <div style="padding:0.75rem 1.25rem; border-top:1px solid var(--border-subtle); background:rgba(var(--shade),0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
                 <button class="btn btn-secondary btn-sm" id="btnGitModalClose_${gitWinId}">Cancel</button>
                 <button class="btn btn-primary btn-sm" id="btnGitModalSave_${gitWinId}">Save Repository Link</button>
               </div>
@@ -147,9 +147,9 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
 
           if (deploymentsList.length === 0) {
             contentArea.innerHTML = `
-              <div style="text-align:center; padding:4rem 1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px;">
+              <div style="text-align:center; padding:4rem 1.5rem; background:rgba(var(--wash),0.02); border:1px solid var(--border-color); border-radius:8px;">
                 <svg style="width:36px;height:36px;color:var(--text-muted);margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 0 1 2 2v7M6 9v12"></path></svg>
-                <div style="font-weight:700; font-size:0.95rem; color:#f8fafc; margin-bottom:0.35rem;">No Git Deployments Configured</div>
+                <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary); margin-bottom:0.35rem;">No Git Deployments Configured</div>
                 <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">Link a GitHub or GitLab repository to automate code deployments on this server.</div>
                 <button class="btn btn-primary btn-sm" id="btnEmptyLink_${gitWinId}">Link Your First Repository</button>
               </div>
@@ -171,9 +171,9 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
                   <!-- Header row -->
                   <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
                     <div style="display:flex; align-items:center; gap:0.6rem;">
-                      <span style="font-weight:700; font-size:0.95rem; color:#f8fafc;">${d.name}</span>
-                      <span style="font-size:0.68rem; background:rgba(244,63,94,0.12); color:#fb7185; border:1px solid rgba(244,63,94,0.3); padding:0.1rem 0.45rem; border-radius:4px; font-weight:700; font-family:monospace;">${d.branch}</span>
-                      <span style="font-size:0.65rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; ${d.last_status === 'success' ? 'background:rgba(16,185,129,0.15); color:#34d399;' : d.last_status === 'failed' ? 'background:rgba(239,68,68,0.15); color:#f87171;' : 'background:rgba(148,163,184,0.15); color:#94a3b8;'}">
+                      <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">${d.name}</span>
+                      <span style="font-size:0.68rem; background:rgba(244,63,94,0.12); color:var(--c-rose); border:1px solid rgba(244,63,94,0.3); padding:0.1rem 0.45rem; border-radius:4px; font-weight:700; font-family:monospace;">${d.branch}</span>
+                      <span style="font-size:0.65rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; ${d.last_status === 'success' ? 'background:rgba(16,185,129,0.15); color:var(--c-ok);' : d.last_status === 'failed' ? 'background:rgba(239,68,68,0.15); color:var(--c-bad);' : 'background:rgba(148,163,184,0.15); color:var(--text-muted);'}">
                         ${(d.last_status || 'PENDING').toUpperCase()}
                       </span>
                     </div>
@@ -196,9 +196,9 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
                   </div>
 
                   <!-- Details row -->
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.75rem; color:#94a3b8; background:rgba(0,0,0,0.2); padding:0.6rem 0.8rem; border-radius:6px;">
-                    <div>Directory: <code style="color:#cbd5e1; font-family:monospace;">${d.target_path}</code></div>
-                    <div>Repository: <code style="color:#cbd5e1; font-family:monospace;">${d.repo_url}</code></div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.75rem; color:var(--text-muted); background:rgba(var(--shade),0.2); padding:0.6rem 0.8rem; border-radius:6px;">
+                    <div>Directory: <code style="color:var(--text-secondary); font-family:monospace;">${d.target_path}</code></div>
+                    <div>Repository: <code style="color:var(--text-secondary); font-family:monospace;">${d.repo_url}</code></div>
                     ${d.post_deploy_cmd ? `<div style="grid-column:1 / -1;">Post-Deploy: <code style="color:var(--sm-accent); font-family:monospace;">${d.post_deploy_cmd}</code></div>` : ''}
                     ${d.last_deployed_at ? `<div style="grid-column:1 / -1; font-size:0.7rem; color:var(--text-muted);">Last Deployed: ${d.last_deployed_at}</div>` : ''}
                   </div>
@@ -207,7 +207,7 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
                   <div style="display:flex; align-items:center; justify-content:space-between; background:color-mix(in srgb, var(--sm-accent) 6%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); border-radius:6px; padding:0.4rem 0.75rem;">
                     <div style="display:flex; align-items:center; gap:0.4rem; min-width:0; flex:1;">
                       <span style="font-size:0.7rem; font-weight:700; color:var(--sm-accent);">WEBHOOK:</span>
-                      <code style="font-size:0.72rem; color:#cbd5e1; font-family:monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${window.location.origin}${d.webhook_url}</code>
+                      <code style="font-size:0.72rem; color:var(--text-secondary); font-family:monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${window.location.origin}${d.webhook_url}</code>
                     </div>
                     <button class="btn btn-secondary btn-xs btn-copy-hook" data-url="${window.location.origin}${d.webhook_url}" style="font-size:0.7rem; padding:0.15rem 0.45rem;">
                       Copy URL
@@ -378,7 +378,7 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
             modalTitle.textContent = 'Link New Git Repository';
             nameInp.value = '';
             repoInp.value = '';
-            pathInp.value = '/var/www/';
+            pathInp.value = '/home/';
             branchInp.value = 'main';
             postCmdInp.value = '';
             cloneNowInp.checked = true;
@@ -401,7 +401,7 @@ DesktopAppsController.prototype.launchGit = function (params = {}) {
           btnBrowseGit.onclick = () => {
             this.showDirectoryPicker({
               serverId: this.serverId,
-              initialPath: pathInp.value.trim() || '/var/www/',
+              initialPath: pathInp.value.trim() || '/home/',
               title: 'Select Deployment Target Folder',
               onSelect: (selectedPath) => {
                 pathInp.value = selectedPath;

@@ -67,8 +67,8 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
           </div>
 
           <!-- Tab Bar Navigation -->
-          <div style="background:#0b101b; border-bottom:1px solid var(--border-subtle); display:flex; padding:0 0.85rem; gap:0.4rem; align-items:center;">
-            <button class="ngx-tab-nav-btn active" data-tab="domains" id="tabBtn_domains_${ngxWinId}" style="background:none; border:none; border-bottom:2px solid #10b981; color:#ffffff; font-weight:600; font-size:0.78rem; padding:0.55rem 0.75rem; cursor:pointer; display:flex; align-items:center; gap:0.45rem;">
+          <div style="background:var(--bg-system); border-bottom:1px solid var(--border-subtle); display:flex; padding:0 0.85rem; gap:0.4rem; align-items:center;">
+            <button class="ngx-tab-nav-btn active" data-tab="domains" id="tabBtn_domains_${ngxWinId}" style="background:none; border:none; border-bottom:2px solid #10b981; color:var(--text-primary); font-weight:600; font-size:0.78rem; padding:0.55rem 0.75rem; cursor:pointer; display:flex; align-items:center; gap:0.45rem;">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
               Domains &amp; Reverse Proxy Routing
             </button>
@@ -98,21 +98,21 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
         // Modal for displaying real Linux command and Certbot outputs
         const showCommandOutputModal = (title, outputText, isSuccess) => {
           const modalBackdrop = document.createElement('div');
-          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:110; padding:1rem;';
+          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(var(--shade),0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:110; padding:1rem;';
           modalBackdrop.innerHTML = `
             <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; width:100%; max-width:620px; box-shadow:0 20px 40px rgba(0,0,0,0.65); display:flex; flex-direction:column; overflow:hidden;">
-              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.8rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:#0c121e;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.8rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:var(--bg-system);">
                 <h4 style="margin:0; font-size:0.92rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                   <span class="status-dot ${isSuccess ? 'connected' : 'disconnected'}"></span>
                   ${escapeHtml(title)}
                 </h4>
                 <button type="button" class="btn btn-ghost btn-xs" id="closeCmdModalBtn_${ngxWinId}" style="padding:2px 6px;">&times;</button>
               </div>
-              <div style="padding:1rem; background:#070b12; max-height:55vh; overflow-y:auto;">
+              <div style="padding:1rem; background:var(--sm-inset); max-height:55vh; overflow-y:auto;">
                 <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:0.4rem; font-family:var(--font-sans);">Server Command Execution Output:</div>
-                <pre style="margin:0; font-family:'Fira Code', monospace; font-size:0.75rem; line-height:1.55; color:${isSuccess ? '#34d399' : '#f87171'}; white-space:pre-wrap; word-break:break-all;">${escapeHtml(outputText || 'Command executed with no output.')}</pre>
+                <pre style="margin:0; font-family:'Fira Code', monospace; font-size:0.75rem; line-height:1.55; color:${isSuccess ? 'var(--c-ok)' : 'var(--c-bad)'}; white-space:pre-wrap; word-break:break-all;">${escapeHtml(outputText || 'Command executed with no output.')}</pre>
               </div>
-              <div style="display:flex; justify-content:flex-end; padding:0.65rem 1.1rem; border-top:1px solid var(--border-subtle); background:#0c121e;">
+              <div style="display:flex; justify-content:flex-end; padding:0.65rem 1.1rem; border-top:1px solid var(--border-subtle); background:var(--bg-system);">
                 <button type="button" class="btn btn-secondary btn-sm" id="okCmdModalBtn_${ngxWinId}">Close</button>
               </div>
             </div>
@@ -163,24 +163,24 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             if (st.nginx_running) {
               ngxDot.className = 'status-dot connected';
               const verDisplay = (st.nginx_version && !st.nginx_version.toLowerCase().includes('not found')) ? `(${escapeHtml(st.nginx_version)})` : '';
-              ngxText.innerHTML = `Nginx: <span style="color:#10b981;">Active</span> <span style="font-weight:400;color:var(--text-muted);font-size:0.72rem;">${verDisplay}</span>`;
+              ngxText.innerHTML = `Nginx: <span style="color:var(--c-ok2);">Active</span> <span style="font-weight:400;color:var(--text-muted);font-size:0.72rem;">${verDisplay}</span>`;
             } else {
               ngxDot.className = 'status-dot disconnected';
-              ngxText.innerHTML = `Nginx: <span style="color:#f59e0b;">Inactive (Stopped)</span>`;
+              ngxText.innerHTML = `Nginx: <span style="color:var(--c-warn);">Inactive (Stopped)</span>`;
             }
           } else {
             ngxDot.className = 'status-dot disconnected';
-            ngxText.innerHTML = `Nginx: <span style="color:#ef4444;">Not Installed</span> <button class="btn btn-primary btn-xs" id="hdrInstallNginx_${ngxWinId}" style="margin-left:6px;padding:1px 6px;font-size:0.68rem;">Install Nginx</button>`;
+            ngxText.innerHTML = `Nginx: <span style="color:var(--c-bad);">Not Installed</span> <button class="btn btn-primary btn-xs" id="hdrInstallNginx_${ngxWinId}" style="margin-left:6px;padding:1px 6px;font-size:0.68rem;">Install Nginx</button>`;
             const instBtn = bodyEl.querySelector(`#hdrInstallNginx_${ngxWinId}`);
             if (instBtn) instBtn.onclick = () => installSoftware('nginx');
           }
 
           if (st.certbot_installed) {
             certDot.className = 'status-dot connected';
-            certText.innerHTML = `Certbot: <span style="color:#10b981;">Ready</span> <span style="font-weight:400;color:var(--text-muted);font-size:0.72rem;">(${escapeHtml(st.certbot_version)})</span>`;
+            certText.innerHTML = `Certbot: <span style="color:var(--c-ok2);">Ready</span> <span style="font-weight:400;color:var(--text-muted);font-size:0.72rem;">(${escapeHtml(st.certbot_version)})</span>`;
           } else if (st.certbot_broken) {
             certDot.className = 'status-dot disconnected';
-            certText.innerHTML = `Certbot: <span style="color:#ef4444;" title="${escapeHtml(st.certbot_error || 'Dependency conflict')}">Broken (OpenSSL Error)</span> <button class="btn btn-secondary btn-xs" id="hdrRepairCert_${ngxWinId}" style="margin-left:6px;padding:1px 6px;font-size:0.68rem;" title="Reinstall and repair Certbot OpenSSL dependencies">Repair Certbot</button>`;
+            certText.innerHTML = `Certbot: <span style="color:var(--c-bad);" title="${escapeHtml(st.certbot_error || 'Dependency conflict')}">Broken (OpenSSL Error)</span> <button class="btn btn-secondary btn-xs" id="hdrRepairCert_${ngxWinId}" style="margin-left:6px;padding:1px 6px;font-size:0.68rem;" title="Reinstall and repair Certbot OpenSSL dependencies">Repair Certbot</button>`;
             const repBtn = bodyEl.querySelector(`#hdrRepairCert_${ngxWinId}`);
             if (repBtn) repBtn.onclick = () => installSoftware('certbot');
           } else {
@@ -242,7 +242,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
               <div class="table-responsive" style="flex:1; overflow-y:auto; border:1px solid var(--border-subtle); border-radius:6px; background:var(--bg-surface);">
                 <table class="table" style="margin:0; width:100%; border-collapse:collapse; font-size:0.78rem;">
                   <thead>
-                    <tr style="background:#0d131f; border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;">
+                    <tr style="background:var(--bg-system); border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;">
                       <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Domain / Server Name</th>
                       <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Routing Target</th>
                       <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Ports</th>
@@ -320,12 +320,12 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             const isProxy = site.site_type === 'proxy' || Boolean(site.proxy_pass);
             const targetBadge = isProxy
               ? `<span style="background:color-mix(in srgb, var(--sm-accent) 12%, transparent); color:var(--sm-accent); border:1px solid color-mix(in srgb, var(--sm-accent) 22%, transparent); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); font-size:0.72rem; display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(site.proxy_pass)}">Proxy &rarr; ${escapeHtml(site.proxy_pass || 'Port Routing')}</span>`
-              : `<span style="background:rgba(203,213,225,0.08); color:#cbd5e1; border:1px solid rgba(255,255,255,0.12); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); font-size:0.72rem; display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(site.root)}">Static &rarr; ${escapeHtml(site.root || '/var/www')}</span>`;
+              : `<span style="background:rgba(203,213,225,0.08); color:var(--text-secondary); border:1px solid rgba(var(--wash),0.12); padding:2px 7px; border-radius:4px; font-family:var(--font-mono); font-size:0.72rem; display:inline-block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(site.root)}">Static &rarr; ${escapeHtml(site.root || '/var/www')}</span>`;
 
             const portsBadges = (site.ports && site.ports.length > 0)
               ? site.ports.map(p => {
                   const isSslPort = (p === 443 || String(p).includes('443') || String(p).includes('ssl'));
-                  return `<span style="background:${isSslPort ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.1)'}; color:${isSslPort ? '#34d399' : '#94a3b8'}; border:1px solid ${isSslPort ? 'rgba(16,185,129,0.25)' : 'rgba(148,163,184,0.2)'}; padding:1px 5px; border-radius:3px; font-family:var(--font-mono); font-size:0.68rem; margin-right:3px;">${escapeHtml(p)}</span>`;
+                  return `<span style="background:${isSslPort ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.1)'}; color:${isSslPort ? 'var(--c-ok)' : 'var(--sm-accent)'}; border:1px solid ${isSslPort ? 'rgba(16,185,129,0.25)' : 'rgba(148,163,184,0.2)'}; padding:1px 5px; border-radius:3px; font-family:var(--font-mono); font-size:0.68rem; margin-right:3px;">${escapeHtml(p)}</span>`;
                 }).join('')
               : '<span style="color:var(--text-muted);">-</span>';
 
@@ -343,7 +343,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             const statusToggle = site.is_conf_d
               ? `<span style="font-size:0.7rem; color:var(--text-muted);" title="File resides in conf.d/ (always loaded)">conf.d</span>`
               : `<button class="btn btn-xs toggle-site-btn ${site.enabled ? 'btn-secondary' : 'btn-ghost'}" data-file="${escapeHtml(site.filename)}" data-enable="${!site.enabled}" style="padding:2px 8px; font-size:0.7rem; min-width:64px;">
-                   ${site.enabled ? '<span style="color:#10b981;">Enabled</span>' : '<span style="color:var(--text-muted);">Disabled</span>'}
+                   ${site.enabled ? '<span style="color:var(--c-ok2);">Enabled</span>' : '<span style="color:var(--text-muted);">Disabled</span>'}
                  </button>`;
 
             return `
@@ -456,7 +456,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
           contentPane.innerHTML = `
             <div style="display:flex; flex-direction:column; height:100%; box-sizing:border-box;">
               <!-- Editor Sub-bar -->
-              <div style="background:#090d16; border-bottom:1px solid var(--border-subtle); padding:0.45rem 0.9rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+              <div style="background:var(--sm-inset); border-bottom:1px solid var(--border-subtle); padding:0.45rem 0.9rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
                 <div style="display:flex; align-items:center; gap:0.6rem;">
                   <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Config File:</span>
                   <select class="form-control" id="editorFileSelect_${ngxWinId}" style="width:260px; font-size:0.78rem; padding:0.25rem 0.5rem; font-family:var(--font-mono);">
@@ -485,12 +485,12 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
               </div>
 
               <!-- Main Code Surface -->
-              <div style="flex:1; position:relative; display:flex; flex-direction:column; background:#070b12;">
-                <textarea id="ngxCodeArea_${ngxWinId}" spellcheck="false" placeholder="Loading configuration..." style="flex:1; width:100%; border:none; outline:none; background:#070b12; color:#f8fafc; font-family:'Fira Code', 'Cascadia Code', monospace; font-size:0.8rem; line-height:1.55; padding:0.85rem; box-sizing:border-box; resize:none; white-space:pre;"></textarea>
+              <div style="flex:1; position:relative; display:flex; flex-direction:column; background:var(--sm-inset);">
+                <textarea id="ngxCodeArea_${ngxWinId}" spellcheck="false" placeholder="Loading configuration..." style="flex:1; width:100%; border:none; outline:none; background:var(--sm-inset); color:var(--text-primary); font-family:'Fira Code', 'Cascadia Code', monospace; font-size:0.8rem; line-height:1.55; padding:0.85rem; box-sizing:border-box; resize:none; white-space:pre;"></textarea>
               </div>
 
               <!-- Console Output Banner -->
-              <div id="editorOutputBox_${ngxWinId}" style="display:none; background:#0d131f; border-top:1px solid var(--border-subtle); padding:0.5rem 0.85rem; font-family:var(--font-mono); font-size:0.72rem; max-height:120px; overflow-y:auto;">
+              <div id="editorOutputBox_${ngxWinId}" style="display:none; background:var(--bg-system); border-top:1px solid var(--border-subtle); padding:0.5rem 0.85rem; font-family:var(--font-mono); font-size:0.72rem; max-height:120px; overflow-y:auto;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.25rem;">
                   <span id="editorOutputTitle_${ngxWinId}" style="font-weight:600; font-size:0.72rem;">Nginx Syntax Validation Result:</span>
                   <button type="button" class="btn btn-ghost btn-xs" id="closeEditorOutputBtn_${ngxWinId}" style="padding:0 4px; font-size:0.68rem;">Dismiss</button>
@@ -561,12 +561,12 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
               const res = await resp.json();
               outputBox.style.display = 'block';
               if (res.success) {
-                outputTitle.innerHTML = `<span style="color:#10b981;">&check; Syntax OK</span> - Nginx configuration test successful`;
-                outputText.style.color = '#34d399';
+                outputTitle.innerHTML = `<span style="color:var(--c-ok2);">&check; Syntax OK</span> - Nginx configuration test successful`;
+                outputText.style.color = 'var(--c-ok)';
                 outputText.textContent = res.message || 'Syntax is ok, test is successful.';
               } else {
-                outputTitle.innerHTML = `<span style="color:#ef4444;">&cross; Syntax Error</span> in configuration`;
-                outputText.style.color = '#f87171';
+                outputTitle.innerHTML = `<span style="color:var(--c-bad);">&cross; Syntax Error</span> in configuration`;
+                outputText.style.color = 'var(--c-bad)';
                 outputText.textContent = res.message || 'Syntax check failed';
               }
             } catch (e) {
@@ -591,13 +591,13 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
               const res = await resp.json();
               outputBox.style.display = 'block';
               if (res.success) {
-                outputTitle.innerHTML = `<span style="color:#10b981;">&check; Saved &amp; Reloaded</span>`;
-                outputText.style.color = '#34d399';
+                outputTitle.innerHTML = `<span style="color:var(--c-ok2);">&check; Saved &amp; Reloaded</span>`;
+                outputText.style.color = 'var(--c-ok)';
                 outputText.textContent = res.message || 'Configuration saved and Nginx reloaded successfully.';
                 if (window.showToast) window.showToast('Config saved and Nginx reloaded!', 'success');
               } else {
-                outputTitle.innerHTML = `<span style="color:#ef4444;">&cross; Syntax Error - Save Rolled Back</span>`;
-                outputText.style.color = '#f87171';
+                outputTitle.innerHTML = `<span style="color:var(--c-bad);">&cross; Syntax Error - Save Rolled Back</span>`;
+                outputText.style.color = 'var(--c-bad)';
                 outputText.textContent = res.message || 'Syntax check failed. Reverted to previous backup.';
                 if (window.showToast) window.showToast('Syntax error! Rolled back to safe backup.', 'error');
               }
@@ -639,7 +639,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
                 <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
                   <div style="display:flex; align-items:center; gap:0.5rem;">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    <span style="font-size:0.78rem; color:#fde68a;">Certbot is not installed on this server. Install it to manage SSL certificates.</span>
+                    <span style="font-size:0.78rem; color:var(--c-warn);">Certbot is not installed on this server. Install it to manage SSL certificates.</span>
                   </div>
                   <button class="btn btn-primary btn-xs" id="installCertbotBannerBtn_${ngxWinId}" style="padding:0.3rem 0.7rem;">Install Certbot</button>
                 </div>
@@ -649,7 +649,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
               <div class="table-responsive" style="flex:1; overflow-y:auto; border:1px solid var(--border-subtle); border-radius:6px; background:var(--bg-surface);">
                 <table class="table" style="margin:0; width:100%; border-collapse:collapse; font-size:0.78rem;">
                   <thead>
-                    <tr style="background:#0d131f; border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;">
+                    <tr style="background:var(--bg-system); border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;">
                       <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Certificate Name</th>
                       <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Covered Domains</th>
                       <th style="padding:0.6rem 0.75rem; text-align:left; font-weight:600;">Expiry &amp; Validity</th>
@@ -752,7 +752,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
               if (daysLeft > 30) {
                 validityBadge = `<span class="badge badge-online" style="font-size:0.7rem; padding:2px 6px;">${daysLeft} days remaining</span>`;
               } else if (daysLeft > 0) {
-                validityBadge = `<span class="badge" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); font-size:0.7rem; padding:2px 6px;">${daysLeft} days left (Expiring soon)</span>`;
+                validityBadge = `<span class="badge" style="background:rgba(245,158,11,0.15); color:var(--c-warn); border:1px solid rgba(245,158,11,0.3); font-size:0.7rem; padding:2px 6px;">${daysLeft} days left (Expiring soon)</span>`;
               } else {
                 validityBadge = `<span class="badge badge-offline" style="font-size:0.7rem; padding:2px 6px;">Expired</span>`;
               }
@@ -827,7 +827,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             const isActive = (b.dataset.tab === tab);
             b.classList.toggle('active', isActive);
             b.style.borderBottomColor = isActive ? '#10b981' : 'transparent';
-            b.style.color = isActive ? '#ffffff' : 'var(--text-secondary)';
+            b.style.color = isActive ? 'var(--text-primary)' : 'var(--text-secondary)';
             b.style.fontWeight = isActive ? '600' : '500';
           });
 
@@ -845,10 +845,10 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
         // 8. Add Domain / Reverse Proxy Modal
         const openAddDomainModal = () => {
           const modalBackdrop = document.createElement('div');
-          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; padding:1rem;';
+          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(var(--shade),0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; padding:1rem;';
           modalBackdrop.innerHTML = `
             <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; width:100%; max-width:520px; box-shadow:0 20px 40px rgba(0,0,0,0.6); display:flex; flex-direction:column; overflow:hidden;">
-              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:#0c121e;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:var(--bg-system);">
                 <h4 style="margin:0; font-size:0.92rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>
                   Add Domain / Reverse Proxy
@@ -859,14 +859,14 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
               <div style="padding:1.1rem; display:flex; flex-direction:column; gap:0.9rem; max-height:75vh; overflow-y:auto;">
                 <!-- Domain Name -->
                 <div>
-                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Domain Name (FQDN) *</label>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:var(--text-secondary);">Domain Name (FQDN) *</label>
                   <input type="text" class="form-control" id="mDomainName_${ngxWinId}" placeholder="e.g. app.yourdomain.com or mydomain.com" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box;">
                   <span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:block;">Ensure your DNS A/AAAA record points to this server IP before obtaining SSL.</span>
                 </div>
 
                 <!-- Routing Type -->
                 <div>
-                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.35rem; color:#cbd5e1;">Routing Target Type</label>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.35rem; color:var(--text-secondary);">Routing Target Type</label>
                   <div style="display:flex; gap:1.25rem; font-size:0.78rem;">
                     <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;">
                       <input type="radio" name="mRouteType_${ngxWinId}" value="proxy" checked>
@@ -881,29 +881,29 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
 
                 <!-- Proxy Port Input -->
                 <div id="mProxyBox_${ngxWinId}">
-                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Application Port / Internal Address *</label>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:var(--text-secondary);">Application Port / Internal Address *</label>
                   <input type="text" class="form-control" id="mProxyPort_${ngxWinId}" placeholder="e.g. 3000, 8080, or 127.0.0.1:5000" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box; font-family:var(--font-mono);">
                   <span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:block;">Requests for this domain will be forwarded internally to this local port.</span>
                 </div>
 
                 <!-- Static Directory Input -->
                 <div id="mStaticBox_${ngxWinId}" style="display:none;">
-                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Web Root Path *</label>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:var(--text-secondary);">Web Root Path *</label>
                   <input type="text" class="form-control" id="mStaticRoot_${ngxWinId}" placeholder="/var/www/my-domain" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box; font-family:var(--font-mono);">
                 </div>
 
                 <!-- Let's Encrypt Checkbox -->
-                <div style="background:#0a0f1a; border:1px solid var(--border-subtle); border-radius:6px; padding:0.75rem;">
+                <div style="background:var(--sm-inset); border:1px solid var(--border-subtle); border-radius:6px; padding:0.75rem;">
                   <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; font-size:0.78rem;">
                     <input type="checkbox" id="mEnableSsl_${ngxWinId}" style="margin-top:2px;">
                     <div>
-                      <span style="font-weight:600; color:#34d399;">Obtain Free Let's Encrypt SSL Certificate</span>
+                      <span style="font-weight:600; color:var(--c-ok);">Obtain Free Let's Encrypt SSL Certificate</span>
                       <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:1px;">Automatically configures HTTPS with HTTP-to-HTTPS redirect.</div>
                     </div>
                   </label>
 
                   <div id="mEmailBox_${ngxWinId}" style="display:none; margin-top:0.6rem; padding-left:1.45rem;">
-                    <label style="display:block; font-weight:600; font-size:0.74rem; margin-bottom:0.25rem; color:#cbd5e1;">Admin Email Address *</label>
+                    <label style="display:block; font-weight:600; font-size:0.74rem; margin-bottom:0.25rem; color:var(--text-secondary);">Admin Email Address *</label>
                     <input type="email" class="form-control" id="mSslEmail_${ngxWinId}" placeholder="admin@yourdomain.com" style="width:100%; font-size:0.78rem; padding:0.35rem 0.55rem; box-sizing:border-box;">
                     <span style="font-size:0.68rem; color:var(--text-muted); margin-top:2px; display:block;">Required by Let's Encrypt for urgent security and renewal alerts.</span>
                   </div>
@@ -912,7 +912,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
                 <div id="mAddStatus_${ngxWinId}" style="display:none; padding:0.5rem 0.75rem; border-radius:4px; font-size:0.74rem;"></div>
               </div>
 
-              <div style="display:flex; justify-content:flex-end; gap:0.4rem; padding:0.75rem 1.1rem; border-top:1px solid var(--border-subtle); background:#0c121e;">
+              <div style="display:flex; justify-content:flex-end; gap:0.4rem; padding:0.75rem 1.1rem; border-top:1px solid var(--border-subtle); background:var(--bg-system);">
                 <button type="button" class="btn btn-ghost btn-sm" id="mCancelAddBtn_${ngxWinId}">Cancel</button>
                 <button type="button" class="btn btn-primary btn-sm" id="mSubmitAddBtn_${ngxWinId}" style="font-weight:600;">Deploy Domain Route</button>
               </div>
@@ -984,7 +984,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;margin-right:5px;"></span>Deploying...`;
             statusBox.style.display = 'block';
             statusBox.style.background = 'rgba(56,189,248,0.1)';
-            statusBox.style.color = '#38bdf8';
+            statusBox.style.color = 'var(--c-teal)';
             statusBox.style.border = '1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent)';
             statusBox.textContent = enableSsl
               ? 'Creating Nginx configuration, testing syntax, and obtaining Let\'s Encrypt SSL certificate...'
@@ -1011,13 +1011,13 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
                 if (currentTab === 'domains') renderSitesList();
               } else {
                 statusBox.style.background = 'rgba(239,68,68,0.1)';
-                statusBox.style.color = '#f87171';
+                statusBox.style.color = 'var(--c-bad)';
                 statusBox.style.border = '1px solid rgba(239,68,68,0.25)';
                 statusBox.textContent = `Deployment Failed: ${res.message || 'Unknown error'}`;
               }
             } catch (e) {
               statusBox.style.background = 'rgba(239,68,68,0.1)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = `Network error: ${e}`;
             } finally {
               submitBtn.disabled = false;
@@ -1029,10 +1029,10 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
         // 9. Issue SSL Modal
         const openIssueSslModal = (defaultDomain = '') => {
           const modalBackdrop = document.createElement('div');
-          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; padding:1rem;';
+          modalBackdrop.style.cssText = 'position:absolute; inset:0; background:rgba(var(--shade),0.75); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; z-index:100; padding:1rem;';
           modalBackdrop.innerHTML = `
             <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; width:100%; max-width:480px; box-shadow:0 20px 40px rgba(0,0,0,0.6); display:flex; flex-direction:column; overflow:hidden;">
-              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:#0c121e;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:var(--bg-system);">
                 <h4 style="margin:0; font-size:0.92rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                   Issue Let's Encrypt Certificate
@@ -1042,20 +1042,20 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
 
               <div style="padding:1.1rem; display:flex; flex-direction:column; gap:0.85rem;">
                 <div>
-                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Domain Name *</label>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:var(--text-secondary);">Domain Name *</label>
                   <input type="text" class="form-control" id="mSslDomain_${ngxWinId}" value="${escapeHtml(defaultDomain)}" placeholder="e.g. app.yourdomain.com" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box;">
                   <span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:block;">Domain must resolve to this server IP address over port 80.</span>
                 </div>
 
                 <div>
-                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:#cbd5e1;">Admin Email Address *</label>
+                  <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:var(--text-secondary);">Admin Email Address *</label>
                   <input type="email" class="form-control" id="mIssueEmail_${ngxWinId}" placeholder="admin@yourdomain.com" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box;">
                 </div>
 
                 <div id="mIssueStatus_${ngxWinId}" style="display:none; padding:0.5rem 0.75rem; border-radius:4px; font-size:0.74rem;"></div>
               </div>
 
-              <div style="display:flex; justify-content:flex-end; gap:0.4rem; padding:0.75rem 1.1rem; border-top:1px solid var(--border-subtle); background:#0c121e;">
+              <div style="display:flex; justify-content:flex-end; gap:0.4rem; padding:0.75rem 1.1rem; border-top:1px solid var(--border-subtle); background:var(--bg-system);">
                 <button type="button" class="btn btn-ghost btn-sm" id="mCancelIssueBtn_${ngxWinId}">Cancel</button>
                 <button type="button" class="btn btn-primary btn-sm" id="mSubmitIssueBtn_${ngxWinId}" style="font-weight:600;">Issue Certificate</button>
               </div>
@@ -1087,7 +1087,7 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
             submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;margin-right:5px;"></span>Requesting SSL...`;
             statusBox.style.display = 'block';
             statusBox.style.background = 'rgba(56,189,248,0.1)';
-            statusBox.style.color = '#38bdf8';
+            statusBox.style.color = 'var(--c-teal)';
             statusBox.style.border = '1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent)';
             statusBox.textContent = 'Requesting certificate from Let\'s Encrypt and updating Nginx configuration...';
 
@@ -1107,13 +1107,13 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
                 else if (currentTab === 'ssl') renderCertsList();
               } else {
                 statusBox.style.background = 'rgba(239,68,68,0.1)';
-                statusBox.style.color = '#f87171';
+                statusBox.style.color = 'var(--c-bad)';
                 statusBox.style.border = '1px solid rgba(239,68,68,0.25)';
                 statusBox.textContent = `Certificate Error: ${res.message || 'Unknown error'}`;
               }
             } catch (e) {
               statusBox.style.background = 'rgba(239,68,68,0.1)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = `Network error: ${e}`;
             } finally {
               submitBtn.disabled = false;

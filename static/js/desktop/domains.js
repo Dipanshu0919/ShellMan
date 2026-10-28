@@ -33,9 +33,9 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
       contentHtml: `
         <div style="display:flex; flex-direction:column; height:100%; background:var(--bg-canvas); overflow:hidden;" id="domRoot_${domWinId}">
           <!-- Top Application Toolbar -->
-          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.45rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(255,255,255,0.02); flex-shrink:0; gap:0.5rem; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.45rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--wash),0.02); flex-shrink:0; gap:0.5rem; flex-wrap:wrap;">
             <div style="display:flex; align-items:center; gap:0.5rem;">
-              <div id="cfStatusPill_${domWinId}" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.25rem 0.65rem; border-radius:12px; font-size:0.72rem; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); cursor:pointer;" title="Click to view Cloudflare Settings">
+              <div id="cfStatusPill_${domWinId}" style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.25rem 0.65rem; border-radius:12px; font-size:0.72rem; background:rgba(var(--wash),0.05); border:1px solid var(--border-subtle); cursor:pointer;" title="Click to view Cloudflare Settings">
                 <span class="sys-pulse-dot offline" id="cfDot_${domWinId}"></span>
                 <span id="cfStatusText_${domWinId}" style="color:var(--text-muted);">Checking Cloudflare...</span>
               </div>
@@ -76,11 +76,11 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
         // Helper: Status badge color
         const getZoneStatusBadge = (st) => {
           const s = (st || 'unknown').toLowerCase();
-          if (s === 'active') return '<span class="badge" style="background:rgba(16,185,129,0.15); color:#34d399; font-weight:700;">Active</span>';
-          if (s === 'pending') return '<span class="badge" style="background:rgba(245,158,11,0.2); color:#fbbf24; font-weight:700;">Pending Nameservers</span>';
+          if (s === 'active') return '<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--c-ok); font-weight:700;">Active</span>';
+          if (s === 'pending') return '<span class="badge" style="background:rgba(245,158,11,0.2); color:var(--c-warn); font-weight:700;">Pending Nameservers</span>';
           if (s === 'initializing') return '<span class="badge" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);">Initializing</span>';
-          if (s === 'error') return '<span class="badge" style="background:rgba(239,68,68,0.2); color:#f87171;">Error</span>';
-          return `<span class="badge" style="background:rgba(255,255,255,0.06); color:#94a3b8;">${escapeHtml(st)}</span>`;
+          if (s === 'error') return '<span class="badge" style="background:rgba(239,68,68,0.2); color:var(--c-bad);">Error</span>';
+          return `<span class="badge" style="background:rgba(var(--wash),0.06); color:var(--text-muted);">${escapeHtml(st)}</span>`;
         };
 
         // 1. Fetch Cloudflare Connection Status
@@ -91,11 +91,11 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
             if (res.success && res.is_connected) {
               cfAccount = res.account;
               cfDot.className = 'sys-pulse-dot online';
-              cfText.innerHTML = `<span style="color:#34d399; font-weight:600;">Connected</span>: ${escapeHtml(cfAccount.account_name || 'Cloudflare Account')}`;
+              cfText.innerHTML = `<span style="color:var(--c-ok); font-weight:600;">Connected</span>: ${escapeHtml(cfAccount.account_name || 'Cloudflare Account')}`;
             } else {
               cfAccount = null;
               cfDot.className = 'sys-pulse-dot offline';
-              cfText.innerHTML = '<span style="color:#f87171; font-weight:600;">Disconnected</span> (Click to Connect)';
+              cfText.innerHTML = '<span style="color:var(--c-bad); font-weight:600;">Disconnected</span> (Click to Connect)';
             }
           } catch (_) {
             cfDot.className = 'sys-pulse-dot offline';
@@ -132,20 +132,20 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
           mainArea.innerHTML = `
             <div style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
               <!-- Summary Metric Cards -->
-              <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.75rem; padding:0.85rem 1.1rem; background:rgba(0,0,0,0.15); border-bottom:1px solid var(--border-subtle); flex-shrink:0;">
-                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
+              <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.75rem; padding:0.85rem 1.1rem; background:rgba(var(--shade),0.15); border-bottom:1px solid var(--border-subtle); flex-shrink:0;">
+                <div style="background:rgba(var(--wash),0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Total Managed Domains</div>
-                  <div style="font-size:1.2rem; font-weight:700; color:#f8fafc; margin-top:2px;">${total}</div>
+                  <div style="font-size:1.2rem; font-weight:700; color:var(--text-primary); margin-top:2px;">${total}</div>
                 </div>
-                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
+                <div style="background:rgba(var(--wash),0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Active Zones</div>
-                  <div style="font-size:1.2rem; font-weight:700; color:#34d399; margin-top:2px;">${activeCount}</div>
+                  <div style="font-size:1.2rem; font-weight:700; color:var(--c-ok); margin-top:2px;">${activeCount}</div>
                 </div>
-                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
+                <div style="background:rgba(var(--wash),0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Pending Nameservers</div>
-                  <div style="font-size:1.2rem; font-weight:700; color:#fbbf24; margin-top:2px;">${pendingCount}</div>
+                  <div style="font-size:1.2rem; font-weight:700; color:var(--c-warn); margin-top:2px;">${pendingCount}</div>
                 </div>
-                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
+                <div style="background:rgba(var(--wash),0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Linked To Servers</div>
                   <div style="font-size:1.2rem; font-weight:700; color:var(--sm-accent); margin-top:2px;">${connectedSrvCount}</div>
                 </div>
@@ -243,7 +243,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 <tr>
                   <td colspan="6" style="text-align:center; padding:3.5rem 1rem; color:var(--text-muted);">
                     <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:0.75rem; opacity:0.4;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                    <div style="font-weight:600; font-size:0.88rem; color:#f8fafc; margin-bottom:0.35rem;">No domains managed in ShellMan yet</div>
+                    <div style="font-weight:600; font-size:0.88rem; color:var(--text-primary); margin-bottom:0.35rem;">No domains managed in ShellMan yet</div>
                     <div style="font-size:0.75rem; margin-bottom:1rem;">Add a domain or connect your Cloudflare API token to manage DNS and link servers.</div>
                     <button class="btn btn-primary btn-sm" id="emptyAddBtn_${domWinId}" style="font-weight:600;">+ Add First Domain</button>
                   </td>
@@ -261,7 +261,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
             const nsList = d.nameservers || [];
             const nsHtml = nsList.length > 0
               ? nsList.map(ns => `
-                  <span class="badge" style="background:rgba(255,255,255,0.04); font-family:monospace; font-size:0.68rem; color:#cbd5e1; margin-right:3px;">
+                  <span class="badge" style="background:rgba(var(--wash),0.04); font-family:monospace; font-size:0.68rem; color:var(--text-secondary); margin-right:3px;">
                     ${escapeHtml(ns)}
                     <button type="button" class="btn-copy-ns" data-ns="${escapeHtml(ns)}" style="background:none; border:none; color:var(--sm-accent); cursor:pointer; padding:0 2px; font-size:0.65rem;" title="Copy nameserver">&copy;</button>
                   </span>
@@ -275,21 +275,21 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
             return `
               <tr>
                 <td>
-                  <a href="javascript:void(0)" class="domain-click-name" data-zone="${d.zone_id}" style="font-weight:700; font-size:0.82rem; color:#f8fafc; text-decoration:none; display:flex; align-items:center; gap:0.35rem;">
+                  <a href="javascript:void(0)" class="domain-click-name" data-zone="${d.zone_id}" style="font-weight:700; font-size:0.82rem; color:var(--text-primary); text-decoration:none; display:flex; align-items:center; gap:0.35rem;">
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                     ${escapeHtml(d.name)}
                   </a>
                 </td>
                 <td>${getZoneStatusBadge(d.status)}</td>
                 <td>${nsHtml}</td>
-                <td><span style="font-size:0.72rem; color:#94a3b8; text-transform:capitalize;">${escapeHtml(d.ssl_mode || 'unknown')}</span></td>
+                <td><span style="font-size:0.72rem; color:var(--text-muted); text-transform:capitalize;">${escapeHtml(d.ssl_mode || 'unknown')}</span></td>
                 <td>${serverHtml}</td>
                 <td style="text-align:right;">
                   <div style="display:flex; justify-content:flex-end; gap:0.25rem;">
                     <button class="btn btn-secondary btn-xs btn-open-dns" data-zone="${d.zone_id}" title="Manage DNS Records">DNS</button>
                     <button class="btn btn-secondary btn-xs btn-link-srv" data-zone="${d.zone_id}" title="Connect to ShellMan Server">Link Server</button>
                     <button class="btn btn-ghost btn-xs btn-check-ns" data-zone="${d.zone_id}" title="Re-check Nameservers on Cloudflare">Check NS</button>
-                    <button class="btn btn-ghost btn-xs btn-del-dom" data-zone="${d.zone_id}" data-name="${escapeHtml(d.name)}" title="Remove Domain" style="color:#f87171;">&times;</button>
+                    <button class="btn btn-ghost btn-xs btn-del-dom" data-zone="${d.zone_id}" data-name="${escapeHtml(d.name)}" title="Remove Domain" style="color:var(--c-bad);">&times;</button>
                   </div>
                 </td>
               </tr>
@@ -382,14 +382,14 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
           mainArea.innerHTML = `
             <div style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;" id="domDetailView_${domWinId}">
               <!-- Domain Title Bar -->
-              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.2); flex-shrink:0;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.2); flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:0.65rem;">
                   <button class="btn btn-ghost btn-xs" id="btnBackToDomains_${domWinId}" style="display:flex; align-items:center; gap:0.3rem;">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                     Domains
                   </button>
                   <span style="color:var(--text-muted); font-size:0.8rem;">/</span>
-                  <span style="font-weight:700; font-size:1.05rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
+                  <span style="font-weight:700; font-size:1.05rem; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                     ${escapeHtml(domain.name)}
                   </span>
                   ${getZoneStatusBadge(domain.status)}
@@ -408,7 +408,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               </div>
 
               <!-- Details Sub-Navigation Tabs -->
-              <div style="display:flex; gap:0.35rem; padding:0.45rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:rgba(255,255,255,0.015); flex-shrink:0; overflow-x:auto;">
+              <div style="display:flex; gap:0.35rem; padding:0.45rem 1.1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--wash),0.015); flex-shrink:0; overflow-x:auto;">
                 <button class="btn btn-secondary btn-xs detail-tab-btn active" data-dtab="dns" id="dtabDns_${domWinId}">DNS Records</button>
                 <button class="btn btn-ghost btn-xs detail-tab-btn" data-dtab="edge" id="dtabEdge_${domWinId}">Edge &amp; Cache</button>
                 <button class="btn btn-ghost btn-xs detail-tab-btn" data-dtab="ssl" id="dtabSsl_${domWinId}">SSL &amp; Origin CA</button>
@@ -569,10 +569,10 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 cachedDnsRecords = res.records || [];
                 renderDnsRows();
               } else {
-                dnsTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:#f87171;">Failed to load DNS: ${escapeHtml(res.error || 'Unknown error')}</td></tr>`;
+                dnsTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--c-bad);">Failed to load DNS: ${escapeHtml(res.error || 'Unknown error')}</td></tr>`;
               }
             } catch (e) {
-              dnsTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:#f87171;">Network error loading DNS: ${escapeHtml(String(e))}</td></tr>`;
+              dnsTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--c-bad);">Network error loading DNS: ${escapeHtml(String(e))}</td></tr>`;
             }
           };
 
@@ -598,8 +598,8 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               const isEligibleProxy = ['A', 'AAAA', 'CNAME'].includes(r.type);
               const proxyBadge = isEligibleProxy
                 ? (r.proxied
-                    ? `<span class="badge" style="background:rgba(245,158,11,0.2); color:#fbbf24; display:inline-flex; align-items:center; gap:4px; font-weight:700;"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>Proxied</span>`
-                    : `<span class="badge" style="background:rgba(255,255,255,0.06); color:#94a3b8; display:inline-flex; align-items:center; gap:4px;"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>DNS Only</span>`
+                    ? `<span class="badge" style="background:rgba(245,158,11,0.2); color:var(--c-warn); display:inline-flex; align-items:center; gap:4px; font-weight:700;"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>Proxied</span>`
+                    : `<span class="badge" style="background:rgba(var(--wash),0.06); color:var(--text-muted); display:inline-flex; align-items:center; gap:4px;"><svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>DNS Only</span>`
                   )
                 : '<span style="color:var(--text-muted); font-size:0.68rem;">-</span>';
 
@@ -608,10 +608,10 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               return `
                 <tr>
                   <td><span class="badge" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent); font-family:monospace; font-weight:700;">${r.type}</span></td>
-                  <td><code style="font-size:0.75rem; color:#f8fafc;">${escapeHtml(r.name)}</code></td>
+                  <td><code style="font-size:0.75rem; color:var(--text-primary);">${escapeHtml(r.name)}</code></td>
                   <td>
                     <div style="display:flex; align-items:center; gap:0.35rem; max-width:320px;">
-                      <code style="font-size:0.74rem; color:#cbd5e1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(r.content)}</code>
+                      <code style="font-size:0.74rem; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(r.content)}</code>
                       <button type="button" class="btn btn-ghost btn-xs btn-copy-rec-content" data-content="${escapeHtml(r.content)}" style="padding:0 3px; font-size:0.65rem;" title="Copy content">&copy;</button>
                     </div>
                   </td>
@@ -621,7 +621,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                   <td style="text-align:right;">
                     <div style="display:flex; justify-content:flex-end; gap:0.25rem;">
                       <button class="btn btn-ghost btn-xs btn-edit-rec" data-rec='${escapeHtml(JSON.stringify(r))}' title="Edit Record">Edit</button>
-                      <button class="btn btn-ghost btn-xs btn-del-rec" data-id="${r.id}" data-name="${escapeHtml(r.name)}" data-type="${r.type}" title="Delete Record" style="color:#f87171;">Delete</button>
+                      <button class="btn btn-ghost btn-xs btn-del-rec" data-id="${r.id}" data-name="${escapeHtml(r.name)}" data-type="${r.type}" title="Delete Record" style="color:var(--c-bad);">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -684,14 +684,14 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
         const renderServerLinkTab = async (domain, container) => {
           container.innerHTML = `
             <div style="flex:1; overflow-y:auto; padding:1.25rem; max-width:760px;">
-              <h4 style="margin:0 0 0.35rem 0; font-size:0.95rem; font-weight:700; color:#f8fafc;">Connect Domain to a ShellMan Server</h4>
+              <h4 style="margin:0 0 0.35rem 0; font-size:0.95rem; font-weight:700; color:var(--text-primary);">Connect Domain to a ShellMan Server</h4>
               <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1.15rem; line-height:1.45;">
                 Link this domain to an existing remote node managed by ShellMan. This creates or updates the authoritative A-record in Cloudflare to point to the server's public IP address, and allows you to configure Nginx reverse proxy routes with automated SSL.
               </p>
 
               <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.2rem; display:flex; flex-direction:column; gap:1rem; margin-bottom:1.5rem;">
                 <div>
-                  <label style="display:block; font-size:0.78rem; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Target Server Node *</label>
+                  <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Target Server Node *</label>
                   <select id="lnkServerSel_${domWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.45rem 0.65rem;">
                     <option value="">-- Choose a server --</option>
                     ${(window.DesktopServersList || []).map(s => `
@@ -704,30 +704,30 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.85rem;">
                   <div>
-                    <label style="display:block; font-size:0.78rem; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Subdomain / Host</label>
+                    <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Subdomain / Host</label>
                     <div style="display:flex; align-items:center;">
                       <input type="text" id="lnkSubdomainInp_${domWinId}" class="form-control" placeholder="@" value="@" style="font-size:0.8rem; padding:0.45rem 0.65rem; border-top-right-radius:0; border-bottom-right-radius:0;">
-                      <span style="background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); border-left:none; padding:0.45rem 0.65rem; font-size:0.75rem; color:var(--text-muted); border-top-right-radius:4px; border-bottom-right-radius:4px;">.${escapeHtml(domain.name)}</span>
+                      <span style="background:rgba(var(--wash),0.05); border:1px solid var(--border-subtle); border-left:none; padding:0.45rem 0.65rem; font-size:0.75rem; color:var(--text-muted); border-top-right-radius:4px; border-bottom-right-radius:4px;">.${escapeHtml(domain.name)}</span>
                     </div>
                     <span style="font-size:0.68rem; color:var(--text-muted); margin-top:2px; display:block;">Use "@" for root domain, or specify subdomain (e.g. "api", "app").</span>
                   </div>
 
                   <div>
-                    <label style="display:block; font-size:0.78rem; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Destination Server IP *</label>
+                    <label style="display:block; font-size:0.78rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Destination Server IP *</label>
                     <input type="text" id="lnkDestIpInp_${domWinId}" class="form-control" placeholder="e.g. 20.219.23.4" value="${escapeHtml(domain.server_host || '')}" style="font-size:0.8rem; padding:0.45rem 0.65rem; font-family:monospace;">
                     <div id="lnkIpNotice_${domWinId}" style="margin-top:2px; font-size:0.68rem;"></div>
                   </div>
                 </div>
 
                 <div>
-                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.78rem; color:#f8fafc; font-weight:600;">
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.78rem; color:var(--text-primary); font-weight:600;">
                     <input type="checkbox" id="lnkProxiedCb_${domWinId}" checked>
                     Enable Cloudflare Proxy (CDN, DDoS Protection &amp; Edge SSL)
                   </label>
                   <span style="font-size:0.68rem; color:var(--text-muted); margin-left:1.55rem; display:block;">Hides origin server IP and accelerates traffic via Cloudflare Anycast edge.</span>
                 </div>
 
-                <div id="lnkConflictBox_${domWinId}" style="display:none; padding:0.65rem 0.85rem; border-radius:6px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); font-size:0.75rem; color:#fbbf24;"></div>
+                <div id="lnkConflictBox_${domWinId}" style="display:none; padding:0.65rem 0.85rem; border-radius:6px; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); font-size:0.75rem; color:var(--c-warn);"></div>
 
                 <div style="display:flex; justify-content:flex-end; gap:0.5rem; padding-top:0.5rem; border-top:1px solid var(--border-subtle);">
                   <button type="button" class="btn btn-primary btn-sm" id="btnApplyLink_${domWinId}" style="font-weight:600;">
@@ -738,7 +738,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
               <!-- Nginx Virtual Host Shortcut Card -->
               <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.2rem;">
-                <h5 style="margin:0 0 0.35rem 0; font-size:0.88rem; font-weight:700; color:#cbd5e1; display:flex; align-items:center; gap:0.45rem;">
+                <h5 style="margin:0 0 0.35rem 0; font-size:0.88rem; font-weight:700; color:var(--text-secondary); display:flex; align-items:center; gap:0.45rem;">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10b981" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
                   Nginx &amp; SSL Integration
                 </h5>
@@ -778,9 +778,9 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
           const checkIpType = (ip) => {
             const isPriv = ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('172.16.') || ip.startsWith('127.');
             if (isPriv) {
-              ipNotice.innerHTML = `<span style="color:#fbbf24;">Private network IP detected. Public web clients cannot reach this IP over the internet.</span>`;
+              ipNotice.innerHTML = `<span style="color:var(--c-warn);">Private network IP detected. Public web clients cannot reach this IP over the internet.</span>`;
             } else {
-              ipNotice.innerHTML = `<span style="color:#34d399;">Public routable IP address.</span>`;
+              ipNotice.innerHTML = `<span style="color:var(--c-ok);">Public routable IP address.</span>`;
             }
           };
 
@@ -877,20 +877,20 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
           const nsList = domain.nameservers || [];
           container.innerHTML = `
             <div style="flex:1; overflow-y:auto; padding:1.25rem; max-width:760px;">
-              <h4 style="margin:0 0 0.35rem 0; font-size:0.95rem; font-weight:700; color:#f8fafc;">Authoritative Nameservers Activation</h4>
+              <h4 style="margin:0 0 0.35rem 0; font-size:0.95rem; font-weight:700; color:var(--text-primary);">Authoritative Nameservers Activation</h4>
               <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1.15rem; line-height:1.45;">
                 To activate DNS routing, CDN caching, and DDoS mitigation for <strong>${escapeHtml(domain.name)}</strong>, update your registrar's nameservers with the Cloudflare authoritative servers below.
               </p>
 
               <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.2rem; margin-bottom:1.25rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                  <span style="font-size:0.78rem; font-weight:700; color:#cbd5e1; text-transform:uppercase;">Assigned Cloudflare Nameservers</span>
+                  <span style="font-size:0.78rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase;">Assigned Cloudflare Nameservers</span>
                   <button type="button" class="btn btn-secondary btn-xs" id="btnCopyAllNs_${domWinId}">Copy Both Nameservers</button>
                 </div>
 
                 <div style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
                   ${nsList.map((ns, idx) => `
-                    <div style="display:flex; align-items:center; justify-content:space-between; background:#0b111c; border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-system); border:1px solid var(--border-subtle); border-radius:6px; padding:0.5rem 0.75rem;">
                       <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">NS ${idx + 1}:</span>
                         <code style="font-size:0.8rem; color:var(--sm-accent); font-weight:700;">${escapeHtml(ns)}</code>
@@ -912,7 +912,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
               <!-- Registrar Instructions Card -->
               <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.2rem;">
-                <h5 style="margin:0 0 0.5rem 0; font-size:0.85rem; font-weight:700; color:#cbd5e1;">How to update nameservers:</h5>
+                <h5 style="margin:0 0 0.5rem 0; font-size:0.85rem; font-weight:700; color:var(--text-secondary);">How to update nameservers:</h5>
                 <ol style="margin:0; padding-left:1.25rem; font-size:0.74rem; color:var(--text-secondary); line-height:1.6;">
                   <li>Log in to your domain registrar account where you purchased <strong>${escapeHtml(domain.name)}</strong> (e.g. Namecheap, GoDaddy, Google Domains / Squarespace, Cloudflare Registrar).</li>
                   <li>Go to your Domain List, select <strong>${escapeHtml(domain.name)}</strong>, and locate the <strong>DNS</strong> or <strong>Nameservers</strong> section.</li>
@@ -968,7 +968,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
         const renderDiagnosticsTab = (domain, container) => {
           container.innerHTML = `
             <div style="flex:1; overflow-y:auto; padding:1.25rem; max-width:760px;">
-              <h4 style="margin:0 0 0.35rem 0; font-size:0.95rem; font-weight:700; color:#f8fafc;">Live DNS &amp; Reachability Diagnostics</h4>
+              <h4 style="margin:0 0 0.35rem 0; font-size:0.95rem; font-weight:700; color:var(--text-primary);">Live DNS &amp; Reachability Diagnostics</h4>
               <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1.15rem; line-height:1.45;">
                 Verifies public DNS resolution, HTTP response status, and SSL certificate availability for <strong>${escapeHtml(domain.name)}</strong>.
               </p>
@@ -1007,46 +1007,46 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 resBox.innerHTML = `
                   <div style="display:flex; flex-direction:column; gap:0.75rem;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.5rem; border-bottom:1px solid var(--border-subtle);">
-                      <span style="font-weight:700; color:#f8fafc;">Target Hostname</span>
+                      <span style="font-weight:700; color:var(--text-primary);">Target Hostname</span>
                       <code style="color:var(--sm-accent);">${escapeHtml(d.hostname)}</code>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.5rem; border-bottom:1px solid var(--border-subtle);">
-                      <span style="font-weight:700; color:#f8fafc;">Resolved Public IPs</span>
+                      <span style="font-weight:700; color:var(--text-primary);">Resolved Public IPs</span>
                       <code>${d.resolved_ips.length > 0 ? d.resolved_ips.join(', ') : 'None resolved'}</code>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.5rem; border-bottom:1px solid var(--border-subtle);">
-                      <span style="font-weight:700; color:#f8fafc;">Target Server Host</span>
+                      <span style="font-weight:700; color:var(--text-primary);">Target Server Host</span>
                       <code>${d.server_ip || 'Unlinked'}</code>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.5rem; border-bottom:1px solid var(--border-subtle);">
-                      <span style="font-weight:700; color:#f8fafc;">HTTP Status</span>
-                      <span class="badge" style="background:${d.http_status ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.2)'}; color:${d.http_status ? '#34d399' : '#f87171'};">
+                      <span style="font-weight:700; color:var(--text-primary);">HTTP Status</span>
+                      <span class="badge" style="background:${d.http_status ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.2)'}; color:${d.http_status ? 'var(--c-ok)' : 'var(--c-bad)'};">
                         ${d.http_status ? `HTTP ${d.http_status}` : 'Unreachable'}
                       </span>
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:0.5rem; border-bottom:1px solid var(--border-subtle);">
-                      <span style="font-weight:700; color:#f8fafc;">HTTPS &amp; SSL Certificate</span>
-                      <span class="badge" style="background:${d.ssl_detected ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.2)'}; color:${d.ssl_detected ? '#34d399' : '#f87171'};">
+                      <span style="font-weight:700; color:var(--text-primary);">HTTPS &amp; SSL Certificate</span>
+                      <span class="badge" style="background:${d.ssl_detected ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.2)'}; color:${d.ssl_detected ? 'var(--c-ok)' : 'var(--c-bad)'};">
                         ${d.ssl_detected ? `HTTPS Valid (${d.https_status})` : 'No SSL Detected'}
                       </span>
                     </div>
 
                     ${d.diagnostics.length > 0 ? `
-                      <div style="margin-top:0.5rem; padding:0.65rem 0.85rem; background:#0b111c; border:1px solid var(--border-subtle); border-radius:6px; font-family:monospace; font-size:0.72rem; color:#94a3b8; line-height:1.5;">
+                      <div style="margin-top:0.5rem; padding:0.65rem 0.85rem; background:var(--bg-system); border:1px solid var(--border-subtle); border-radius:6px; font-family:monospace; font-size:0.72rem; color:var(--text-muted); line-height:1.5;">
                         ${d.diagnostics.map(msg => `<div>&bull; ${escapeHtml(msg)}</div>`).join('')}
                       </div>
                     ` : ''}
                   </div>
                 `;
               } else {
-                resBox.innerHTML = `<div style="color:#f87171;">Diagnostic failed: ${escapeHtml(res.error || 'Unknown error')}</div>`;
+                resBox.innerHTML = `<div style="color:var(--c-bad);">Diagnostic failed: ${escapeHtml(res.error || 'Unknown error')}</div>`;
               }
             } catch (e) {
-              resBox.innerHTML = `<div style="color:#f87171;">Probe network error: ${escapeHtml(String(e))}</div>`;
+              resBox.innerHTML = `<div style="color:var(--c-bad);">Probe network error: ${escapeHtml(String(e))}</div>`;
             } finally {
               runBtn.disabled = false;
               runBtn.textContent = 'Run Diagnostic Probe';
@@ -1067,33 +1067,33 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
           container.innerHTML = `
             <div style="flex:1; overflow-y:auto; padding:1.2rem; display:flex; flex-direction:column; gap:1.1rem;">
               <!-- 24-Hour Traffic Ticker -->
-              <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem;">
+              <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                  <span style="font-weight:700; font-size:0.85rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
+                  <span style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                     24-Hour Edge Traffic &amp; Cache Telemetry
                   </span>
                   <span id="edgeAnalyticsLoading_${domWinId}" style="font-size:0.7rem; color:var(--text-muted);">Fetching metrics...</span>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.75rem;" id="edgeStatsGrid_${domWinId}">
-                  <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
+                  <div style="background:rgba(var(--shade),0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Total Requests (24h)</div>
-                    <div style="font-size:1.25rem; font-weight:700; color:#f8fafc; margin-top:2px;" id="statReqTotal_${domWinId}">--</div>
+                    <div style="font-size:1.25rem; font-weight:700; color:var(--text-primary); margin-top:2px;" id="statReqTotal_${domWinId}">--</div>
                     <div style="font-size:0.68rem; color:var(--sm-accent); margin-top:3px;" id="statReqCached_${domWinId}">-- cached</div>
                   </div>
-                  <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
+                  <div style="background:rgba(var(--shade),0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Bandwidth Served</div>
-                    <div style="font-size:1.25rem; font-weight:700; color:#34d399; margin-top:2px;" id="statBwTotal_${domWinId}">--</div>
-                    <div style="font-size:0.68rem; color:#34d399; margin-top:3px;" id="statBwSaved_${domWinId}">-- saved by cache</div>
+                    <div style="font-size:1.25rem; font-weight:700; color:var(--c-ok); margin-top:2px;" id="statBwTotal_${domWinId}">--</div>
+                    <div style="font-size:0.68rem; color:var(--c-ok); margin-top:3px;" id="statBwSaved_${domWinId}">-- saved by cache</div>
                   </div>
-                  <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
+                  <div style="background:rgba(var(--shade),0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Threats Blocked</div>
-                    <div style="font-size:1.25rem; font-weight:700; color:#fbbf24; margin-top:2px;" id="statThreats_${domWinId}">--</div>
+                    <div style="font-size:1.25rem; font-weight:700; color:var(--c-warn); margin-top:2px;" id="statThreats_${domWinId}">--</div>
                     <div style="font-size:0.68rem; color:var(--text-muted); margin-top:3px;">WAF / DDoS mitigation</div>
                   </div>
-                  <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
+                  <div style="background:rgba(var(--shade),0.25); border:1px solid var(--border-subtle); border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Unique Visitors</div>
-                    <div style="font-size:1.25rem; font-weight:700; color:#a78bfa; margin-top:2px;" id="statUniques_${domWinId}">--</div>
+                    <div style="font-size:1.25rem; font-weight:700; color:var(--c-violet); margin-top:2px;" id="statUniques_${domWinId}">--</div>
                     <div style="font-size:0.68rem; color:var(--text-muted); margin-top:3px;">Edge distinct IPs</div>
                   </div>
                 </div>
@@ -1102,14 +1102,14 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               <!-- Quick Action Edge Cards Grid -->
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
                 <!-- 1-Click "Under Attack Mode" & Security Level -->
-                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem; display:flex; flex-direction:column; justify-content:space-between;">
+                <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem; display:flex; flex-direction:column; justify-content:space-between;">
                   <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                      <span style="font-weight:700; font-size:0.85rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
+                      <span style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ef4444" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                         DDoS &amp; Security Level
                       </span>
-                      <span id="badgeSecLevel_${domWinId}" class="badge" style="background:rgba(255,255,255,0.06); color:#94a3b8;">Checking...</span>
+                      <span id="badgeSecLevel_${domWinId}" class="badge" style="background:rgba(var(--wash),0.06); color:var(--text-muted);">Checking...</span>
                     </div>
                     <p style="color:var(--text-secondary); font-size:0.75rem; margin:0 0 0.85rem; line-height:1.45;">
                       If your server is experiencing high traffic or SYN flood spikes in the Netstat monitor, enable <strong>Under Attack Mode</strong> to challenge all visitors at Cloudflare's edge.
@@ -1130,14 +1130,14 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 </div>
 
                 <!-- Development Mode Toggle -->
-                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem; display:flex; flex-direction:column; justify-content:space-between;">
+                <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem; display:flex; flex-direction:column; justify-content:space-between;">
                   <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                      <span style="font-weight:700; font-size:0.85rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
+                      <span style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
                         Development Mode (3 Hours)
                       </span>
-                      <span id="badgeDevMode_${domWinId}" class="badge" style="background:rgba(255,255,255,0.06); color:#94a3b8;">Checking...</span>
+                      <span id="badgeDevMode_${domWinId}" class="badge" style="background:rgba(var(--wash),0.06); color:var(--text-muted);">Checking...</span>
                     </div>
                     <p style="color:var(--text-secondary); font-size:0.75rem; margin:0 0 0.85rem; line-height:1.45;">
                       Temporarily bypasses edge caching for 3 hours so file changes or Git deployments show up immediately without busting cache.
@@ -1152,8 +1152,8 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               </div>
 
               <!-- Cache Purge Section -->
-              <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem;">
-                <span style="font-weight:700; font-size:0.85rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem; margin-bottom:0.5rem;">
+              <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem;">
+                <span style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem; margin-bottom:0.5rem;">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10b981" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   Edge Cache Purge
                 </span>
@@ -1212,7 +1212,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 curSecLevel = res.data.level || 'medium';
                 badgeSec.textContent = curSecLevel.toUpperCase();
                 badgeSec.style.background = curSecLevel === 'under_attack' ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)';
-                badgeSec.style.color = curSecLevel === 'under_attack' ? '#f87171' : '#cbd5e1';
+                badgeSec.style.color = curSecLevel === 'under_attack' ? 'var(--c-bad)' : 'var(--sm-accent)';
                 selSec.value = curSecLevel;
                 btnUnderAttack.textContent = curSecLevel === 'under_attack' ? 'Disable Under Attack Mode' : 'Enable Under Attack Mode';
                 btnUnderAttack.className = curSecLevel === 'under_attack' ? 'btn btn-secondary btn-xs' : 'btn btn-danger btn-xs';
@@ -1273,7 +1273,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 const remMins = Math.round((res.data.time_remaining || 0) / 60);
                 badgeDev.textContent = isDevActive ? `ACTIVE (${remMins}m remaining)` : 'OFF';
                 badgeDev.style.background = isDevActive ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)';
-                badgeDev.style.color = isDevActive ? '#34d399' : '#94a3b8';
+                badgeDev.style.color = isDevActive ? 'var(--c-ok)' : 'var(--sm-accent)';
                 btnDev.textContent = isDevActive ? 'Disable Development Mode' : 'Enable Development Mode (3h)';
                 btnDev.className = isDevActive ? 'btn btn-secondary btn-xs' : 'btn btn-primary btn-xs';
               }
@@ -1372,8 +1372,8 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
           container.innerHTML = `
             <div style="flex:1; overflow-y:auto; padding:1.2rem; display:flex; flex-direction:column; gap:1.1rem;">
               <!-- Cloudflare SSL Encryption Mode -->
-              <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem;">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.45rem;">
+              <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem;">
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.45rem;">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                   Cloudflare SSL/TLS Encryption Mode
                 </div>
@@ -1393,8 +1393,8 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               </div>
 
               <!-- Cloudflare Origin CA Certificate Generator (15-Year Free SSL) -->
-              <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem;">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.4rem; display:flex; align-items:center; gap:0.45rem;">
+              <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:1rem;">
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.45rem;">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
                   Cloudflare Origin CA Certificate (15-Year Validity)
                 </div>
@@ -1418,7 +1418,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
                       <div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                          <span style="font-size:0.72rem; font-weight:700; color:#f8fafc;">Certificate (.crt)</span>
+                          <span style="font-size:0.72rem; font-weight:700; color:var(--text-primary);">Certificate (.crt)</span>
                           <button class="btn btn-ghost btn-xs" id="btnCopyCert_${domWinId}" style="padding:1px 5px; font-size:0.68rem;">Copy</button>
                         </div>
                         <textarea id="txtCert_${domWinId}" class="form-control" rows="6" readonly style="font-family:monospace; font-size:0.68rem;"></textarea>
@@ -1426,7 +1426,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
                       <div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                          <span style="font-size:0.72rem; font-weight:700; color:#f8fafc;">Private Key (.key)</span>
+                          <span style="font-size:0.72rem; font-weight:700; color:var(--text-primary);">Private Key (.key)</span>
                           <button class="btn btn-ghost btn-xs" id="btnCopyKey_${domWinId}" style="padding:1px 5px; font-size:0.68rem;">Copy</button>
                         </div>
                         <textarea id="txtKey_${domWinId}" class="form-control" rows="6" readonly style="font-family:monospace; font-size:0.68rem;"></textarea>
@@ -1435,7 +1435,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
                     <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:6px; padding:0.75rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
                       <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:260px;">
-                        <span style="font-size:0.73rem; font-weight:700; color:#34d399;">Target Server:</span>
+                        <span style="font-size:0.73rem; font-weight:700; color:var(--c-ok);">Target Server:</span>
                         <select id="selInstallServer_${domWinId}" class="form-control" style="font-size:0.74rem; padding:0.25rem 0.5rem; flex:1;">
                           ${(window.DesktopServersList || []).map(s => `
                             <option value="${s.id}" ${domain.server_id == s.id ? 'selected' : ''}>${escapeHtml(s.name)} (${s.host})</option>
@@ -1561,18 +1561,18 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               fbBox.style.display = 'block';
               if (res.success) {
                 fbBox.style.background = 'rgba(16,185,129,0.15)';
-                fbBox.style.color = '#34d399';
+                fbBox.style.color = 'var(--c-ok)';
                 fbBox.textContent = res.message;
                 if (window.showToast) window.showToast('Origin certificate installed successfully!', 'success');
               } else {
                 fbBox.style.background = 'rgba(239,68,68,0.15)';
-                fbBox.style.color = '#f87171';
+                fbBox.style.color = 'var(--c-bad)';
                 fbBox.textContent = res.error || 'Installation failed.';
               }
             } catch (e) {
               fbBox.style.display = 'block';
               fbBox.style.background = 'rgba(239,68,68,0.15)';
-              fbBox.style.color = '#f87171';
+              fbBox.style.color = 'var(--c-bad)';
               fbBox.textContent = 'Error: ' + e;
             } finally {
               installBtn.disabled = false;
@@ -1585,11 +1585,11 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
         const openAddDomainModal = () => {
           const backdrop = document.createElement('div');
           backdrop.className = 'desktop-modal-backdrop';
-          backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100020; padding:1.25rem;';
+          backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(var(--shade),0.75); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100020; padding:1.25rem;';
           backdrop.innerHTML = `
             <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:12px; width:100%; max-width:520px; box-shadow:0 25px 50px rgba(0,0,0,0.85); overflow:hidden; display:flex; flex-direction:column;">
-              <div style="height:42px; padding:0 1rem; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02);">
-                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
+              <div style="height:42px; padding:0 1rem; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; background:rgba(var(--wash),0.02);">
+                <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                   Add Domain to Cloudflare
                 </div>
@@ -1599,17 +1599,17 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               <div style="padding:1.2rem; display:flex; flex-direction:column; gap:0.85rem; font-size:0.78rem;">
                 <p style="margin:0; color:var(--text-secondary); line-height:1.45;">
                   Adding a domain creates a DNS zone inside your connected Cloudflare account.
-                  <br><strong style="color:#cbd5e1;">Note:</strong> ShellMan does not register or purchase domains. You must already own the domain at a registrar (e.g. Namecheap, GoDaddy, Squarespace).
+                  <br><strong style="color:var(--text-secondary);">Note:</strong> ShellMan does not register or purchase domains. You must already own the domain at a registrar (e.g. Namecheap, GoDaddy, Squarespace).
                 </p>
 
                 <div>
-                  <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Domain Name *</label>
+                  <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Domain Name *</label>
                   <input type="text" id="newDomNameInp_${domWinId}" class="form-control" placeholder="e.g. example.com (no http:// or /)" style="width:100%; font-size:0.82rem; padding:0.45rem 0.65rem;" autocomplete="off" spellcheck="false">
                   <span style="font-size:0.68rem; color:var(--text-muted); display:block; margin-top:3px;">Must be a registered root domain (e.g. <code>example.com</code>). Subdomains like <code>sub.example.com</code> are configured as DNS records once the domain is added.</span>
                 </div>
 
                 <div>
-                  <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Link to ShellMan Server (Optional)</label>
+                  <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Link to ShellMan Server (Optional)</label>
                   <select id="newDomSrvSel_${domWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.45rem 0.65rem;">
                     <option value="">-- None (DNS Management Only) --</option>
                     ${(window.DesktopServersList || []).map(s => `
@@ -1618,14 +1618,14 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                   </select>
                 </div>
 
-                <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:0.65rem 0.85rem; font-size:0.73rem; color:#fbbf24; line-height:1.45;">
+                <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:0.65rem 0.85rem; font-size:0.73rem; color:var(--c-warn); line-height:1.45;">
                   <strong>Existing Email / MX Records Notice:</strong> When activating Cloudflare, ensure any required MX, TXT, or SPF records are configured in Cloudflare to prevent email delivery disruptions.
                 </div>
 
-                <div id="addDomErr_${domWinId}" style="display:none; color:#ef4444; font-size:0.74rem;"></div>
+                <div id="addDomErr_${domWinId}" style="display:none; color:var(--c-bad); font-size:0.74rem;"></div>
               </div>
 
-              <div style="padding:0.75rem 1rem; border-top:1px solid var(--border-subtle); background:rgba(0,0,0,0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
+              <div style="padding:0.75rem 1rem; border-top:1px solid var(--border-subtle); background:rgba(var(--shade),0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
                 <button type="button" class="btn btn-secondary btn-sm" id="cancelAddDomBtn_${domWinId}">Cancel</button>
                 <button type="button" class="btn btn-primary btn-sm" id="submitAddDomBtn_${domWinId}" style="font-weight:600;">Add Domain</button>
               </div>
@@ -1688,11 +1688,11 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
         const openCloudflareSettingsModal = () => {
           const backdrop = document.createElement('div');
           backdrop.className = 'desktop-modal-backdrop';
-          backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100020; padding:1.25rem;';
+          backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(var(--shade),0.75); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100020; padding:1.25rem;';
           backdrop.innerHTML = `
             <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:12px; width:100%; max-width:560px; box-shadow:0 25px 50px rgba(0,0,0,0.85); overflow:hidden; display:flex; flex-direction:column;">
-              <div style="height:42px; padding:0 1rem; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02);">
-                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
+              <div style="height:42px; padding:0 1rem; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; background:rgba(var(--wash),0.02);">
+                <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                   Cloudflare API Integration Settings
                 </div>
@@ -1700,22 +1700,22 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               </div>
 
               <div style="padding:1.25rem; display:flex; flex-direction:column; gap:0.95rem; font-size:0.78rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; background:#0b111c; border:1px solid var(--border-subtle); border-radius:6px; padding:0.65rem 0.85rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-system); border:1px solid var(--border-subtle); border-radius:6px; padding:0.65rem 0.85rem;">
                   <div>
-                    <span style="font-weight:700; color:#f8fafc;">Account Status: </span>
+                    <span style="font-weight:700; color:var(--text-primary);">Account Status: </span>
                     <span id="mCfAccStatus_${domWinId}">Checking...</span>
                   </div>
                   ${cfAccount ? `<button type="button" class="btn btn-danger btn-xs" id="btnDisconnCf_${domWinId}">Disconnect</button>` : ''}
                 </div>
 
                 <div>
-                  <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Cloudflare API Token *</label>
+                  <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Cloudflare API Token *</label>
                   <input type="password" id="cfTokenInp_${domWinId}" class="form-control" placeholder="${cfAccount ? '•••••••••••••••••••• (Leave blank to keep current)' : 'Paste Cloudflare Scoped API Token'}" style="width:100%; font-size:0.8rem; padding:0.45rem 0.65rem; font-family:monospace;" autocomplete="off">
                   <span style="font-size:0.68rem; color:var(--text-muted); margin-top:2px; display:block;">Token is encrypted at rest using Fernet keys and never exposed in browser or API payloads.</span>
                 </div>
 
                 <!-- Scoped Token Permissions Guide -->
-                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:6px; padding:0.75rem 0.95rem; line-height:1.5;">
+                <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-subtle); border-radius:6px; padding:0.75rem 0.95rem; line-height:1.5;">
                   <div style="font-weight:700; color:var(--sm-accent); margin-bottom:0.3rem;">Required Minimum-Privilege Scoped Permissions:</div>
                   <div style="color:var(--text-secondary); font-size:0.73rem;">
                     When creating an API Token at <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" style="color:var(--sm-accent); text-decoration:underline;">Cloudflare Dashboard &gt; API Tokens</a>, choose <strong>Create Custom Token</strong> with:
@@ -1740,7 +1740,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 <div id="cfModalMsg_${domWinId}" style="display:none; padding:0.5rem 0.75rem; border-radius:4px; font-size:0.74rem;"></div>
               </div>
 
-              <div style="padding:0.75rem 1rem; border-top:1px solid var(--border-subtle); background:rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center;">
+              <div style="padding:0.75rem 1rem; border-top:1px solid var(--border-subtle); background:rgba(var(--shade),0.2); display:flex; justify-content:space-between; align-items:center;">
                 <button type="button" class="btn btn-secondary btn-sm" id="btnTestCfToken_${domWinId}">Test Token</button>
                 <div style="display:flex; gap:0.5rem;">
                   <button type="button" class="btn btn-secondary btn-sm" id="cancelCfModalBtn_${domWinId}">Cancel</button>
@@ -1757,9 +1757,9 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
           const accStatEl = backdrop.querySelector(`#mCfAccStatus_${domWinId}`);
           if (cfAccount) {
-            accStatEl.innerHTML = `<span style="color:#34d399; font-weight:700;">Active</span> (${escapeHtml(cfAccount.account_name || 'Cloudflare Account')})`;
+            accStatEl.innerHTML = `<span style="color:var(--c-ok); font-weight:700;">Active</span> (${escapeHtml(cfAccount.account_name || 'Cloudflare Account')})`;
           } else {
-            accStatEl.innerHTML = `<span style="color:#f87171; font-weight:700;">Not Connected</span>`;
+            accStatEl.innerHTML = `<span style="color:var(--c-bad); font-weight:700;">Not Connected</span>`;
           }
 
           const msgBox = backdrop.querySelector(`#cfModalMsg_${domWinId}`);
@@ -1809,13 +1809,13 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 const res = await resp.json();
                 if (res.success) {
                   msgBox.style.background = 'rgba(16,185,129,0.15)';
-                  msgBox.style.color = '#34d399';
+                  msgBox.style.color = 'var(--c-ok)';
                   msgBox.textContent = res.message;
                   await fetchCfStatus();
                   await fetchDomains();
                 } else {
                   msgBox.style.background = 'rgba(239,68,68,0.15)';
-                  msgBox.style.color = '#f87171';
+                  msgBox.style.color = 'var(--c-bad)';
                   msgBox.textContent = res.error || 'Token test failed.';
                 }
               } else {
@@ -1824,17 +1824,17 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                 const res = await resp.json();
                 if (res.success) {
                   msgBox.style.background = 'rgba(16,185,129,0.15)';
-                  msgBox.style.color = '#34d399';
+                  msgBox.style.color = 'var(--c-ok)';
                   msgBox.textContent = res.message;
                 } else {
                   msgBox.style.background = 'rgba(239,68,68,0.15)';
-                  msgBox.style.color = '#f87171';
+                  msgBox.style.color = 'var(--c-bad)';
                   msgBox.textContent = res.error || 'Test failed.';
                 }
               }
             } catch (e) {
               msgBox.style.background = 'rgba(239,68,68,0.15)';
-              msgBox.style.color = '#f87171';
+              msgBox.style.color = 'var(--c-bad)';
               msgBox.textContent = 'Network error: ' + e;
             } finally {
               testBtn.disabled = false;
@@ -1847,7 +1847,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
             if (!raw && !cfAccount) {
               msgBox.style.display = 'block';
               msgBox.style.background = 'rgba(239,68,68,0.15)';
-              msgBox.style.color = '#f87171';
+              msgBox.style.color = 'var(--c-bad)';
               msgBox.textContent = 'Please provide a valid Cloudflare API token.';
               return;
             }
@@ -1875,13 +1875,13 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               } else {
                 msgBox.style.display = 'block';
                 msgBox.style.background = 'rgba(239,68,68,0.15)';
-                msgBox.style.color = '#f87171';
+                msgBox.style.color = 'var(--c-bad)';
                 msgBox.textContent = res.error || 'Failed to connect token.';
               }
             } catch (e) {
               msgBox.style.display = 'block';
               msgBox.style.background = 'rgba(239,68,68,0.15)';
-              msgBox.style.color = '#f87171';
+              msgBox.style.color = 'var(--c-bad)';
               msgBox.textContent = 'Network error: ' + e;
             } finally {
               saveBtn.disabled = false;
@@ -1897,11 +1897,11 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
           const backdrop = document.createElement('div');
           backdrop.className = 'desktop-modal-backdrop';
-          backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100020; padding:1.25rem;';
+          backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(var(--shade),0.75); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:100020; padding:1.25rem;';
           backdrop.innerHTML = `
             <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:12px; width:100%; max-width:500px; box-shadow:0 25px 50px rgba(0,0,0,0.85); overflow:hidden; display:flex; flex-direction:column;">
-              <div style="height:42px; padding:0 1rem; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02);">
-                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc;">
+              <div style="height:42px; padding:0 1rem; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; background:rgba(var(--wash),0.02);">
+                <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">
                   ${isEdit ? 'Edit DNS Record' : 'Add New DNS Record'}
                 </div>
                 <button type="button" class="btn btn-secondary btn-xs" id="closeRecModalBtn_${domWinId}" style="padding:0.15rem 0.45rem;">&times;</button>
@@ -1910,7 +1910,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
               <div style="padding:1.2rem; display:flex; flex-direction:column; gap:0.85rem; font-size:0.78rem;">
                 <div style="display:grid; grid-template-columns:120px 1fr; gap:0.75rem;">
                   <div>
-                    <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Type *</label>
+                    <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Type *</label>
                     <select id="mRecType_${domWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.45rem 0.55rem;">
                       ${['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'SRV', 'CAA'].map(t => `
                         <option value="${t}" ${r.type === t ? 'selected' : ''}>${t}</option>
@@ -1919,18 +1919,18 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                   </div>
 
                   <div>
-                    <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Name *</label>
+                    <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Name *</label>
                     <input type="text" id="mRecName_${domWinId}" class="form-control" value="${escapeHtml(r.name || '@')}" placeholder="@ or subdomain" style="width:100%; font-size:0.8rem; padding:0.45rem 0.65rem;">
                   </div>
                 </div>
 
                 <div>
-                  <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Content / Target *</label>
+                  <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Content / Target *</label>
                   <input type="text" id="mRecContent_${domWinId}" class="form-control" value="${escapeHtml(r.content || '')}" placeholder="IPv4 address, hostname, or text" style="width:100%; font-size:0.8rem; padding:0.45rem 0.65rem; font-family:monospace;">
                 </div>
 
                 <div id="mRecProxyRow_${domWinId}">
-                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; color:#f8fafc; font-weight:600;">
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; color:var(--text-primary); font-weight:600;">
                     <input type="checkbox" id="mRecProxied_${domWinId}" ${r.proxied ? 'checked' : ''}>
                     Cloudflare Proxy Status (Orange Cloud CDN &amp; WAF)
                   </label>
@@ -1938,7 +1938,7 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
 
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
                   <div>
-                    <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">TTL</label>
+                    <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">TTL</label>
                     <select id="mRecTtl_${domWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.45rem 0.55rem;">
                       <option value="1" ${r.ttl === 1 || !r.ttl ? 'selected' : ''}>Auto</option>
                       <option value="60" ${r.ttl === 60 ? 'selected' : ''}>1 minute</option>
@@ -1950,20 +1950,20 @@ DesktopAppsController.prototype.launchDomains = function (params = {}) {
                   </div>
 
                   <div id="mRecPrioCol_${domWinId}" style="display:${r.type === 'MX' || r.type === 'SRV' ? 'block' : 'none'};">
-                    <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Priority</label>
+                    <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Priority</label>
                     <input type="number" id="mRecPrio_${domWinId}" class="form-control" value="${r.priority !== undefined ? r.priority : 10}" style="width:100%; font-size:0.8rem; padding:0.45rem 0.55rem;">
                   </div>
                 </div>
 
                 <div>
-                  <label style="display:block; font-weight:600; color:#cbd5e1; margin-bottom:0.35rem;">Comment (Optional)</label>
+                  <label style="display:block; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Comment (Optional)</label>
                   <input type="text" id="mRecComment_${domWinId}" class="form-control" value="${escapeHtml(r.comment || '')}" placeholder="Note or description" style="width:100%; font-size:0.8rem; padding:0.45rem 0.65rem;">
                 </div>
 
-                <div id="mRecErr_${domWinId}" style="display:none; color:#ef4444; font-size:0.74rem;"></div>
+                <div id="mRecErr_${domWinId}" style="display:none; color:var(--c-bad); font-size:0.74rem;"></div>
               </div>
 
-              <div style="padding:0.75rem 1rem; border-top:1px solid var(--border-subtle); background:rgba(0,0,0,0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
+              <div style="padding:0.75rem 1rem; border-top:1px solid var(--border-subtle); background:rgba(var(--shade),0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
                 <button type="button" class="btn btn-secondary btn-sm" id="cancelRecModalBtn_${domWinId}">Cancel</button>
                 <button type="button" class="btn btn-primary btn-sm" id="saveRecModalBtn_${domWinId}" style="font-weight:600;">
                   ${isEdit ? 'Update Record' : 'Create Record'}

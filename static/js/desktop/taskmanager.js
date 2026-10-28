@@ -173,28 +173,28 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
               <!-- Total System Telemetry: CPU, RAM, Storage -->
               <div id="procSysMetrics" style="display:flex; align-items:center; gap:0.45rem;">
                 <!-- CPU -->
-                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);" title="Host CPU Usage">
+                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(var(--wash),0.04); border:1px solid rgba(var(--wash),0.07);" title="Host CPU Usage">
                   <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700;">CPU:</span>
-                  <span id="procMetricCpuVal" style="color:#34d399; font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
-                  <div style="width:32px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
+                  <span id="procMetricCpuVal" style="color:var(--c-ok); font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
+                  <div style="width:32px; height:4px; background:rgba(var(--wash),0.1); border-radius:2px; overflow:hidden;">
                     <div id="procMetricCpuBar" style="width:0%; height:100%; background:#34d399; transition:width 0.3s ease;"></div>
                   </div>
                 </div>
 
                 <!-- RAM -->
-                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);" title="Total Host Memory Usage">
+                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(var(--wash),0.04); border:1px solid rgba(var(--wash),0.07);" title="Total Host Memory Usage">
                   <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700;">RAM:</span>
                   <span id="procMetricMemVal" style="color:var(--sm-accent); font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
-                  <div style="width:32px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
+                  <div style="width:32px; height:4px; background:rgba(var(--wash),0.1); border-radius:2px; overflow:hidden;">
                     <div id="procMetricMemBar" style="width:0%; height:100%; background:var(--sm-accent); transition:width 0.3s ease;"></div>
                   </div>
                 </div>
 
                 <!-- Storage / Disk -->
-                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);" title="Total Root Storage Usage">
+                <div style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.22rem 0.55rem; border-radius:4px; background:rgba(var(--wash),0.04); border:1px solid rgba(var(--wash),0.07);" title="Total Root Storage Usage">
                   <span style="color:var(--text-muted); font-size:0.68rem; font-weight:700;">Disk:</span>
-                  <span id="procMetricDiskVal" style="color:#a78bfa; font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
-                  <div style="width:32px; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;">
+                  <span id="procMetricDiskVal" style="color:var(--c-violet); font-weight:700; font-family:var(--font-mono); font-size:0.72rem;">--%</span>
+                  <div style="width:32px; height:4px; background:rgba(var(--wash),0.1); border-radius:2px; overflow:hidden;">
                     <div id="procMetricDiskBar" style="width:0%; height:100%; background:#a78bfa; transition:width 0.3s ease;"></div>
                   </div>
                 </div>
@@ -222,13 +222,13 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
           <div class="table-responsive" style="flex:1; overflow-y:auto;">
             <table class="table" style="margin:0; width:100%; border-collapse:collapse; font-size:0.78rem;">
               <thead>
-                <tr id="procTableHeadRow" style="position:sticky; top:0; background:#0d131f; z-index:2; border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;"></tr>
+                <tr id="procTableHeadRow" style="position:sticky; top:0; background:var(--bg-system); z-index:2; border-bottom:1px solid var(--border-subtle); color:var(--text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.03em;"></tr>
               </thead>
               <tbody id="procTableBody">
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:45px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:65px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:38px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:38px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:55px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:55px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:160px;"></div></td></tr>
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:50px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:70px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:42px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:52px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:50px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:220px;"></div></td></tr>
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:48px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:60px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:40px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:58px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:56px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:130px;"></div></td></tr>
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:52px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:68px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:32px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:38px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:54px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:52px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:190px;"></div></td></tr>
+                <tr style="border-bottom:1px solid rgba(var(--wash),0.05);"><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:45px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:65px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:38px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:38px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:55px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:55px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:160px;"></div></td></tr>
+                <tr style="border-bottom:1px solid rgba(var(--wash),0.05);"><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:50px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:70px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:42px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:52px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:50px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:220px;"></div></td></tr>
+                <tr style="border-bottom:1px solid rgba(var(--wash),0.05);"><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:48px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:60px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:40px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:58px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:56px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:130px;"></div></td></tr>
+                <tr style="border-bottom:1px solid rgba(var(--wash),0.05);"><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:52px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:68px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:32px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:38px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:54px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:52px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:35px;"></div></td><td style="padding:9px 12px;"><div class="sm-skeleton sm-skeleton-text" style="width:190px;"></div></td></tr>
               </tbody>
             </table>
           </div>
@@ -296,54 +296,54 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
 
         // Decodes Linux process STAT codes into human-readable states with colored badges and rich tooltips
         const parseProcessState = (stat) => {
-          if (!stat) return { label: 'Unknown', color: '#94a3b8', bg: 'rgba(148,163,184,0.14)', desc: 'Unknown state' };
+          if (!stat) return { label: 'Unknown', color: 'var(--sm-accent)', bg: 'rgba(148,163,184,0.14)', desc: 'Unknown state' };
           const s = String(stat).trim();
           const primary = s.charAt(0);
           let label = 'Unknown';
-          let color = '#94a3b8';
+          let color = 'var(--sm-accent)';
           let bg = 'rgba(148,163,184,0.14)';
           let baseDesc = '';
 
           switch (primary) {
             case 'R':
               label = 'Running';
-              color = '#34d399';
+              color = 'var(--c-ok)';
               bg = 'rgba(52,211,153,0.14)';
               baseDesc = 'Running (actively executing instructions on CPU)';
               break;
             case 'S':
               label = 'Active';
-              color = '#34d399';
+              color = 'var(--c-ok)';
               bg = 'rgba(52,211,153,0.14)';
               baseDesc = 'Active and healthy (listening & waiting for incoming requests / I/O)';
               break;
             case 'D':
               label = 'Disk Wait';
-              color = '#fbbf24';
+              color = 'var(--c-warn)';
               bg = 'rgba(251,191,36,0.14)';
               baseDesc = 'Uninterruptible sleep (usually waiting for disk I/O)';
               break;
             case 'Z':
               label = 'Zombie';
-              color = '#f87171';
+              color = 'var(--c-bad)';
               bg = 'rgba(248,113,113,0.16)';
               baseDesc = 'Defunct / Zombie (terminated, waiting for parent to reap)';
               break;
             case 'T':
               label = 'Stopped';
-              color = '#fb923c';
+              color = 'var(--c-warn)';
               bg = 'rgba(251,146,60,0.14)';
               baseDesc = 'Stopped by job control signal or SIGSTOP';
               break;
             case 't':
               label = 'Traced';
-              color = '#fb923c';
+              color = 'var(--c-warn)';
               bg = 'rgba(251,146,60,0.14)';
               baseDesc = 'Stopped by debugger during code tracing';
               break;
             case 'I':
               label = 'Idle';
-              color = '#94a3b8';
+              color = 'var(--sm-accent)';
               bg = 'rgba(148,163,184,0.12)';
               baseDesc = 'Idle kernel thread';
               break;
@@ -511,7 +511,7 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
                 span.innerHTML = sortDir === 'asc'
                   ? `<svg style="width:7px; height:7px; margin-left:3px; vertical-align:1px; display:inline-block;" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`
                   : `<svg style="width:7px; height:7px; margin-left:3px; vertical-align:1px; display:inline-block;" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-                th.style.color = '#ffffff';
+                th.style.color = 'var(--text-primary)';
               } else {
                 span.innerHTML = '';
                 th.style.color = 'var(--text-muted)';
@@ -553,11 +553,11 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
           const cpuBar = bodyEl.querySelector('#procMetricCpuBar');
           if (cpuVal) {
             cpuVal.textContent = `${cpu}%`;
-            cpuVal.style.color = cpu > 80 ? '#ef4444' : (cpu > 50 ? '#f59e0b' : '#34d399');
+            cpuVal.style.color = cpu > 80 ? 'var(--c-bad)' : (cpu > 50 ? 'var(--c-warn)' : 'var(--c-ok)');
           }
           if (cpuBar) {
             cpuBar.style.width = `${Math.min(100, Math.max(0, cpu))}%`;
-            cpuBar.style.background = cpu > 80 ? '#ef4444' : (cpu > 50 ? '#f59e0b' : '#34d399');
+            cpuBar.style.background = cpu > 80 ? 'var(--c-bad)' : (cpu > 50 ? 'var(--c-warn)' : 'var(--c-ok)');
           }
 
           const memVal = bodyEl.querySelector('#procMetricMemVal');
@@ -567,11 +567,11 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
             if (m.memory && m.memory.used_formatted && m.memory.total_formatted) {
               memVal.parentElement.title = `Total Host Memory Usage: ${m.memory.used_formatted} / ${m.memory.total_formatted}`;
             }
-            memVal.style.color = mem > 85 ? '#ef4444' : (mem > 60 ? '#f59e0b' : '#38bdf8');
+            memVal.style.color = mem > 85 ? 'var(--c-bad)' : (mem > 60 ? 'var(--c-warn)' : 'var(--c-teal)');
           }
           if (memBar) {
             memBar.style.width = `${Math.min(100, Math.max(0, mem))}%`;
-            memBar.style.background = mem > 85 ? '#ef4444' : (mem > 60 ? '#f59e0b' : '#38bdf8');
+            memBar.style.background = mem > 85 ? 'var(--c-bad)' : (mem > 60 ? 'var(--c-warn)' : 'var(--c-teal)');
           }
 
           const diskVal = bodyEl.querySelector('#procMetricDiskVal');
@@ -581,11 +581,11 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
             if (m.disk && m.disk.used_formatted && m.disk.total_formatted) {
               diskVal.parentElement.title = `Total Root Storage Usage: ${m.disk.used_formatted} / ${m.disk.total_formatted}`;
             }
-            diskVal.style.color = disk > 90 ? '#ef4444' : (disk > 75 ? '#f59e0b' : '#a78bfa');
+            diskVal.style.color = disk > 90 ? 'var(--c-bad)' : (disk > 75 ? 'var(--c-warn)' : 'var(--c-violet)');
           }
           if (diskBar) {
             diskBar.style.width = `${Math.min(100, Math.max(0, disk))}%`;
-            diskBar.style.background = disk > 90 ? '#ef4444' : (disk > 75 ? '#f59e0b' : '#a78bfa');
+            diskBar.style.background = disk > 90 ? 'var(--c-bad)' : (disk > 75 ? 'var(--c-warn)' : 'var(--c-violet)');
           }
         };
 
@@ -634,8 +634,8 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
           }
 
           tbody.innerHTML = filtered.map(p => {
-            const cpuColor = p.cpu > 50 ? '#ef4444' : (p.cpu > 15 ? '#f59e0b' : '#34d399');
-            const memColor = p.mem > 50 ? '#ef4444' : (p.mem > 20 ? '#f59e0b' : 'inherit');
+            const cpuColor = p.cpu > 50 ? 'var(--c-bad)' : (p.cpu > 15 ? 'var(--c-warn)' : 'var(--c-ok)');
+            const memColor = p.mem > 50 ? 'var(--c-bad)' : (p.mem > 20 ? 'var(--c-warn)' : 'inherit');
             const rssDisplay = formatKb(p.rss);
             const pssDisplay = (p.pss !== null && p.pss !== undefined) ? formatKb(p.pss) : '<span style="color:var(--text-muted);">-</span>';
             const vszDisplay = formatKb(p.vsz);
@@ -658,7 +658,7 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
               cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.73rem; color:var(--sm-accent);" title="Resident Physical Memory (RSS): ${p.rss} KB">${rssDisplay}</td>`);
             }
             if (visibleCols.pss) {
-              cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.73rem; color:#a78bfa;" title="Proportional Set Size (PSS): ${p.pss !== null && p.pss !== undefined ? p.pss + ' KB' : 'Unavailable'}">${pssDisplay}</td>`);
+              cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.73rem; color:var(--c-violet);" title="Proportional Set Size (PSS): ${p.pss !== null && p.pss !== undefined ? p.pss + ' KB' : 'Unavailable'}">${pssDisplay}</td>`);
             }
             if (visibleCols.vsz) {
               cells.push(`<td style="padding:0.45rem 0.65rem; font-family:var(--font-mono); font-size:0.7rem; color:var(--text-muted);" title="Virtual Memory Size: ${p.vsz} KB">${vszDisplay}</td>`);
@@ -678,7 +678,7 @@ DesktopAppsController.prototype.launchProcesses = function (params = {}) {
             }
 
             return `
-              <tr data-pid="${p.pid}" style="border-bottom:1px solid rgba(255,255,255,0.04); cursor:context-menu;">
+              <tr data-pid="${p.pid}" style="border-bottom:1px solid rgba(var(--wash),0.04); cursor:context-menu;">
                 ${cells.join('')}
               </tr>
             `;
@@ -885,8 +885,8 @@ DesktopAppsController.prototype.launchLogs = function (params = {}) {
       minWidth: 500,
       minHeight: 300,
       contentHtml: `
-        <div style="height:100%; display:flex; flex-direction:column; background:#090d16;">
-          <div style="background:#0f172a; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; padding:0.4rem 0.75rem; flex-wrap:wrap; gap:0.45rem;">
+        <div style="height:100%; display:flex; flex-direction:column; background:var(--sm-inset);">
+          <div style="background:var(--bg-system); border-bottom:1px solid var(--sm-line-strong); display:flex; align-items:center; justify-content:space-between; padding:0.4rem 0.75rem; flex-wrap:wrap; gap:0.45rem;">
             <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
               <input type="text" id="logUnitInput_${logWinId}" placeholder="Unit (e.g. nginx, sshd)" class="form-control" style="width:140px; padding:0.25rem 0.5rem; font-size:0.75rem;" value="${service}">
               <select id="logLinesSelect_${logWinId}" class="form-control" style="width:90px; padding:0.25rem 0.4rem; font-size:0.72rem;">
@@ -897,14 +897,14 @@ DesktopAppsController.prototype.launchLogs = function (params = {}) {
               </select>
               <button class="btn btn-primary btn-sm" id="logFetchBtn_${logWinId}">Fetch</button>
               
-              <div style="width:1px; height:18px; background:rgba(255,255,255,0.1); margin:0 2px;"></div>
+              <div style="width:1px; height:18px; background:rgba(var(--wash),0.1); margin:0 2px;"></div>
 
               <input type="text" id="logSearchInput_${logWinId}" placeholder="Filter in logs..." class="form-control" style="width:145px; padding:0.25rem 0.5rem; font-size:0.75rem;">
 
               <div style="display:flex; align-items:center; gap:3px;">
                 <button class="btn btn-secondary btn-xs active log-lvl-btn" data-lvl="all" id="lvlAll_${logWinId}" style="padding:2px 7px; font-size:0.7rem;">All <span id="cntAll_${logWinId}">0</span></button>
-                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="error" id="lvlErr_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:#f87171;">Errors <span id="cntErr_${logWinId}">0</span></button>
-                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="warn" id="lvlWarn_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:#fbbf24;">Warn <span id="cntWarn_${logWinId}">0</span></button>
+                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="error" id="lvlErr_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:var(--c-bad);">Errors <span id="cntErr_${logWinId}">0</span></button>
+                <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="warn" id="lvlWarn_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:var(--c-warn);">Warn <span id="cntWarn_${logWinId}">0</span></button>
                 <button class="btn btn-secondary btn-xs log-lvl-btn" data-lvl="info" id="lvlInfo_${logWinId}" style="padding:2px 7px; font-size:0.7rem; color:var(--sm-accent);">Info <span id="cntInfo_${logWinId}">0</span></button>
               </div>
             </div>
@@ -920,11 +920,11 @@ DesktopAppsController.prototype.launchLogs = function (params = {}) {
             </div>
           </div>
 
-          <div id="logViewerContainer_${logWinId}" style="flex:1; overflow-y:auto; overflow-x:auto; padding:0.35rem 0; font-family:var(--font-mono); background:#090d16;">
+          <div id="logViewerContainer_${logWinId}" style="flex:1; overflow-y:auto; overflow-x:auto; padding:0.35rem 0; font-family:var(--font-mono); background:var(--sm-inset);">
             <div style="text-align:center; padding:2.5rem; color:var(--text-muted); font-size:0.8rem;">Ready to fetch journal logs...</div>
           </div>
 
-          <div style="height:22px; background:#0c1220; border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem; font-size:0.68rem; color:#64748b; font-family:var(--font-mono);">
+          <div style="height:22px; background:var(--bg-system); border-top:1px solid rgba(var(--wash),0.06); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem; font-size:0.68rem; color:var(--sm-text-4); font-family:var(--font-mono);">
             <span id="logStatusText_${logWinId}">Ready</span>
             <span id="logStatsText_${logWinId}">0 lines</span>
           </div>
@@ -1063,12 +1063,12 @@ DesktopAppsController.prototype.launchLogs = function (params = {}) {
               statusText.textContent = `${isLive ? 'Live Streaming' : 'Synchronized'} at ${new Date().toLocaleTimeString()}`;
               renderLogs();
             } else if (!silent) {
-              viewer.innerHTML = `<div style="text-align:center; padding:2rem; color:#f87171; font-size:0.8rem;">Error: ${escapeHtml(res.error)}</div>`;
+              viewer.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--c-bad); font-size:0.8rem;">Error: ${escapeHtml(res.error)}</div>`;
               statusText.textContent = 'Fetch failed';
             }
           } catch (e) {
             if (!silent) {
-              viewer.innerHTML = `<div style="text-align:center; padding:2rem; color:#f87171; font-size:0.8rem;">Network error: ${escapeHtml(e.message)}</div>`;
+              viewer.innerHTML = `<div style="text-align:center; padding:2rem; color:var(--c-bad); font-size:0.8rem;">Network error: ${escapeHtml(e.message)}</div>`;
               statusText.textContent = 'Network error';
             }
           }
@@ -1210,7 +1210,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
       contentHtml: `
         <div style="display:flex; flex-direction:column; height:100%; background:var(--bg-canvas); overflow:hidden;" id="netRoot_${netWinId}">
           <!-- Top Control Header -->
-          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(255,255,255,0.02); flex-shrink:0; gap:0.5rem; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--wash),0.02); flex-shrink:0; gap:0.5rem; flex-wrap:wrap;">
             <div style="display:flex; gap:0.35rem; align-items:center;">
               <button class="btn btn-secondary btn-xs net-tab-btn active" data-tab="connections" id="tabConn_${netWinId}" style="font-size:0.75rem;">
                 Active Connections
@@ -1218,7 +1218,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
               </button>
               <button class="btn btn-ghost btn-xs net-tab-btn" data-tab="ports" id="tabPorts_${netWinId}" style="font-size:0.75rem;">
                 Listening Ports
-                <span class="badge" id="netPortsCountBadge_${netWinId}" style="margin-left:4px; background:rgba(255,255,255,0.08); color:#94a3b8;">--</span>
+                <span class="badge" id="netPortsCountBadge_${netWinId}" style="margin-left:4px; background:rgba(var(--wash),0.08); color:var(--text-muted);">--</span>
               </button>
               <button class="btn btn-ghost btn-xs net-tab-btn" data-tab="interfaces" id="tabIfaces_${netWinId}" style="font-size:0.75rem;">
                 Interfaces
@@ -1242,27 +1242,27 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
           <!-- Active Connections View -->
           <div id="viewConnections_${netWinId}" style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
             <!-- DDoS & Telemetry Stats Ticker -->
-            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.65rem; padding:0.75rem 1rem 0.45rem; background:rgba(0,0,0,0.15); flex-shrink:0;">
-              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.65rem; padding:0.75rem 1rem 0.45rem; background:rgba(var(--shade),0.15); flex-shrink:0;">
+              <div style="background:rgba(var(--wash),0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
                 <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Total Active Sockets</div>
-                <div id="mStatTotal_${netWinId}" style="font-size:1.15rem; font-weight:700; color:#f8fafc; margin-top:2px;">--</div>
+                <div id="mStatTotal_${netWinId}" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin-top:2px;">--</div>
               </div>
-              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
+              <div style="background:rgba(var(--wash),0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
                 <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Established</div>
-                <div id="mStatEstab_${netWinId}" style="font-size:1.15rem; font-weight:700; color:#34d399; margin-top:2px;">--</div>
+                <div id="mStatEstab_${netWinId}" style="font-size:1.15rem; font-weight:700; color:var(--c-ok); margin-top:2px;">--</div>
               </div>
-              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
+              <div style="background:rgba(var(--wash),0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
                 <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">SYN_RECV (SYN Flood)</div>
                 <div id="mStatSyn_${netWinId}" style="font-size:1.15rem; font-weight:700; color:var(--sm-accent); margin-top:2px;">--</div>
               </div>
-              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
+              <div style="background:rgba(var(--wash),0.03); border:1px solid var(--border-subtle); border-radius:6px; padding:0.45rem 0.65rem;">
                 <div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Time Wait / Closed</div>
-                <div id="mStatWait_${netWinId}" style="font-size:1.15rem; font-weight:700; color:#94a3b8; margin-top:2px;">--</div>
+                <div id="mStatWait_${netWinId}" style="font-size:1.15rem; font-weight:700; color:var(--text-muted); margin-top:2px;">--</div>
               </div>
             </div>
 
             <!-- DDoS Top Connecting Remote IPs Leaderboard -->
-            <div style="padding:0.45rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.1); flex-shrink:0; display:flex; align-items:center; gap:0.5rem; overflow-x:auto;" id="topIpsBar_${netWinId}">
+            <div style="padding:0.45rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.1); flex-shrink:0; display:flex; align-items:center; gap:0.5rem; overflow-x:auto;" id="topIpsBar_${netWinId}">
               <span style="font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; white-space:nowrap; letter-spacing:0.04em;">Top Remote IPs:</span>
               <div id="topIpsList_${netWinId}" style="display:flex; gap:0.35rem; align-items:center; flex-wrap:nowrap;">
                 <span style="font-size:0.72rem; color:var(--text-muted);">Analyzing active remote IPs...</span>
@@ -1322,8 +1322,8 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
 
           <!-- Interfaces View -->
           <div id="viewInterfaces_${netWinId}" style="flex:1; display:none; flex-direction:column; min-height:0; padding:1rem; overflow-y:auto;">
-            <div style="font-size:0.74rem; font-weight:700; color:#cbd5e1; margin-bottom:0.4rem; text-transform:uppercase;">Network Interfaces &amp; Link Statistics</div>
-            <pre id="netIfacesPre_${netWinId}" style="background:#0b111c; border:1px solid var(--border-subtle); border-radius:6px; padding:0.85rem; font-family:monospace; font-size:0.75rem; color:#94a3b8; white-space:pre-wrap; line-height:1.45; margin:0;">Loading interface stats...</pre>
+            <div style="font-size:0.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.4rem; text-transform:uppercase;">Network Interfaces &amp; Link Statistics</div>
+            <pre id="netIfacesPre_${netWinId}" style="background:var(--bg-system); border:1px solid var(--border-subtle); border-radius:6px; padding:0.85rem; font-family:monospace; font-size:0.75rem; color:var(--text-muted); white-space:pre-wrap; line-height:1.45; margin:0;">Loading interface stats...</pre>
           </div>
         </div>
       `,
@@ -1356,11 +1356,11 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
         });
 
         const getStateStyle = (st) => {
-          if (st === 'ESTABLISHED') return 'background:rgba(16,185,129,0.15); color:#34d399;';
-          if (st === 'SYN_RECV') return 'background:rgba(239,68,68,0.25); color:#f87171; font-weight:700;';
-          if (st === 'TIME_WAIT') return 'background:rgba(148,163,184,0.15); color:#94a3b8;';
-          if (st === 'CLOSE_WAIT') return 'background:rgba(245,158,11,0.15); color:#fbbf24;';
-          return 'background:rgba(255,255,255,0.06); color:#cbd5e1;';
+          if (st === 'ESTABLISHED') return 'background:rgba(16,185,129,0.15); color:var(--c-ok);';
+          if (st === 'SYN_RECV') return 'background:rgba(239,68,68,0.25); color:var(--c-bad); font-weight:700;';
+          if (st === 'TIME_WAIT') return 'background:rgba(148,163,184,0.15); color:var(--text-muted);';
+          if (st === 'CLOSE_WAIT') return 'background:rgba(245,158,11,0.15); color:var(--c-warn);';
+          return 'background:rgba(var(--wash),0.06); color:var(--text-secondary);';
         };
 
         const renderConnectionsList = () => {
@@ -1386,7 +1386,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
 
           tbody.innerHTML = filtered.map(c => `
             <tr>
-              <td><span class="badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; font-size:0.68rem;">${c.proto}</span></td>
+              <td><span class="badge" style="background:rgba(var(--wash),0.05); color:var(--text-muted); font-size:0.68rem;">${c.proto}</span></td>
               <td><span class="badge" style="${getStateStyle(c.state)}; font-size:0.68rem;">${c.state}</span></td>
               <td><code style="font-size:0.75rem;">${c.local_addr}</code></td>
               <td>
@@ -1394,12 +1394,12 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
                   <code style="font-size:0.75rem; color:var(--sm-accent);">${c.remote_addr}</code>
                   <button type="button" class="btn btn-ghost btn-xs btn-copy-ip" data-ip="${c.remote_ip}" style="padding:0 3px; font-size:0.65rem;" title="Copy IP">&copy;</button>
                   ${c.remote_ip && c.remote_ip !== '0.0.0.0' && c.remote_ip !== '127.0.0.1' && c.remote_ip !== '::1' && c.remote_ip !== '*' ? `
-                    <button type="button" class="btn btn-ghost btn-xs btn-ban-ip" data-ip="${c.remote_ip}" style="padding:0 4px; font-size:0.65rem; color:#f87171;" title="Block ${c.remote_ip} in Firewall">Ban</button>
+                    <button type="button" class="btn btn-ghost btn-xs btn-ban-ip" data-ip="${c.remote_ip}" style="padding:0 4px; font-size:0.65rem; color:var(--c-bad);" title="Block ${c.remote_ip} in Firewall">Ban</button>
                   ` : ''}
                 </div>
               </td>
               <td style="font-size:0.72rem; font-family:monospace; color:var(--text-muted);">${c.recv_q} / ${c.send_q}</td>
-              <td><span style="font-size:0.73rem; font-family:monospace; color:#e2e8f0;">${c.process}</span></td>
+              <td><span style="font-size:0.73rem; font-family:monospace; color:var(--text-secondary);">${c.process}</span></td>
             </tr>
           `).join('');
 
@@ -1441,7 +1441,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
             if (estabEl) estabEl.textContent = estab;
             if (synEl) {
               synEl.textContent = syn;
-              synEl.style.color = syn > 10 ? '#ef4444' : '#38bdf8';
+              synEl.style.color = syn > 10 ? 'var(--c-bad)' : 'var(--c-teal)';
             }
             if (waitEl) waitEl.textContent = wait;
             if (connBadge) connBadge.textContent = total;
@@ -1455,12 +1455,12 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
                 topList.innerHTML = `<span style="font-size:0.72rem; color:var(--text-muted);">No external client connections</span>`;
               } else {
                 topList.innerHTML = topIps.map(item => `
-                  <div style="display:inline-flex; align-items:center; background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:4px; padding:1px 3px;">
+                  <div style="display:inline-flex; align-items:center; background:rgba(var(--wash),0.04); border:1px solid var(--border-subtle); border-radius:4px; padding:1px 3px;">
                     <button type="button" class="btn btn-ghost btn-xs btn-chip-ip" data-ip="${item.ip}" style="display:flex; align-items:center; gap:0.3rem; padding:0.12rem 0.35rem; font-size:0.7rem; white-space:nowrap; border:none;">
-                      <span style="font-family:monospace; color:#f8fafc;">${item.ip}</span>
-                      <span class="badge" style="background:${item.count > 10 ? '#ef4444' : 'rgba(56,189,248,0.2)'}; color:${item.count > 10 ? '#fff' : '#38bdf8'}; font-weight:700;">${item.count}</span>
+                      <span style="font-family:monospace; color:var(--text-primary);">${item.ip}</span>
+                      <span class="badge" style="background:${item.count > 10 ? 'var(--c-bad)' : 'rgba(56,189,248,0.2)'}; color:${item.count > 10 ? '#fff' : 'var(--c-teal)'}; font-weight:700;">${item.count}</span>
                     </button>
-                    <button type="button" class="btn btn-ghost btn-xs btn-ban-chip" data-ip="${item.ip}" title="Block ${item.ip} in Firewall" style="padding:0.1rem 0.3rem; font-size:0.65rem; color:#f87171; border:none;">Ban</button>
+                    <button type="button" class="btn btn-ghost btn-xs btn-ban-chip" data-ip="${item.ip}" title="Block ${item.ip} in Firewall" style="padding:0.1rem 0.3rem; font-size:0.65rem; color:var(--c-bad); border:none;">Ban</button>
                   </div>
                 `).join('');
 
@@ -1489,7 +1489,7 @@ DesktopAppsController.prototype.launchNetwork = function (params = {}) {
               } else {
                 portsTbody.innerHTML = ports.map(p => `
                   <tr>
-                    <td><span class="badge" style="background:rgba(255,255,255,0.06); font-size:0.68rem;">${p.proto.toUpperCase()}</span></td>
+                    <td><span class="badge" style="background:rgba(var(--wash),0.06); font-size:0.68rem;">${p.proto.toUpperCase()}</span></td>
                     <td><code style="font-size:0.75rem;">${p.local_addr}</code></td>
                     <td><span style="font-size:0.74rem; font-family:monospace;">${p.process}</span></td>
                   </tr>

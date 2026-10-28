@@ -172,11 +172,11 @@
   let panel = null, timer = null;
   const css = `
     #smBusy{position:fixed;right:16px;bottom:calc(var(--sm-dock-h,88px) + 16px);z-index:99990;display:none;flex-direction:column;gap:6px;max-width:min(360px,calc(100vw - 32px));font-family:var(--font-sans,system-ui)}
-    #smBusy .sm-busy-row{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;background:rgba(15,22,35,.94);border:1px solid rgba(255,255,255,.12);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.55);backdrop-filter:blur(10px);color:#e2e8f0;font-size:.74rem}
-    #smBusy .sm-busy-dollar{font:700 .9rem/1 var(--font-mono,ui-monospace,monospace);color:var(--sm-accent,#38bdf8);animation:smBusyBlink 1s steps(2) infinite}
+    #smBusy .sm-busy-row{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;background:rgba(var(--panel-rgb),.94);border:1px solid rgba(var(--wash),.12);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.55);backdrop-filter:blur(10px);color:var(--text-secondary);font-size:.74rem}
+    #smBusy .sm-busy-dollar{font:700 .9rem/1 var(--font-mono,ui-monospace,monospace);color:var(--sm-accent,var(--c-teal));animation:smBusyBlink 1s steps(2) infinite}
     #smBusy .sm-busy-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    #smBusy .sm-busy-time{font:600 .68rem/1 var(--font-mono,ui-monospace,monospace);color:#94a3b8}
-    #smBusy button{border:0;background:rgba(255,255,255,.08);color:#e2e8f0;width:22px;height:22px;border-radius:6px;cursor:pointer;font-size:.95rem;line-height:1}
+    #smBusy .sm-busy-time{font:600 .68rem/1 var(--font-mono,ui-monospace,monospace);color:var(--text-muted)}
+    #smBusy button{border:0;background:rgba(var(--wash),.08);color:var(--text-secondary);width:22px;height:22px;border-radius:6px;cursor:pointer;font-size:.95rem;line-height:1}
     #smBusy button:hover{background:#7f1d1d;color:#fff}
     #smBusy .sm-busy-all{align-self:flex-end;width:auto;padding:0 10px;height:24px;font-size:.7rem}
     @keyframes smBusyBlink{50%{opacity:.25}}

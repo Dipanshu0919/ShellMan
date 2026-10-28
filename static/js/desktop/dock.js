@@ -159,6 +159,17 @@ window.SHELLMAN_APPS = [
     defaultDesktop: true
   },
   {
+    id: 'apache',
+    title: 'Apache Web Server',
+    shortTitle: 'Apache',
+    desc: 'apache2/httpd sites, modules, config editor, logs, SSL',
+    category: 'web',
+    gradient: 'linear-gradient(135deg, #b91c1c, #ef4444)',
+    icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="4" fill="rgba(255,255,255,0.15)" stroke="#ffffff" stroke-width="1.5"/><path d="M8 17c1-3 2-6 4-9 1 2 2.5 5 4 9M9.5 13.5h5" stroke="#fecaca" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    defaultDock: false,
+    defaultDesktop: false
+  },
+  {
     id: 'domains',
     title: 'Cloudflare Domains & DNS',
     shortTitle: 'Cloudflare',
@@ -438,17 +449,17 @@ const DesktopCustomizer = {
     const overlay = document.createElement('div');
     overlay.className = 'desktop-modal-backdrop';
     overlay.style.cssText = `
-      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.76);
+      position: fixed; inset: 0; background: rgba(var(--shade), 0.76);
       backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
       display: flex; align-items: center; justify-content: center;
       z-index: 100000; padding: 1rem; font-family: var(--font-sans); color: var(--text-primary);
     `;
 
     overlay.innerHTML = `
-      <div style="width: 100%; max-width: 720px; height: 600px; background: var(--bg-surface, #111827); border: 1px solid var(--border-color, #1f2937); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85); display: flex; flex-direction: column; overflow: hidden;">
+      <div style="width: 100%; max-width: 720px; height: 600px; background: var(--bg-surface, var(--bg-system)); border: 1px solid var(--border-color, var(--sm-line-strong)); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85); display: flex; flex-direction: column; overflow: hidden;">
         <!-- Header -->
-        <div style="height: 46px; padding: 0 1.1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); flex-shrink: 0;">
-          <div style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; font-size: 0.9rem; color: #f8fafc;">
+        <div style="height: 46px; padding: 0 1.1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(var(--wash),0.02); flex-shrink: 0;">
+          <div style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">
             <svg style="width: 18px; height: 18px; color: var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
             <span>Customize Desktop Shortcuts &amp; Floating Dock</span>
           </div>
@@ -456,10 +467,10 @@ const DesktopCustomizer = {
         </div>
 
         <!-- Controls Toolbar: Icon Size & Bulk Actions -->
-        <div style="padding: 0.65rem 1.1rem; border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.22); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; flex-shrink: 0;">
+        <div style="padding: 0.65rem 1.1rem; border-bottom: 1px solid var(--border-subtle); background: rgba(var(--shade),0.22); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; flex-shrink: 0;">
           <div style="display: flex; align-items: center; gap: 0.4rem;">
             <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Desktop Icon Size:</span>
-            <div style="display: flex; gap: 2px; background: var(--bg-canvas, #090d16); border: 1px solid var(--border-color, #1f2937); border-radius: 5px; padding: 2px;">
+            <div style="display: flex; gap: 2px; background: var(--bg-canvas, var(--sm-inset)); border: 1px solid var(--border-color, var(--sm-line-strong)); border-radius: 5px; padding: 2px;">
               <button class="btn btn-xs ${currentSize === 'compact' ? 'btn-primary' : 'btn-ghost'}" id="btnSizeCompact" style="font-size:0.7rem; padding:0.15rem 0.55rem;">Compact</button>
               <button class="btn btn-xs ${currentSize === 'normal' ? 'btn-primary' : 'btn-ghost'}" id="btnSizeNormal" style="font-size:0.7rem; padding:0.15rem 0.55rem;">Normal</button>
               <button class="btn btn-xs ${currentSize === 'large' ? 'btn-primary' : 'btn-ghost'}" id="btnSizeLarge" style="font-size:0.7rem; padding:0.15rem 0.55rem;">Large</button>
@@ -468,15 +479,15 @@ const DesktopCustomizer = {
           <div style="display: flex; align-items: center; gap: 0.4rem;">
             <button class="btn btn-secondary btn-xs" id="btnSelectAllDesktop" style="font-size: 0.7rem;">Select All Desktop</button>
             <button class="btn btn-secondary btn-xs" id="btnSelectAllDock" style="font-size: 0.7rem;">Select All Dock</button>
-            <button class="btn btn-secondary btn-xs" id="btnResetDefaults" style="font-size: 0.7rem; color: #ef4444;">Reset Layout</button>
+            <button class="btn btn-secondary btn-xs" id="btnResetDefaults" style="font-size: 0.7rem; color: var(--c-bad);">Reset Layout</button>
           </div>
         </div>
 
         <!-- Search Bar -->
-        <div style="padding: 0.45rem 1.1rem; border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.12); flex-shrink: 0;">
-          <div style="display: flex; align-items: center; background: var(--bg-canvas, #090d16); border: 1px solid var(--border-color, #1f2937); border-radius: 6px; padding: 0.2rem 0.55rem;">
-            <svg style="width: 13px; height: 13px; color: #94a3b8; margin-right: 0.4rem; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" id="customizerSearchInput" placeholder="Filter applications by name or category..." style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-sans); font-size: 0.78rem; color: #f8fafc;">
+        <div style="padding: 0.45rem 1.1rem; border-bottom: 1px solid var(--border-subtle); background: rgba(var(--shade),0.12); flex-shrink: 0;">
+          <div style="display: flex; align-items: center; background: var(--bg-canvas, var(--sm-inset)); border: 1px solid var(--border-color, var(--sm-line-strong)); border-radius: 6px; padding: 0.2rem 0.55rem;">
+            <svg style="width: 13px; height: 13px; color: var(--text-muted); margin-right: 0.4rem; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="customizerSearchInput" placeholder="Filter applications by name or category..." style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-sans); font-size: 0.78rem; color: var(--text-primary);">
           </div>
         </div>
 
@@ -485,7 +496,7 @@ const DesktopCustomizer = {
         </div>
 
         <!-- Footer -->
-        <div style="padding: 0.65rem 1.1rem; border-top: 1px solid var(--border-subtle); background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+        <div style="padding: 0.65rem 1.1rem; border-top: 1px solid var(--border-subtle); background: rgba(var(--shade),0.25); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
           <div style="font-size: 0.73rem; color: var(--text-muted);">
             Changes apply instantly and persist in your browser profile.
           </div>
@@ -520,7 +531,7 @@ const DesktopCustomizer = {
         const onDesktop = this.isAppOnDesktop(app.id);
         const inDock = this.isAppInDock(app.id);
         return `
-          <div class="customizer-app-row" data-id="${app.id}" style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0.75rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); transition:background 0.15s;">
+          <div class="customizer-app-row" data-id="${app.id}" style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0.75rem; border-radius:6px; background:rgba(var(--wash),0.02); border:1px solid rgba(var(--wash),0.05); transition:background 0.15s;">
             <!-- Left: Icon & Details -->
             <div style="display:flex; align-items:center; gap:0.75rem; min-width:0; flex:1;">
               <div style="width:34px; height:34px; border-radius:8px; background:${app.gradient}; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.4);">
@@ -530,8 +541,8 @@ const DesktopCustomizer = {
               </div>
               <div style="min-width:0; overflow:hidden;">
                 <div style="display:flex; align-items:center; gap:0.4rem;">
-                  <span style="font-weight:600; font-size:0.82rem; color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${app.title}</span>
-                  <span class="badge" style="font-size:0.62rem; text-transform:uppercase; background:rgba(255,255,255,0.06); color:var(--text-muted); padding:1px 4px;">${app.category}</span>
+                  <span style="font-weight:600; font-size:0.82rem; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${app.title}</span>
+                  <span class="badge" style="font-size:0.62rem; text-transform:uppercase; background:rgba(var(--wash),0.06); color:var(--text-muted); padding:1px 4px;">${app.category}</span>
                 </div>
                 <div style="font-size:0.71rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${app.desc}</div>
               </div>
@@ -541,11 +552,11 @@ const DesktopCustomizer = {
             <div style="display:flex; align-items:center; gap:1.1rem; flex-shrink:0;">
               <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.75rem; user-select:none;">
                 <input type="checkbox" class="chk-desktop" data-id="${app.id}" ${onDesktop ? 'checked' : ''} style="cursor:pointer; width:14px; height:14px; accent-color:color-mix(in srgb, var(--sm-accent) 78%, #000);">
-                <span style="color:${onDesktop ? '#f8fafc' : 'var(--text-muted)'}; font-weight:${onDesktop ? '600' : '400'};">Desktop</span>
+                <span style="color:${onDesktop ? 'var(--sm-accent)' : 'var(--text-muted)'}; font-weight:${onDesktop ? '600' : '400'};">Desktop</span>
               </label>
               <label style="display:flex; align-items:center; gap:0.4rem; cursor:pointer; font-size:0.75rem; user-select:none;">
                 <input type="checkbox" class="chk-dock" data-id="${app.id}" ${inDock ? 'checked' : ''} style="cursor:pointer; width:14px; height:14px; accent-color:var(--sm-accent);">
-                <span style="color:${inDock ? '#f8fafc' : 'var(--text-muted)'}; font-weight:${inDock ? '600' : '400'};">Dock</span>
+                <span style="color:${inDock ? 'var(--sm-accent)' : 'var(--text-muted)'}; font-weight:${inDock ? '600' : '400'};">Dock</span>
               </label>
             </div>
           </div>

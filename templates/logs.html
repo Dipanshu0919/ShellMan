@@ -11,7 +11,7 @@
     <a href="{{ url_for('servers.add') }}" class="btn btn-primary" style="margin-top: 1rem;">Add Server</a>
   </div>
 {% else %}
-  <div style="display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; background: #090d16;">
+  <div style="display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; background: var(--sm-inset);">
     <!-- Top Logs Toolbar -->
     <header class="desktop-toolbar" style="padding: 0 0.85rem; height: 42px;">
       <div class="toolbar-left" style="gap: 0.6rem;">
@@ -35,14 +35,14 @@
           Fetch
         </button>
 
-        <div style="width:1px; height:18px; background:rgba(255,255,255,0.1); margin:0 2px;"></div>
+        <div style="width:1px; height:18px; background:rgba(var(--wash),0.1); margin:0 2px;"></div>
 
         <input type="text" id="logFilterInput" placeholder="Filter in logs..." class="form-control" style="width: 140px; padding: 0.25rem 0.5rem; font-size: 0.75rem;" oninput="renderLogs()">
 
         <div style="display:flex; align-items:center; gap:3px;">
           <button class="btn btn-secondary btn-xs active log-tab-btn" data-lvl="all" onclick="setLevel('all', this)" style="padding:2px 7px; font-size:0.7rem;">All <span id="cntAll">0</span></button>
-          <button class="btn btn-secondary btn-xs log-tab-btn" data-lvl="error" onclick="setLevel('error', this)" style="padding:2px 7px; font-size:0.7rem; color:#f87171;">Errors <span id="cntErr">0</span></button>
-          <button class="btn btn-secondary btn-xs log-tab-btn" data-lvl="warn" onclick="setLevel('warn', this)" style="padding:2px 7px; font-size:0.7rem; color:#fbbf24;">Warn <span id="cntWarn">0</span></button>
+          <button class="btn btn-secondary btn-xs log-tab-btn" data-lvl="error" onclick="setLevel('error', this)" style="padding:2px 7px; font-size:0.7rem; color:var(--c-bad);">Errors <span id="cntErr">0</span></button>
+          <button class="btn btn-secondary btn-xs log-tab-btn" data-lvl="warn" onclick="setLevel('warn', this)" style="padding:2px 7px; font-size:0.7rem; color:var(--c-warn);">Warn <span id="cntWarn">0</span></button>
           <button class="btn btn-secondary btn-xs log-tab-btn" data-lvl="info" onclick="setLevel('info', this)" style="padding:2px 7px; font-size:0.7rem; color:var(--sm-accent);">Info <span id="cntInfo">0</span></button>
         </div>
 
@@ -63,7 +63,7 @@
     </header>
 
     <!-- Preformatted Log Terminal Output -->
-    <div id="logOutput" style="flex: 1; margin: 0; padding: 0.5rem 0; overflow-y: auto; overflow-x: auto; font-family: var(--font-mono); font-size: 0.78rem; color: #f1f5f9; background: #090d16;"></div>
+    <div id="logOutput" style="flex: 1; margin: 0; padding: 0.5rem 0; overflow-y: auto; overflow-x: auto; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-primary); background: var(--sm-inset);"></div>
 
     <!-- Bottom Status Bar -->
     <footer class="files-statusbar" style="background: var(--bg-surface); display:flex; justify-content:space-between; align-items:center;">

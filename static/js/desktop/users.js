@@ -54,9 +54,9 @@
             <span class="sa-pill ${u.role === 'admin' ? 'sa-ok' : 'sa-mute'}">${u.role === 'admin' ? 'ADMIN' : 'VIEWER'}</span>
             <button class="btn btn-secondary sa-btn" data-act="role">Make ${u.role === 'admin' ? 'viewer' : 'admin'}</button>
             <button class="btn btn-secondary sa-btn" data-act="pw">Reset password</button>
-            ${u.id === r.me ? '' : '<button class="btn btn-secondary sa-btn" data-act="del" style="color:#ff8a93">Delete</button>'}
+            ${u.id === r.me ? '' : '<button class="btn btn-secondary sa-btn" data-act="del" style="color:var(--c-bad)">Delete</button>'}
           </div>`).join('')}</div><div class="sa-err" id="usMsg"></div>`;
-      const msg = (t, ok) => { const e = card.querySelector('#usMsg'); e.textContent = t || ''; e.style.color = ok ? '#34d399' : '#ff8a93'; };
+      const msg = (t, ok) => { const e = card.querySelector('#usMsg'); e.textContent = t || ''; e.style.color = ok ? 'var(--c-ok)' : 'var(--c-bad)'; };
       card.querySelector('#usAdd').onclick = () => this.form(card, msg);
       card.querySelectorAll('#usList .sa-row[data-id]').forEach(row => {
         const id = Number(row.dataset.id);

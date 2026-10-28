@@ -81,6 +81,8 @@ def create_app(config_class=Config):
     from routes.settings import settings_bp
     from routes.workspace import workspace_bp
     from routes.nginx import nginx_bp
+    from routes.apache import apache_bp
+    from routes.wallpapers import wallpaper_bp
     from routes.actions import actions_bp
     from routes.sync import sync_bp
     from routes.cron import cron_bp
@@ -109,6 +111,8 @@ def create_app(config_class=Config):
     app.register_blueprint(network_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(nginx_bp)
+    app.register_blueprint(apache_bp)
+    app.register_blueprint(wallpaper_bp)
     app.register_blueprint(actions_bp)
     app.register_blueprint(sync_bp)
     app.register_blueprint(cron_bp)

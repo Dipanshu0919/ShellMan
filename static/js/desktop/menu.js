@@ -438,7 +438,7 @@ class DesktopMenusController {
 
     if (isSearchingFiles) {
       html += `
-        <div style="display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.8rem; font-size:0.72rem; color:var(--accent-cyan); border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.8rem; font-size:0.72rem; color:var(--accent-cyan); border-top:1px solid rgba(var(--wash),0.06);">
           <svg style="width:13px; height:13px; animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
           <span>Searching remote server files for "${this.escapeHtml(this._activeQuery)}"...</span>
         </div>

@@ -132,11 +132,11 @@ html, body {
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(var(--shade), 0.2);
   border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(var(--wash), 0.25);
   border-radius: 5px;
   border: 2px solid transparent;
   background-clip: padding-box;
@@ -283,7 +283,7 @@ html, body {
   gap: 0.35rem;
   font-size: 0.75rem;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--wash), 0.02);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xs);
   padding: 0.2rem 0.5rem;
@@ -364,7 +364,7 @@ html, body {
 .sys-tel-bar {
   width: 28px;
   height: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash), 0.08);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -546,8 +546,8 @@ html, body {
   left: calc(100% + 10px);
   top: 50%;
   transform: translateY(-50%) scale(0.95);
-  background: #1e293b;
-  color: #f8fafc;
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
   font-size: 0.72rem;
   font-weight: 500;
   padding: 0.3rem 0.6rem;
@@ -647,7 +647,7 @@ html, body {
   align-items: baseline;
   font-size: 0.75rem;
   padding: 0.25rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(var(--wash), 0.03);
 }
 
 .inspector-kv-key {
@@ -739,7 +739,7 @@ html, body {
 
 .btn-danger {
   background: rgba(244, 63, 94, 0.15);
-  color: #fda4af;
+  color: var(--c-rose);
   border-color: rgba(244, 63, 94, 0.35);
 }
 .btn-danger:hover {
@@ -794,19 +794,19 @@ html, body {
 .alert-danger {
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #fca5a5;
+  color: var(--c-bad);
 }
 
 .alert-success {
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid rgba(16, 185, 129, 0.35);
-  color: #86efac;
+  color: var(--c-ok);
 }
 
 .alert-warning {
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fcd34d;
+  color: var(--c-warn);
 }
 
 .alert-info {
@@ -863,9 +863,9 @@ input[type="checkbox"] {
   -webkit-appearance: none;
   width: 17px;
   height: 17px;
-  border: 1.5px solid #475569;
+  border: 1.5px solid color-mix(in srgb, var(--sm-accent) 35%, transparent);
   border-radius: 4px;
-  background-color: #0c121e;
+  background-color: var(--bg-system);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -879,7 +879,7 @@ input[type="checkbox"] {
 
 input[type="checkbox"]:hover {
   border-color: var(--sm-accent);
-  background-color: #162033;
+  background-color: var(--bg-surface-elevated);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sm-accent) 18%, transparent);
 }
 
@@ -920,9 +920,9 @@ input[type="checkbox"]:focus-visible {
 
 /* File Upload Dropzone */
 .upload-dropzone {
-  border: 2px dashed #334155;
+  border: 2px dashed var(--sm-line-strong);
   border-radius: var(--radius-md);
-  background: rgba(12, 18, 30, 0.6);
+  background: rgba(var(--panel-rgb), 0.6);
   padding: 1.5rem 1rem;
   text-align: center;
   cursor: pointer;
@@ -990,7 +990,7 @@ input[type="checkbox"]:focus-visible {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(9, 13, 22, 0.75);
+  background-color: rgba(var(--inset-rgb), 0.75);
   display: none;
   align-items: center;
   justify-content: center;
@@ -1065,7 +1065,7 @@ input[type="checkbox"]:focus-visible {
 .cmd-palette-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(9, 13, 22, 0.75);
+  background: rgba(var(--inset-rgb), 0.75);
   backdrop-filter: blur(10px);
   z-index: 2000;
   display: flex;
@@ -1167,7 +1167,7 @@ input[type="checkbox"]:focus-visible {
 .server-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(9, 13, 22, 0.75);
+  background: rgba(var(--inset-rgb), 0.75);
   backdrop-filter: blur(8px);
   z-index: 2000;
   display: flex;
@@ -1277,7 +1277,7 @@ input[type="checkbox"]:focus-visible {
 .progress-bar-bg {
   width: 100%;
   height: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash), 0.08);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -1626,7 +1626,7 @@ input[type="checkbox"]:focus-visible {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #090d16;
+  background: var(--sm-inset);
 }
 
 .terminal-toolbar {
@@ -1678,7 +1678,7 @@ input[type="checkbox"]:focus-visible {
 }
 
 .terminal-tab-pill.active {
-  background: #090d16;
+  background: var(--sm-inset);
   color: var(--accent-cyan);
   border-color: var(--border-accent);
   font-weight: 600;
@@ -1726,7 +1726,7 @@ input[type="checkbox"]:focus-visible {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #090d16;
+  background: var(--sm-inset);
 }
 
 .terminal-tab-instance {
@@ -1746,7 +1746,7 @@ input[type="checkbox"]:focus-visible {
   width: 100%;
 }
 .terminal-tab-instance .xterm-viewport {
-  background-color: #090d16 !important;
+  background-color: var(--sm-inset) !important;
 }
 
 /* IP Masking Toggle Button */
@@ -1760,9 +1760,9 @@ input[type="checkbox"]:focus-visible {
   min-height: 20px;
   padding: 0;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #94a3b8;
+  background: rgba(var(--wash), 0.05);
+  border: 1px solid rgba(var(--wash), 0.12);
+  color: var(--text-muted);
   cursor: pointer;
   margin: 0 3px;
   transition: all 0.15s ease;
@@ -1796,8 +1796,8 @@ input[type="checkbox"]:focus-visible {
   position: fixed;
   z-index: 10500;
   min-width: 210px;
-  background: rgba(13, 19, 33, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(var(--panel-rgb), 0.96);
+  border: 1px solid rgba(var(--wash), 0.14);
   border-radius: 8px;
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(16px);
@@ -1816,14 +1816,14 @@ input[type="checkbox"]:focus-visible {
 
 .proc-ctx-header {
   padding: 0.35rem 0.6rem 0.45rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(var(--wash), 0.08);
   margin-bottom: 3px;
 }
 
 .proc-ctx-title {
   font-size: 0.76rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1832,7 +1832,7 @@ input[type="checkbox"]:focus-visible {
 
 .proc-ctx-subtitle {
   font-size: 0.68rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-family: var(--font-mono, monospace);
   white-space: nowrap;
   overflow: hidden;
@@ -1848,7 +1848,7 @@ input[type="checkbox"]:focus-visible {
   padding: 0.42rem 0.65rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.12s ease;
@@ -1862,13 +1862,13 @@ input[type="checkbox"]:focus-visible {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  color: #94a3b8;
+  color: var(--text-muted);
   transition: color 0.12s ease;
 }
 
 .proc-ctx-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  background: rgba(var(--wash), 0.08);
+  color: var(--text-primary);
 }
 
 .proc-ctx-item:hover svg {
@@ -1876,21 +1876,21 @@ input[type="checkbox"]:focus-visible {
 }
 
 .proc-ctx-item.danger {
-  color: #fb7185;
+  color: var(--c-rose);
 }
 
 .proc-ctx-item.danger:hover {
   background: rgba(244, 63, 94, 0.16);
-  color: #fda4af;
+  color: var(--c-rose);
 }
 
 .proc-ctx-item.danger:hover svg {
-  color: #fb7185;
+  color: var(--c-rose);
 }
 
 .proc-ctx-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash), 0.08);
   margin: 3px 0;
 }
 
@@ -1900,8 +1900,8 @@ input[type="checkbox"]:focus-visible {
   top: calc(100% + 5px);
   right: 0;
   min-width: 190px;
-  background: rgba(13, 19, 33, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(var(--panel-rgb), 0.97);
+  border: 1px solid rgba(var(--wash), 0.14);
   border-radius: 8px;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(16px);
@@ -1918,7 +1918,7 @@ input[type="checkbox"]:focus-visible {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #94a3b8;
+  color: var(--text-muted);
   padding: 0.15rem 0.35rem;
 }
 
@@ -1927,7 +1927,7 @@ input[type="checkbox"]:focus-visible {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: #e2e8f0;
+  color: var(--text-secondary);
   padding: 0.25rem 0.35rem;
   border-radius: 4px;
   cursor: pointer;
@@ -1936,7 +1936,7 @@ input[type="checkbox"]:focus-visible {
 }
 
 .proc-col-checkbox-label:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--wash), 0.06);
 }
 
 .proc-col-checkbox-label input[type="checkbox"] {
@@ -2045,25 +2045,25 @@ input[type="checkbox"]:focus-visible {
 }
 .status-dot::after {
   content: "$"; font: 700 .9rem/1 var(--font-mono, ui-monospace, monospace);
-  color: var(--accent-cyan, var(--sm-accent, #22d3ee));
+  color: var(--accent-cyan, var(--sm-accent, var(--c-teal)));
 }
-.status-dot.disconnected::after, .status-dot:not(.connected)::after { color: var(--text-muted, var(--sm-text-3, #64748b)); }
+.status-dot.disconnected::after, .status-dot:not(.connected)::after { color: var(--text-muted, var(--sm-text-3, var(--sm-text-4))); }
 
 
 /* ---- Auth pages (login / 2FA / setup): readable fields, autofill-safe ---- */
 .login-card .form-control, .auth-card .form-control, .setup-card .form-control {
-  background-color: #0b111c;
-  border: 1px solid #2f374b;
-  color: #f3f5f9;
+  background-color: var(--bg-system);
+  border: 1px solid var(--sm-line-strong);
+  color: var(--text-primary);
   padding: .6rem .8rem;
   font-size: .9rem;
 }
-.login-card .form-control::placeholder, .auth-card .form-control::placeholder, .setup-card .form-control::placeholder { color: #7c879c; opacity: 1; }
+.login-card .form-control::placeholder, .auth-card .form-control::placeholder, .setup-card .form-control::placeholder { color: var(--text-muted); opacity: 1; }
 .login-card .form-control:focus, .auth-card .form-control:focus, .setup-card .form-control:focus {
   border-color: var(--sm-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--sm-accent) 22%, transparent);
 }
-.login-card .form-label, .auth-card .form-label, .setup-card .form-label { color: #c3cad8; }
+.login-card .form-label, .auth-card .form-label, .setup-card .form-label { color: var(--sm-accent); }
 input.form-control:-webkit-autofill,
 input.form-control:-webkit-autofill:hover,
 input.form-control:-webkit-autofill:focus {
@@ -2073,4 +2073,4 @@ input.form-control:-webkit-autofill:focus {
   box-shadow: 0 0 0 1000px #0b111c inset;
   transition: background-color 9999s ease-out 0s;
 }
-.brand-title { color: #f3f5f9; }
+.brand-title { color: var(--text-primary); }

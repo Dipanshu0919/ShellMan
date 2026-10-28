@@ -139,7 +139,7 @@ const PwaManager = {
               <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;padding:0.75rem 1rem;">
                 <div style="font-weight:600;color:var(--text-primary);margin-bottom:0.25rem;">Chrome &amp; Brave &amp; Edge:</div>
                 <div style="font-size:0.8rem;color:var(--text-muted);">
-                  Look at the right side of your browser address bar and click the <strong>Install ShellMan</strong> icon <span style="display:inline-block;padding:2px 6px;background:rgba(255,255,255,0.1);border-radius:4px;font-family:monospace;">⊕</span> or open the browser menu &rarr; <strong>"Install ShellMan..."</strong>.
+                  Look at the right side of your browser address bar and click the <strong>Install ShellMan</strong> icon <span style="display:inline-block;padding:2px 6px;background:rgba(var(--wash),0.1);border-radius:4px;font-family:monospace;">⊕</span> or open the browser menu &rarr; <strong>"Install ShellMan..."</strong>.
                 </div>
               </div>
               

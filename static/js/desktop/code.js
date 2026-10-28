@@ -161,12 +161,12 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
       minWidth: 640,
       minHeight: 400,
       contentHtml: `
-        <div class="code-workspace-app" id="capp_${codeId}" style="height:100%; display:flex; flex-direction:column; background:#141824; position:relative; overflow:hidden;">
+        <div class="code-workspace-app" id="capp_${codeId}" style="height:100%; display:flex; flex-direction:column; background:var(--bg-system); position:relative; overflow:hidden;">
           <!-- Top IDE Action Bar -->
-          <header style="height:36px; background:#0e131f; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem; flex-shrink:0;">
+          <header style="height:36px; background:var(--bg-system); border-bottom:1px solid rgba(var(--wash),0.08); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:0.6rem;">
-              <span style="font-size:0.75rem; font-weight:600; color:#cbd5e1; display:flex; align-items:center; gap:0.4rem;">
-                <svg style="width:14px;height:14px;color:#818cf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              <span style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:0.4rem;">
+                <svg style="width:14px;height:14px;color:var(--c-violet);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                 Workspace:
               </span>
               <span id="wsRootLabel_${codeId}" style="font-family:var(--font-mono); font-size:0.74rem; color:var(--sm-accent); background:color-mix(in srgb, var(--sm-accent) 10%, transparent); padding:0.15rem 0.5rem; border-radius:var(--radius-xs);">~</span>
@@ -186,14 +186,14 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           <!-- Middle Split: Activity Bar + Sidebar + Main Editor -->
           <div style="display:flex; flex:1; overflow:hidden;">
             <!-- Left Activity Bar (44px) -->
-            <div style="width:44px; background:#090d16; border-right:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; align-items:center; padding:0.5rem 0; gap:0.5rem; flex-shrink:0;">
+            <div style="width:44px; background:var(--sm-inset); border-right:1px solid rgba(var(--wash),0.08); display:flex; flex-direction:column; align-items:center; padding:0.5rem 0; gap:0.5rem; flex-shrink:0;">
               <button class="btn btn-ghost btn-xs code-act-btn active" id="actExplorer_${codeId}" title="File Explorer" style="width:34px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-xs);">
                 <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
               </button>
               <button class="btn btn-ghost btn-xs code-act-btn" id="actSearch_${codeId}" title="Search in Files" style="width:34px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-xs);">
                 <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               </button>
-              <div style="width:20px; height:1px; background:rgba(255,255,255,0.08); margin:0.2rem 0;"></div>
+              <div style="width:20px; height:1px; background:rgba(var(--wash),0.08); margin:0.2rem 0;"></div>
               <button class="btn btn-ghost btn-xs code-act-btn" id="actTerminal_${codeId}" title="Toggle Integrated Terminal" style="width:34px; height:34px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:var(--radius-xs);">
                 <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
               </button>
@@ -203,10 +203,10 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             </div>
 
             <!-- Left Sidebar (Explorer / Search) -->
-            <aside class="code-sidebar" id="sidebar_${codeId}" style="width:230px; background:#0f1420; border-right:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; flex-shrink:0;">
+            <aside class="code-sidebar" id="sidebar_${codeId}" style="width:230px; background:var(--bg-system); border-right:1px solid rgba(var(--wash),0.08); display:flex; flex-direction:column; flex-shrink:0;">
               <!-- Pane 1: File Explorer -->
               <div id="paneExplorer_${codeId}" style="display:flex; flex-direction:column; height:100%;">
-                <div class="code-sidebar-header" style="height:32px; padding:0 0.65rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">
+                <div class="code-sidebar-header" style="height:32px; padding:0 0.65rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(var(--wash),0.06); font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
                   <span>Explorer</span>
                   <div style="display:flex; align-items:center; gap:0.2rem;">
                     <button class="btn btn-ghost btn-xs" id="treeNewFile_${codeId}" title="New File" style="padding:2px 4px;"><svg style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
@@ -220,10 +220,10 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
 
               <!-- Pane 2: Search in Files -->
               <div id="paneSearch_${codeId}" style="display:none; flex-direction:column; height:100%;">
-                <div class="code-sidebar-header" style="height:32px; padding:0 0.65rem; display:flex; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">
+                <div class="code-sidebar-header" style="height:32px; padding:0 0.65rem; display:flex; align-items:center; border-bottom:1px solid rgba(var(--wash),0.06); font-size:0.68rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">
                   <span>Search in Files</span>
                 </div>
-                <div style="padding:0.6rem; display:flex; flex-direction:column; gap:0.4rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div style="padding:0.6rem; display:flex; flex-direction:column; gap:0.4rem; border-bottom:1px solid rgba(var(--wash),0.06);">
                   <div style="display:flex; gap:0.3rem;">
                     <input type="text" id="searchInp_${codeId}" placeholder="Search text..." class="form-control" style="font-size:0.75rem; padding:0.25rem 0.5rem; flex:1;">
                     <button class="btn btn-secondary btn-sm" id="searchExecBtn_${codeId}" style="padding:0 0.5rem;">Go</button>
@@ -236,32 +236,32 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             </aside>
 
             <!-- Main Editor Area -->
-            <div class="code-main-area" style="flex:1; display:flex; flex-direction:column; overflow:hidden; background:#1e1e1e;">
+            <div class="code-main-area" style="flex:1; display:flex; flex-direction:column; overflow:hidden; background:var(--vs-bg);">
               <!-- Editor Tabs Bar -->
-              <div class="code-tabs-bar" id="tabsBar_${codeId}" style="height:35px; background:#111520; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; overflow-x:auto; flex-shrink:0;">
+              <div class="code-tabs-bar" id="tabsBar_${codeId}" style="height:35px; background:var(--bg-system); border-bottom:1px solid rgba(var(--wash),0.08); display:flex; align-items:center; overflow-x:auto; flex-shrink:0;">
                 <div style="padding:0 1rem; color:var(--text-muted); font-size:0.73rem;">No file open</div>
               </div>
 
               <!-- Monaco / Fallback Container -->
               <div class="code-editor-viewport" id="editorViewport_${codeId}" style="flex:1; width:100%; height:100%; overflow:hidden; position:relative;">
                 <div id="monaco_${codeId}" style="width:100%; height:100%; overflow:hidden;"></div>
-                <textarea id="fallbackTxt_${codeId}" style="width:100%; height:100%; background:#1e1e1e; color:#f8fafc; font-family:var(--font-mono); font-size:0.88rem; border:none; padding:1rem; resize:none; outline:none; display:none;"></textarea>
-                <div id="dropOverlay_${codeId}" style="display:none; position:absolute; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(4px); border:2px dashed var(--sm-accent); z-index:100; pointer-events:none; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem; color:var(--sm-accent);">
+                <textarea id="fallbackTxt_${codeId}" style="width:100%; height:100%; background:var(--vs-bg); color:var(--text-primary); font-family:var(--font-mono); font-size:0.88rem; border:none; padding:1rem; resize:none; outline:none; display:none;"></textarea>
+                <div id="dropOverlay_${codeId}" style="display:none; position:absolute; inset:0; background:rgba(var(--panel-rgb),0.88); backdrop-filter:blur(4px); border:2px dashed var(--sm-accent); z-index:100; pointer-events:none; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem; color:var(--sm-accent);">
                   <svg style="width:44px;height:44px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  <div style="font-weight:700; font-size:1rem; color:#f8fafc;">Drop local file here to open in editor</div>
-                  <div style="font-size:0.75rem; color:#94a3b8;">Opens in editable tabs. Press Save to upload to remote workspace.</div>
+                  <div style="font-weight:700; font-size:1rem; color:var(--text-primary);">Drop local file here to open in editor</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted);">Opens in editable tabs. Press Save to upload to remote workspace.</div>
                 </div>
               </div>
 
               <!-- Vertical Resizer for Terminal Panel -->
-              <div class="code-terminal-resizer" id="termResizer_${codeId}" style="height:5px; cursor:row-resize; background:rgba(255,255,255,0.06); display:none; flex-shrink:0;" title="Drag to resize terminal"></div>
+              <div class="code-terminal-resizer" id="termResizer_${codeId}" style="height:5px; cursor:row-resize; background:rgba(var(--wash),0.06); display:none; flex-shrink:0;" title="Drag to resize terminal"></div>
 
               <!-- Collapsible Bottom Terminal Panel -->
-              <div class="code-terminal-panel" id="termPanel_${codeId}" style="height:190px; min-height:120px; display:none; flex-direction:column; background:#090d16; border-top:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); flex-shrink:0;">
-                <div class="code-term-header" style="height:28px; background:#0f1522; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; padding:0 0.65rem;">
+              <div class="code-terminal-panel" id="termPanel_${codeId}" style="height:190px; min-height:120px; display:none; flex-direction:column; background:var(--sm-inset); border-top:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); flex-shrink:0;">
+                <div class="code-term-header" style="height:28px; background:var(--bg-system); border-bottom:1px solid rgba(var(--wash),0.08); display:flex; align-items:center; justify-content:space-between; padding:0 0.65rem;">
                   <div style="display:flex; align-items:center; gap:0.4rem;">
                     <span class="status-dot connected"></span>
-                    <span style="font-family:var(--font-mono); font-size:0.7rem; color:#cbd5e1; font-weight:600;">TERMINAL (PTY)</span>
+                    <span style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-secondary); font-weight:600;">TERMINAL (PTY)</span>
                   </div>
                   <div style="display:flex; align-items:center; gap:0.3rem;">
                     <button class="btn btn-ghost btn-xs" id="termClearBtn_${codeId}" title="Clear">Clear</button>
@@ -272,9 +272,9 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
               </div>
 
               <!-- Bottom Status Bar -->
-              <footer class="code-statusbar" style="height:24px; background:#0d121c; border-top:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem; font-size:0.68rem; color:#64748b; font-family:var(--font-mono); flex-shrink:0;">
+              <footer class="code-statusbar" style="height:24px; background:var(--bg-system); border-top:1px solid rgba(var(--wash),0.06); display:flex; align-items:center; justify-content:space-between; padding:0 0.75rem; font-size:0.68rem; color:var(--sm-text-4); font-family:var(--font-mono); flex-shrink:0;">
                 <div style="display:flex; align-items:center; gap:0.6rem;">
-                  <span id="stFilePath_${codeId}" style="color:#94a3b8;">Ready</span>
+                  <span id="stFilePath_${codeId}" style="color:var(--text-muted);">Ready</span>
                   <span id="stDirty_${codeId}" style="color:var(--sm-accent); display:none;">• Modified</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:0.8rem;">
@@ -400,9 +400,10 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           editor = monaco.editor.create(monacoContainer, {
             value: '// Remote Code Workspace\n// Select a file from the explorer tree on the left to edit\n',
             language: 'plaintext',
-            theme: 'vs-dark',
+            theme: (window.ShellmanTheme ? ShellmanTheme.monacoTheme() : 'vs-dark'),
             automaticLayout: true,
             fontSize: 13,
+            fontFamily: window.ShellmanLook ? window.ShellmanLook.monoStack() : undefined,
             lineNumbers: 'on',
             scrollBeyondLastLine: false,
             wordWrap: 'on',
@@ -443,7 +444,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             const fileName = fpath.split('/').pop() || fpath;
             const isActive = fpath === activePath;
             html += `
-              <div class="code-tab ${isActive ? 'active' : ''} ${tab.dirty ? 'dirty' : ''}" data-path="${fpath}" style="height:100%; padding:0 0.75rem; display:inline-flex; align-items:center; gap:0.45rem; background:${isActive ? '#1e1e1e' : '#141926'}; border-right:1px solid rgba(255,255,255,0.06); border-top:2px solid ${isActive ? '#38bdf8' : 'transparent'}; color:${isActive ? '#ffffff' : '#94a3b8'}; font-size:0.74rem; cursor:pointer; user-select:none; white-space:nowrap;">
+              <div class="code-tab ${isActive ? 'active' : ''} ${tab.dirty ? 'dirty' : ''}" data-path="${fpath}" style="height:100%; padding:0 0.75rem; display:inline-flex; align-items:center; gap:0.45rem; background:${isActive ? '#1e1e1e' : '#141926'}; border-right:1px solid rgba(var(--wash),0.06); border-top:2px solid ${isActive ? 'var(--c-teal)' : 'transparent'}; color:${isActive ? '#ffffff' : 'var(--sm-accent)'}; font-size:0.74rem; cursor:pointer; user-select:none; white-space:nowrap;">
                 <span>${fileName}</span>
                 <span class="code-tab-dirty" style="width:6px; height:6px; border-radius:50%; background:var(--sm-accent); display:${tab.dirty ? 'inline-block' : 'none'};"></span>
                 <span class="code-tab-close" data-close-path="${fpath}" style="font-size:12px; margin-left:2px; opacity:0.6; padding:0 2px; border-radius:2px;" title="Close">×</span>
@@ -604,7 +605,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           const tabName = fpath.split('/').pop() || fpath;
 
           const menuHtml = `
-            <div class="file-context-header" style="padding:0.35rem 0.65rem; font-size:0.68rem; font-weight:700; color:var(--sm-accent); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            <div class="file-context-header" style="padding:0.35rem 0.65rem; font-size:0.68rem; font-weight:700; color:var(--sm-accent); text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid rgba(var(--wash),0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
               ${escapeHtml(tabName)}
             </div>
             <div class="file-context-item" id="tab_ctx_close">
@@ -619,7 +620,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
               <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="9" x2="15" y2="15"></line><line x1="15" y1="9" x2="9" y2="15"></line></svg>
               <span>Close All</span>
             </div>
-            <div class="file-context-separator" style="height:1px; background:rgba(255,255,255,0.06); margin:3px 0;"></div>
+            <div class="file-context-separator" style="height:1px; background:rgba(var(--wash),0.06); margin:3px 0;"></div>
             <div class="file-context-item" id="tab_ctx_save">
               <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline></svg>
               <span>Save File</span>
@@ -787,14 +788,14 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
 
           container.innerHTML = items.map(item => {
             const indent = depth * 14 + 8;
-            const arrow = item.is_dir ? `<span class="code-tree-arrow" style="width:12px; height:12px; display:inline-flex; align-items:center; justify-content:center; color:#64748b; margin-right:2px; font-size:9px;">▶</span>` : `<span style="width:14px; display:inline-block;"></span>`;
+            const arrow = item.is_dir ? `<span class="code-tree-arrow" style="width:12px; height:12px; display:inline-flex; align-items:center; justify-content:center; color:var(--sm-text-4); margin-right:2px; font-size:9px;">▶</span>` : `<span style="width:14px; display:inline-block;"></span>`;
             const icon = item.is_dir
               ? `<svg style="width:13px;height:13px;color:var(--sm-accent);flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`
-              : `<svg style="width:13px;height:13px;color:#94a3b8;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>`;
+              : `<svg style="width:13px;height:13px;color:var(--text-muted);flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>`;
 
             return `
               <div class="code-tree-node" style="user-select:none;">
-                <div class="code-tree-item" data-path="${item.path}" data-is-dir="${item.is_dir}" style="display:flex; align-items:center; gap:0.35rem; padding:0.25rem 0.5rem 0.25rem ${indent}px; font-size:0.75rem; color:#cbd5e1; cursor:pointer; border-radius:var(--radius-xs);">
+                <div class="code-tree-item" data-path="${item.path}" data-is-dir="${item.is_dir}" style="display:flex; align-items:center; gap:0.35rem; padding:0.25rem 0.5rem 0.25rem ${indent}px; font-size:0.75rem; color:var(--text-secondary); cursor:pointer; border-radius:var(--radius-xs);">
                   ${arrow}
                   ${icon}
                   <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">${item.name}</span>
@@ -857,7 +858,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             if (isDir) {
               // Directory Context Menu
               showCodeContextMenu(e.clientX, e.clientY, `
-                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(var(--wash),0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                   ${escapeHtml(itemName)}
                 </div>
                 <div class="file-context-item" id="code_ctx_new_file">
@@ -1048,7 +1049,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             } else {
               // File Context Menu
               showCodeContextMenu(e.clientX, e.clientY, `
-                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(var(--wash),0.06); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                   ${escapeHtml(itemName)}
                 </div>
                 <div class="file-context-item" id="code_ctx_open">
@@ -1268,7 +1269,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           } else {
             // Right-click on empty background of explorer tree
             showCodeContextMenu(e.clientX, e.clientY, `
-              <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <div class="file-context-header" style="padding: 0.35rem 0.65rem; font-size: 0.68rem; font-weight: 700; color: var(--sm-accent); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(var(--wash),0.06);">
                 Workspace
               </div>
               <div class="file-context-item" id="code_ctx_root_new_file">
@@ -1448,7 +1449,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
               return;
             }
             searchResults.innerHTML = list.map(item => `
-              <div class="search-result-item" data-path="${item.file}" data-line="${item.line}" style="padding:0.35rem 0.5rem; border-radius:var(--radius-xs); cursor:pointer; margin-bottom:0.3rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05);">
+              <div class="search-result-item" data-path="${item.file}" data-line="${item.line}" style="padding:0.35rem 0.5rem; border-radius:var(--radius-xs); cursor:pointer; margin-bottom:0.3rem; background:rgba(var(--wash),0.03); border:1px solid rgba(var(--wash),0.05);">
                 <div style="font-size:0.74rem; font-weight:600; color:var(--sm-accent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                   ${item.file.split('/').pop()} <span style="color:var(--text-muted); font-size:0.68rem; font-weight:normal;">:${item.line}</span>
                 </div>
@@ -1561,7 +1562,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             cursorBlink: true,
             cursorStyle: 'bar',
             fontSize: 13,
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontFamily: (window.ShellmanLook ? window.ShellmanLook.monoStack() : 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'),
             theme: activeTheme,
             scrollback: 2000
           });

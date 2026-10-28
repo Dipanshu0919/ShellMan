@@ -304,6 +304,10 @@ class DesktopAppsController {
         return this.launchNetwork(params);
       case 'nginx':
         return this.launchNginx(params);
+      case 'apache':
+      case 'apache2':
+      case 'httpd':
+        return this.launchApache(params);
       case 'sync':
       case 'rsync':
         return this.launchSync(params);
@@ -356,39 +360,39 @@ class DesktopAppsController {
     const overlay = document.createElement('div');
     overlay.className = 'desktop-modal-backdrop';
     overlay.style.cssText = `
-      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.72);
+      position: fixed; inset: 0; background: rgba(var(--shade), 0.72);
       backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
       display: flex; align-items: center; justify-content: center;
       z-index: 100000; padding: 1rem; font-family: var(--font-sans); color: var(--text-primary);
     `;
 
     overlay.innerHTML = `
-      <div style="width: 100%; max-width: 660px; height: 530px; background: var(--bg-surface, #111827); border: 1px solid var(--border-color, #1f2937); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); display: flex; flex-direction: column; overflow: hidden;">
+      <div style="width: 100%; max-width: 660px; height: 530px; background: var(--bg-surface, var(--bg-system)); border: 1px solid var(--border-color, var(--sm-line-strong)); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); display: flex; flex-direction: column; overflow: hidden;">
         <!-- Header -->
-        <div style="height: 42px; padding: 0 1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02);">
-          <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.88rem; color: #f8fafc;">
+        <div style="height: 42px; padding: 0 1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(var(--wash),0.02);">
+          <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">
             ${selectFiles
-              ? '<svg style="width: 16px; height: 16px; color: #10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>'
+              ? '<svg style="width: 16px; height: 16px; color: var(--c-ok2);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>'
               : (isLocal
                 ? '<svg style="width: 16px; height: 16px; color: var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'
                 : '<svg style="width: 16px; height: 16px; color: var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>')
             }
             <span>${dialogTitle}</span>
-            <span style="font-size: 0.68rem; padding: 0.12rem 0.45rem; border-radius: 3px; font-weight:600; background: ${isLocal ? 'color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);' : 'rgba(52,211,153,0.15); color:#34d399;'}">${isLocal ? 'Local Machine' : 'Remote Server'}</span>
-            ${fileExtensions && fileExtensions.length ? `<span style="font-size:0.66rem; padding:0.1rem 0.4rem; border-radius:3px; background:rgba(16,185,129,0.15); color:#10b981; font-family:var(--font-mono);">${fileExtensions.join(', ')}</span>` : ''}
+            <span style="font-size: 0.68rem; padding: 0.12rem 0.45rem; border-radius: 3px; font-weight:600; background: ${isLocal ? 'color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);' : 'rgba(52,211,153,0.15); color:var(--c-ok);'}">${isLocal ? 'Local Machine' : 'Remote Server'}</span>
+            ${fileExtensions && fileExtensions.length ? `<span style="font-size:0.66rem; padding:0.1rem 0.4rem; border-radius:3px; background:rgba(16,185,129,0.15); color:var(--c-ok2); font-family:var(--font-mono);">${fileExtensions.join(', ')}</span>` : ''}
           </div>
           <button class="btn btn-secondary btn-xs" id="dpCloseBtn" style="padding: 0.15rem 0.45rem;">&times;</button>
         </div>
 
         <!-- Navigation Bar -->
-        <div style="padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.25); display: flex; align-items: center; gap: 0.45rem;">
+        <div style="padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border-subtle); background: rgba(var(--shade),0.25); display: flex; align-items: center; gap: 0.45rem;">
           <button class="btn btn-secondary btn-xs" id="dpUpBtn" title="Go to Parent Folder" style="display: flex; align-items: center; gap: 3px; padding: 0.25rem 0.55rem;">
             <svg style="width: 12px; height: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"></path></svg>
             Up
           </button>
-          <div style="flex: 1; display: flex; align-items: center; background: var(--bg-canvas, #090d16); border: 1px solid var(--border-color, #1f2937); border-radius: 6px; padding: 0.15rem 0.5rem;">
-            <svg style="width: 13px; height: 13px; color: #94a3b8; margin-right: 0.4rem; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-            <input type="text" id="dpPathInput" value="${currentPath}" style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-mono); font-size: 0.78rem; color: #f8fafc;">
+          <div style="flex: 1; display: flex; align-items: center; background: var(--bg-canvas, var(--sm-inset)); border: 1px solid var(--border-color, var(--sm-line-strong)); border-radius: 6px; padding: 0.15rem 0.5rem;">
+            <svg style="width: 13px; height: 13px; color: var(--text-muted); margin-right: 0.4rem; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <input type="text" id="dpPathInput" value="${currentPath}" style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-primary);">
           </div>
           <button class="btn btn-secondary btn-xs" id="dpGoBtn" style="padding: 0.25rem 0.6rem;">Go</button>
           ${!selectFiles ? `
@@ -399,7 +403,7 @@ class DesktopAppsController {
         </div>
 
         <!-- Quick location presets -->
-        <div style="padding: 0.35rem 0.85rem; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; background: rgba(255,255,255,0.015);">
+        <div style="padding: 0.35rem 0.85rem; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap; background: rgba(var(--wash),0.015);">
           <span style="font-size: 0.68rem; color: var(--text-muted); margin-right: 0.2rem;">Places:</span>
           ${defaultPlaces.map(p => `
             <button class="btn btn-secondary btn-xs dp-preset-btn" data-path="${p}" style="font-size: 0.68rem; padding: 0.12rem 0.45rem;">${p}</button>
@@ -414,7 +418,7 @@ class DesktopAppsController {
         </div>
 
         <!-- Footer -->
-        <div style="padding: 0.65rem 1rem; border-top: 1px solid var(--border-subtle); background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
+        <div style="padding: 0.65rem 1rem; border-top: 1px solid var(--border-subtle); background: rgba(var(--shade),0.25); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;">
           <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: var(--text-muted);">
             ${selectFiles ? 'Selected File:' : 'Selected Directory:'} <strong id="dpSelectedPathText" style="color: var(--sm-accent); font-family: var(--font-mono);">${selectedPath}</strong>
           </div>
@@ -484,7 +488,7 @@ class DesktopAppsController {
         const res = await resp.json();
         if (!res.success) {
           listEl.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: #f87171; font-size: 0.8rem;">
+            <div style="text-align: center; padding: 2rem; color: var(--c-bad); font-size: 0.8rem;">
               Failed to load directory: ${res.error || 'Access denied'}
             </div>
           `;
@@ -527,7 +531,7 @@ class DesktopAppsController {
             <div class="dp-folder-row" data-path="${item.path}" data-type="dir" style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-size: 0.82rem; user-select: none;">
               <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0;">
                 <svg style="width: 16px; height: 16px; color: var(--sm-accent); flex-shrink: 0;" viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 21a3 3 0 0 0 3-3v-4.5a3 3 0 0 0-3-3h-1.5V9a3 3 0 0 0-3-3h-3.38a3 3 0 0 1-2.12-.88l-.7-.7A3 3 0 0 0 6.68 3.5H4.5A3 3 0 0 0 1.5 6.5v11.5a3 3 0 0 0 3 3h15z"/></svg>
-                <span style="font-weight: 500; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}/</span>
+                <span style="font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}/</span>
               </div>
               <span style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono);">${item.permissions || 'directory'}</span>
             </div>
@@ -541,10 +545,10 @@ class DesktopAppsController {
             <div class="dp-folder-row dp-file-row" data-path="${item.path}" data-type="file" style="display: flex; align-items: center; justify-content: space-between; padding: 0.45rem 0.75rem; border-radius: 6px; cursor: pointer; transition: background 0.15s; font-size: 0.82rem; user-select: none; border-left: 2px solid transparent;">
               <div style="display: flex; align-items: center; gap: 0.6rem; min-width: 0;">
                 ${isDb
-                  ? '<svg style="width: 16px; height: 16px; color: #10b981; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>'
-                  : '<svg style="width: 16px; height: 16px; color: #94a3b8; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>'
+                  ? '<svg style="width: 16px; height: 16px; color: var(--c-ok2); flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>'
+                  : '<svg style="width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>'
                 }
-                <span style="font-weight: 500; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}</span>
+                <span style="font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.name}</span>
               </div>
               <div style="display: flex; align-items: center; gap: 0.6rem;">
                 <span style="font-size: 0.7rem; color: var(--sm-accent); font-family: var(--font-mono);">${item.size_human || item.size || ''}</span>
@@ -591,7 +595,7 @@ class DesktopAppsController {
         });
 
       } catch (err) {
-        listEl.innerHTML = `<div style="text-align: center; padding: 2rem; color: #f87171; font-size: 0.8rem;">Network error: ${err}</div>`;
+        listEl.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--c-bad); font-size: 0.8rem;">Network error: ${err}</div>`;
       }
     };
 

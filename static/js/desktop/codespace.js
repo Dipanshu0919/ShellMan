@@ -25,24 +25,24 @@
     st.id = 'smCsCss';
     st.textContent = `
       .cs-box{width:600px;max-width:94vw;max-height:calc(100% - 1.5rem);display:flex;flex-direction:column}
-      .cs-body{padding:1rem 1.1rem;overflow:auto;display:flex;flex-direction:column;gap:1rem;font-size:.78rem;color:var(--text-secondary,#c3cad8)}
-      .cs-card{border:1px solid var(--border-color,#2f374b);border-radius:10px;padding:.8rem .9rem;background:rgba(255,255,255,.02)}
-      .cs-h{font-weight:700;font-size:.82rem;color:var(--text-primary,#f3f5f9);margin-bottom:.45rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+      .cs-body{padding:1rem 1.1rem;overflow:auto;display:flex;flex-direction:column;gap:1rem;font-size:.78rem;color:var(--text-secondary,var(--sm-accent))}
+      .cs-card{border:1px solid var(--border-color,var(--sm-line-strong));border-radius:10px;padding:.8rem .9rem;background:rgba(var(--wash),.02)}
+      .cs-h{font-weight:700;font-size:.82rem;color:var(--text-primary,var(--text-primary));margin-bottom:.45rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem}
       .cs-state{font:700 .66rem/1 var(--font-mono,monospace);padding:.25rem .5rem;border-radius:999px;border:1px solid currentColor;letter-spacing:.05em}
-      .cs-on{color:#34d399}.cs-off{color:#94a3b8}.cs-mid{color:#fbbf24}.cs-bad{color:#ff5a67}
-      .cs-bar{height:10px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;margin:.45rem 0}
+      .cs-on{color:var(--c-ok)}.cs-off{color:var(--text-muted)}.cs-mid{color:var(--c-warn)}.cs-bad{color:var(--c-bad)}
+      .cs-bar{height:10px;border-radius:6px;background:rgba(var(--wash),.08);overflow:hidden;margin:.45rem 0}
       .cs-bar>i{display:block;height:100%;border-radius:6px;background:#34d399;transition:width .4s}
       .cs-bar.warn>i{background:#fbbf24}.cs-bar.full>i{background:#ff5a67}
-      .cs-big{font-size:1.25rem;font-weight:700;color:var(--text-primary,#f3f5f9)}
+      .cs-big{font-size:1.25rem;font-weight:700;color:var(--text-primary,var(--text-primary))}
       .cs-row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
       .cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.55rem;margin:.5rem 0}
-      .cs-grid label{display:block;font-size:.68rem;color:var(--text-muted,#939db2);margin-bottom:.2rem}
+      .cs-grid label{display:block;font-size:.68rem;color:var(--text-muted,var(--text-muted));margin-bottom:.2rem}
       .cs-grid .form-control{font-size:.78rem;padding:.35rem .5rem;min-height:30px;width:100%}
       .cs-days{display:flex;align-items:flex-end;gap:2px;height:54px;margin-top:.4rem}
       .cs-days i{flex:1;min-width:3px;background:var(--sm-accent,#38bdf8);border-radius:2px 2px 0 0;opacity:.85}
-      .cs-note{font-size:.7rem;color:var(--text-muted,#939db2);line-height:1.4}
-      .cs-err{color:#ff8a93;font-size:.74rem;min-height:1em}
-      .cs-chip{position:fixed;bottom:18px;left:62px;z-index:9000;height:34px;padding:0 .7rem;border-radius:10px;border:1px solid var(--border-color,#2f374b);background:rgba(15,20,32,.92);color:var(--text-primary,#f3f5f9);font:600 .72rem/1 var(--font-mono,monospace);display:none;align-items:center;gap:.45rem;cursor:pointer}
+      .cs-note{font-size:.7rem;color:var(--text-muted,var(--text-muted));line-height:1.4}
+      .cs-err{color:var(--c-bad);font-size:.74rem;min-height:1em}
+      .cs-chip{position:fixed;bottom:18px;left:62px;z-index:9000;height:34px;padding:0 .7rem;border-radius:10px;border:1px solid var(--border-color,var(--sm-line-strong));background:rgba(var(--panel-rgb),.92);color:var(--text-primary,var(--text-primary));font:600 .72rem/1 var(--font-mono,monospace);display:none;align-items:center;gap:.45rem;cursor:pointer}
       .cs-chip:hover{border-color:var(--sm-accent,#38bdf8)}
       .cs-chip .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
       .cs-chip.on .dot{background:#34d399}.cs-chip.warn .dot{background:#fbbf24}.cs-chip.full .dot{background:#ff5a67}
@@ -64,7 +64,7 @@
       back.className = 'file-modal-backdrop';
       back.innerHTML = `<div class="file-modal-box cs-box">
         <div class="file-modal-header" style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:700;font-size:.88rem;color:#f8fafc">GitHub Codespace: time &amp; power</span>
+          <span style="font-weight:700;font-size:.88rem;color:var(--text-primary)">GitHub Codespace: time &amp; power</span>
           <button class="win-btn win-close" data-x>×</button></div>
         <div class="cs-body" data-body><div class="cs-note">Loading…</div></div></div>`;
       document.body.appendChild(back);
@@ -101,7 +101,7 @@
             <button class="btn btn-secondary btn-xs" data-ext="1">+1 hour</button>
             <button class="btn btn-secondary btn-xs" data-ext="2">+2 hours</button>
             <button class="btn btn-ghost btn-xs" data-edit>Edit budget</button>
-            <button class="btn btn-ghost btn-xs" data-del style="color:#ff8a93">Remove</button></div>`;
+            <button class="btn btn-ghost btn-xs" data-del style="color:var(--c-bad)">Remove</button></div>`;
       } else {
         budget = `<div class="cs-note">No time budget yet. ShellMan still counts running time (${hrs(q.month_used_minutes || 0)} h this month). Set a budget to see the time left and to stop the Codespace automatically.</div>
           <div class="cs-row" style="margin-top:.5rem"><button class="btn btn-primary btn-xs" data-edit>Set time budget</button></div>`;

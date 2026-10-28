@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+  <script>(function(){try{var t=localStorage.getItem('shellman_theme')||'dark';if(t==='system')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';if(t!=='light')t='dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ selected_server.name if selected_server else 'ShellMan' }} - Remote Workspace</title>
@@ -10,6 +11,8 @@
   <link rel="stylesheet" href="{{ static_v('css/style.css') }}">
   <link rel="stylesheet" href="{{ static_v('css/workspace.css') }}">
   <link rel="stylesheet" href="{{ static_v('vendor/xterm/xterm.css') }}">
+  <link rel="stylesheet" href="{{ static_v('css/light.css') }}">
+  <script src="{{ static_v('js/theme.js') }}"></script>
   <!-- Load XTerm.js first so window.Terminal and window.FitAddon are globally available -->
   <script src="{{ static_v('vendor/xterm/xterm.js') }}"></script>
   <script src="{{ static_v('vendor/xterm/xterm-addon-fit.js') }}"></script>
@@ -23,7 +26,7 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      background-color: #1e1e1e;
+      background-color: var(--vs-bg);
     }
   </style>
 </head>
@@ -46,7 +49,7 @@
       <div class="ws-folder-badge" onclick="promptChangeFolder()" title="Click to open another remote folder">
         <svg style="width:14px;height:14px;color:#007acc;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
         <span id="wsCurrentPathDisplay">{{ workspace_path }}</span>
-        <svg style="width:12px;height:12px;color:#858585;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        <svg style="width:12px;height:12px;color:var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
       </div>
 
       <button class="btn btn-ghost btn-sm" onclick="showQuickOpen()" title="Quick Open File (Ctrl+P)" style="font-size:0.75rem;">
@@ -104,7 +107,7 @@
         <input type="file" id="wsUploadFileInput" multiple style="display:none;" onchange="handleWsUploadFiles(this)">
 
         <div class="tree-container" id="fileTreeContainer">
-          <div style="padding: 1rem; color: #858585; font-size: 0.8rem;">Loading tree...</div>
+          <div style="padding: 1rem; color: var(--text-muted); font-size: 0.8rem;">Loading tree...</div>
         </div>
       </div>
 
@@ -113,13 +116,13 @@
         <div class="sidebar-title-bar">
           <span>Search in Files</span>
         </div>
-        <div style="padding: 0.75rem; border-bottom: 1px solid #2d2d2d;">
+        <div style="padding: 0.75rem; border-bottom: 1px solid var(--sm-line-strong);">
           <input type="text" id="codeSearchQuery" placeholder="Search text..." class="form-control" style="font-size:0.8rem; margin-bottom: 0.4rem;" onkeydown="if(event.key==='Enter') executeCodeSearch()">
           <input type="text" id="codeSearchPattern" placeholder="files to include (e.g. *.py)" class="form-control" style="font-size:0.75rem; margin-bottom: 0.5rem;" onkeydown="if(event.key==='Enter') executeCodeSearch()">
           <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="executeCodeSearch()">Find</button>
         </div>
         <div class="tree-container" id="searchResultsContainer" style="padding: 0.5rem;">
-          <div style="color: #858585; font-size: 0.78rem; text-align: center; margin-top: 1rem;">Enter query to search across remote files.</div>
+          <div style="color: var(--text-muted); font-size: 0.78rem; text-align: center; margin-top: 1rem;">Enter query to search across remote files.</div>
         </div>
       </div>
     </div>
@@ -134,9 +137,9 @@
 
       <!-- Editor Body (Monaco) -->
       <div class="monaco-mount-area" id="editorContainer">
-        <div id="noFilePlaceholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b;">
+        <div id="noFilePlaceholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--sm-text-4);">
           <svg style="width:48px;height:48px;margin-bottom:0.75rem;opacity:0.5;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-          <p style="font-size: 0.95rem;">Select a file from the explorer or press <kbd style="background:#2d2d2d;padding:2px 5px;border-radius:3px;">Ctrl+P</kbd> to open</p>
+          <p style="font-size: 0.95rem;">Select a file from the explorer or press <kbd style="background:var(--vs-side);padding:2px 5px;border-radius:3px;">Ctrl+P</kbd> to open</p>
         </div>
         <div id="monacoInstance" style="width:100%;height:100%;display:none;"></div>
       </div>
@@ -149,7 +152,7 @@
         <div class="ws-terminal-header">
           <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span>Terminal</span>
-            <span style="font-size: 0.7rem; color: #858585; font-family: var(--font-mono);" id="termCwdText">{{ workspace_path }}</span>
+            <span style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono);" id="termCwdText">{{ workspace_path }}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 0.35rem;">
             <button class="btn btn-ghost btn-sm" style="padding: 2px 6px; font-size: 0.7rem;" onclick="reconnectWsTerminal()" title="Restart Session">↺</button>
@@ -191,15 +194,15 @@
 </div>
 
 <!-- Upload Progress Toast in Workspace -->
-<div id="wsUploadToast" style="display:none; position: fixed; bottom: 35px; right: 24px; z-index: 1000; background: #252526; border: 1px solid #3c3c3c; box-shadow: 0 4px 16px rgba(0,0,0,0.6); border-radius: 6px; padding: 0.75rem 1rem; width: 340px; color: #cccccc; font-size: 0.82rem;">
+<div id="wsUploadToast" style="display:none; position: fixed; bottom: 35px; right: 24px; z-index: 1000; background: var(--vs-side); border: 1px solid var(--sm-line-strong); box-shadow: 0 4px 16px rgba(0,0,0,0.6); border-radius: 6px; padding: 0.75rem 1rem; width: 340px; color: var(--text-secondary); font-size: 0.82rem;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
     <span id="wsUploadToastTitle" style="font-weight: 600; color: #ffffff;">Uploading...</span>
     <span id="wsUploadToastPercent" style="font-weight: 600; color: var(--sm-accent);">0%</span>
   </div>
-  <div style="height: 5px; background: #333333; border-radius: 3px; overflow: hidden; margin-bottom: 0.4rem;">
+  <div style="height: 5px; background: var(--vs-bar); border-radius: 3px; overflow: hidden; margin-bottom: 0.4rem;">
     <div id="wsUploadToastBar" style="height: 100%; width: 0%; background: #007acc; transition: width 0.15s ease;"></div>
   </div>
-  <div id="wsUploadToastStatus" style="font-size: 0.74rem; color: #94a3b8; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Preparing upload...</div>
+  <div id="wsUploadToastStatus" style="font-size: 0.74rem; color: var(--text-muted); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Preparing upload...</div>
 </div>
 
 <!-- Quick Open Modal (Ctrl+P) -->
@@ -228,7 +231,7 @@
   function initMonaco() {
     require(['vs/editor/editor.main'], function () {
       monacoEditor = monaco.editor.create(document.getElementById('monacoInstance'), {
-        theme: 'vs-dark',
+        theme: (window.ShellmanTheme ? ShellmanTheme.monacoTheme() : 'vs-dark'),
         automaticLayout: true,
         fontSize: 14,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
@@ -422,7 +425,7 @@
 
       const items = res.data.items;
       if (!items || items.length === 0) {
-        container.innerHTML = `<div style="padding:0.3rem 1rem;color:#858585;font-size:0.75rem;">(empty)</div>`;
+        container.innerHTML = `<div style="padding:0.3rem 1rem;color:var(--text-muted);font-size:0.75rem;">(empty)</div>`;
         return;
       }
 
@@ -443,7 +446,7 @@
           return `
             <div class="tree-node" onclick="openFileInWorkspace('${item.path}')" oncontextmenu="showContextMenu(event, '${item.path}', false)" data-path="${item.path}">
               <span class="tree-arrow empty"></span>
-              <svg style="width:14px;height:14px;color:#cccccc;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <svg style="width:14px;height:14px;color:var(--text-secondary);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
               <span>${item.name}</span>
             </div>
           `;
@@ -466,7 +469,7 @@
       childrenDiv.classList.add('open');
       arrow.classList.add('expanded');
       if (childrenDiv.children.length === 0) {
-        childrenDiv.innerHTML = '<div style="padding:0.2rem 0.5rem;font-size:0.75rem;color:#858585;">Loading...</div>';
+        childrenDiv.innerHTML = '<div style="padding:0.2rem 0.5rem;font-size:0.75rem;color:var(--text-muted);">Loading...</div>';
         loadTreeDirectory(path, childrenDiv);
       }
     }
@@ -474,7 +477,7 @@
 
   function refreshWorkspaceTree() {
     const container = document.getElementById('fileTreeContainer');
-    container.innerHTML = '<div style="padding: 1rem; color: #858585; font-size: 0.8rem;">Refreshing tree...</div>';
+    container.innerHTML = '<div style="padding: 1rem; color: var(--text-muted); font-size: 0.8rem;">Refreshing tree...</div>';
     loadTreeDirectory(currentWorkspacePath, container);
   }
 
@@ -655,19 +658,19 @@
     const container = document.getElementById('searchResultsContainer');
     if (!q) return;
 
-    container.innerHTML = '<div style="color: #858585; font-size: 0.78rem; text-align: center;">Searching...</div>';
+    container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.78rem; text-align: center;">Searching...</div>';
     try {
       const resp = await fetch(`/api/servers/${serverId}/workspace/search-code?path=${encodeURIComponent(currentWorkspacePath)}&q=${encodeURIComponent(q)}&pattern=${encodeURIComponent(pattern)}`);
       const res = await resp.json();
       if (!res.success || res.results.length === 0) {
-        container.innerHTML = '<div style="color: #858585; font-size: 0.78rem; text-align: center;">No results found.</div>';
+        container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.78rem; text-align: center;">No results found.</div>';
         return;
       }
 
       container.innerHTML = res.results.map(r => `
-        <div style="padding: 0.35rem 0.5rem; cursor: pointer; border-bottom: 1px solid #2d2d2d;" onclick="openFileInWorkspace('${r.path}')">
-          <div style="font-weight: 500; font-size: 0.8rem; color: var(--sm-accent);">${r.path.split('/').pop()} <span style="font-size:0.7rem;color:#858585;">Line ${r.line}</span></div>
-          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #cccccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${r.text}</div>
+        <div style="padding: 0.35rem 0.5rem; cursor: pointer; border-bottom: 1px solid var(--sm-line-strong);" onclick="openFileInWorkspace('${r.path}')">
+          <div style="font-weight: 500; font-size: 0.8rem; color: var(--sm-accent);">${r.path.split('/').pop()} <span style="font-size:0.7rem;color:var(--text-muted);">Line ${r.line}</span></div>
+          <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${r.text}</div>
         </div>
       `).join('');
     } catch (e) {
@@ -706,7 +709,7 @@
     list.innerHTML = items.slice(0, 30).map(item => `
       <div class="quick-open-item" onclick="openFileInWorkspace('${item.path}'); closeQuickOpen();">
         <span style="font-weight: 500;">${item.name}</span>
-        <span style="font-family: var(--font-mono); font-size: 0.72rem; color: #858585;">${item.path}</span>
+        <span style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">${item.path}</span>
       </div>
     `).join('');
   }

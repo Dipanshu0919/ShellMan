@@ -1,0 +1,292 @@
+/* ==========================================================================
+   SHELLMAN: THEME TOKENS (light.css)
+   Load last. Dark is the default palette; :root[data-theme="light"] swaps every token.
+   The shell, windows and apps read these variables, so a theme change is one attribute on <html>.
+   ========================================================================== */
+
+/* ---- tokens that only exist so hard-coded colors could become variables (dark values = the old look) ---- */
+:root {
+  --wash: 255, 255, 255;           /* "white at some opacity" used for hovers, dividers, soft fills */
+  --shade: 0, 0, 0;                /* "black at some opacity" used for inset wells and code areas */
+  --sm-text-4: #64748b;
+  --sm-inset: #070b12;
+  --c-ok: #34d399;    --c-ok2: #10b981;
+  --c-warn: #fbbf24;
+  --c-bad: #f87171;
+  --c-rose: #fb7185;
+  --c-violet: #a78bfa;
+  --c-teal: #2dd4bf;
+  --vs-bg: #1e1e1e; --vs-side: #252526; --vs-bar: #333333; --vs-hover: #37373d; --vs-sel: #094771;
+  --sm-wall-grad: linear-gradient(180deg, rgba(8, 12, 20, 0.42) 0%, rgba(6, 9, 15, 0.65) 100%);
+  --sm-vignette: rgba(4, 6, 11, 0.5);
+  --sm-sbar: #2a3144; --sm-sbar-hover: #3a4460;
+  --panel-rgb: 15, 23, 42;         /* translucent dark panels */
+  --inset-rgb: 9, 13, 22;          /* translucent dark wells */
+  color-scheme: dark;
+}
+
+/* ---- light palette ---- */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --sm-canvas:  #eef1f6;
+  --sm-base:    #f5f7fa;
+  --sm-surface: #ffffff;
+  --sm-raised:  #f0f3f7;
+  --sm-hover:   #eaeef4;
+  --sm-press:   #dfe5ee;
+
+  --sm-line:        #e3e8ef;
+  --sm-line-strong: #d1d8e2;
+
+  --sm-text:   #0f172a;
+  --sm-text-2: #334155;
+  --sm-text-3: #5b667a;
+  --sm-text-4: #7a8599;
+  --text-dim:  #94a3b8;
+
+  --sm-ok: #059669;  --sm-warn: #b45309;  --sm-bad: #dc2626;  --sm-violet: #6d28d9;  --sm-signal: #e11d2f;
+  --c-ok: #047857;  --c-ok2: #059669;
+  --c-warn: #b45309;
+  --c-bad: #dc2626;
+  --c-rose: #be123c;
+  --c-violet: #6d28d9;
+  --c-teal: #0f766e;
+
+  --sm-accent: #0284c7; --sm-accent-ink: #ffffff; --sm-accent-soft: rgba(2, 132, 199, .12); --sm-accent-line: rgba(2, 132, 199, .36);
+  --wash: 15, 23, 42;
+  --panel-rgb: 255, 255, 255;
+  --inset-rgb: 238, 241, 246;
+  --shade: 148, 163, 184;
+  --sm-inset: #f1f4f8;
+
+  --vs-bg: #ffffff; --vs-side: #f3f3f3; --vs-bar: #e5e7eb; --vs-hover: #e8e8e8; --vs-sel: #cfe3f6;
+
+  --sm-shadow-win:  0 1px 2px rgba(15, 23, 42, .06), 0 14px 36px -14px rgba(15, 23, 42, .22);
+  --sm-shadow-pop:  0 1px 3px rgba(15, 23, 42, .08), 0 12px 28px -12px rgba(15, 23, 42, .26);
+  --sm-shadow-card: 0 1px 2px rgba(15, 23, 42, .05), 0 6px 16px -10px rgba(15, 23, 42, .16);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, .12);
+  --sm-scrim: #0f172a66;
+
+  --sm-sbar: #b9c2d2; --sm-sbar-hover: #98a4ba;
+
+  /* legacy names (pages that only load style.css use these) */
+  --bg-canvas: var(--sm-canvas);  --bg-system: var(--sm-base);  --bg-surface: var(--sm-surface);
+  --bg-surface-elevated: var(--sm-raised);  --bg-surface-active: var(--sm-press);  --bg-surface-hover: var(--sm-hover);
+  --bg-primary: var(--sm-canvas);  --bg-secondary: var(--sm-surface);  --bg-tertiary: var(--sm-raised);  --bg-card: var(--sm-surface);
+  --border-subtle: var(--sm-line);  --border-default: var(--sm-line-strong);  --border-color: var(--sm-line-strong);
+  --text-primary: var(--sm-text);  --text-secondary: var(--sm-text-2);  --text-muted: var(--sm-text-3);
+  --accent-emerald: var(--sm-ok);  --accent-amber: var(--sm-warn);  --accent-rose: var(--sm-bad);  --accent-purple: var(--sm-violet);
+}
+
+/* ---- things that were drawn with fixed colors ---- */
+:root[data-theme="light"] * { scrollbar-color: var(--sm-sbar) transparent; }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--sm-sbar); background-clip: content-box; }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: var(--sm-sbar-hover); background-clip: content-box; }
+:root[data-theme="light"] ::selection { background: var(--sm-accent-line); color: var(--sm-text); }
+:root[data-theme="light"] select:hover { border-color: var(--sm-text-4); }
+
+/* calm light mode: no neon glows, soft neutral shadows */
+:root[data-theme="light"] .widget-progress-fill,
+:root[data-theme="light"] .dock-active-pill,
+:root[data-theme="light"] .dock-item .running-dot,
+:root[data-theme="light"] .dock-item.active .running-dot { box-shadow: none !important; }
+:root[data-theme="light"] .status-dot.connected, :root[data-theme="light"] .status-dot.disconnected { box-shadow: none !important; background: none !important; }
+:root[data-theme="light"] .desktop-icon:hover .desktop-icon-tile,
+:root[data-theme="light"] .dock-item:hover .dock-tile,
+:root[data-theme="light"] .dock-toggle-item:hover .dock-toggle-tile,
+:root[data-theme="light"] .dock-peek-trigger:hover { box-shadow: 0 10px 18px -10px rgba(15, 23, 42, .4) !important; }
+:root[data-theme="light"] .alt-tab-card.selected { box-shadow: 0 0 0 2px var(--sm-accent-line) !important; }
+:root[data-theme="light"] .metric-sparkline-svg { background: rgba(var(--shade), .16); border-color: var(--sm-line); }
+
+
+/* ==========================================================================
+   LIGHT: FLAT, QUIET SURFACES  (white panels, hairline borders, soft shadows, no tinted rings or glass)
+   ========================================================================== */
+:root[data-theme="light"] .desktop-window { border-color: var(--sm-line-strong); box-shadow: var(--sm-shadow-card); }
+:root[data-theme="light"] .desktop-window.active { border-color: #bdc6d4; box-shadow: 0 2px 4px rgba(15, 23, 42, .07), 0 24px 52px -18px rgba(15, 23, 42, .30); }
+:root[data-theme="light"] .desktop-window.maximized { box-shadow: none; }
+:root[data-theme="light"] .window-titlebar,
+:root[data-theme="light"] .desktop-window.active .window-titlebar { background: #fff; border-bottom-color: var(--sm-line); }
+:root[data-theme="light"] .window-controls { background: transparent; border-color: transparent; }
+:root[data-theme="light"] .win-btn:hover { background: var(--sm-hover); }
+:root[data-theme="light"] .window-body { background: var(--sm-base); }
+
+:root[data-theme="light"] .desktop-dock { border-color: var(--sm-line); box-shadow: var(--sm-shadow-pop); }
+:root[data-theme="light"] .dock-tile { box-shadow: 0 3px 6px -3px rgba(15, 23, 42, .35); }
+:root[data-theme="light"] .desktop-icon-tile { box-shadow: 0 3px 8px -4px rgba(15, 23, 42, .35); }
+:root[data-theme="light"] .widget-card, :root[data-theme="light"] .desktop-widgets-panel > * { box-shadow: var(--sm-shadow-card); border-color: var(--sm-line); }
+
+/* controls: white fields with hairlines, flat buttons */
+:root[data-theme="light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] select, :root[data-theme="light"] select.form-control,
+:root[data-theme="light"] .form-control { background-color: #fff; border-color: var(--sm-line-strong); color: var(--sm-text); box-shadow: none; }
+:root[data-theme="light"] .btn, :root[data-theme="light"] .btn-secondary, :root[data-theme="light"] .btn-ghost { box-shadow: none; }
+:root[data-theme="light"] .btn-secondary { background: #fff; border-color: var(--sm-line-strong); color: var(--sm-text); }
+:root[data-theme="light"] .btn-secondary:hover { background: var(--sm-hover); }
+:root[data-theme="light"] .btn-primary, :root[data-theme="light"] .files-toolbar .btn-primary {
+  background: var(--sm-accent) !important; border-color: var(--sm-accent) !important; color: #fff !important; box-shadow: none !important; }
+:root[data-theme="light"] .btn-primary:hover { filter: brightness(.94); }
+:root[data-theme="light"] table thead th, :root[data-theme="light"] thead { background: var(--sm-raised); }
+:root[data-theme="light"] .window-body * { text-shadow: none; }
+:root[data-theme="light"] .window-body [class*="card"] { box-shadow: none; }
+
+/* desktop: label legibility, light wallpaper, notification button */
+
+/* ==========================================================================
+   THE SWITCH  (flat pill, sliding disc, line icons)
+   ========================================================================== */
+.sm-tt {
+  --w: 58px; --h: 30px; --k: 22px;
+  position: relative; display: inline-block; width: var(--w); height: var(--h); padding: 0; margin: 0;
+  border: 0; background: none; cursor: pointer; flex: none; outline: none;
+  perspective: 420px; -webkit-tap-highlight-color: transparent;
+  transform-style: preserve-3d;
+}
+.sm-tt-tilt { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .25s ease-out; will-change: transform; }
+.sm-tt:focus-visible .sm-tt-track { outline: 2px solid var(--sm-accent); outline-offset: 3px; }
+
+.sm-tt-track {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: #1c2536; border: 1px solid rgba(255,255,255,.14);
+  transition: background .35s ease, border-color .35s ease;
+}
+.sm-tt-ic { position: absolute; top: 50%; width: 13px; height: 13px; margin-top: -6.5px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; color: #7d8aa3; transition: color .35s ease; }
+.sm-tt-ic-sun  { right: 8px; }
+.sm-tt-ic-moon { left: 8px; }
+
+.sm-tt-knob {
+  position: absolute; top: calc((var(--h) - var(--k)) / 2); left: calc((var(--h) - var(--k)) / 2);
+  width: var(--k); height: var(--k); transform-style: preserve-3d;
+  transition: transform .7s cubic-bezier(.34,1.3,.5,1);
+}
+.sm-tt-face {
+  position: absolute; inset: 0; border-radius: 50%; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.sm-tt-face svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sm-tt-sun  { background: #ffffff; color: #b45309; }
+.sm-tt-moon { transform: rotateY(180deg); background: #e8edf6; color: #1c2536; }
+
+/* dark: disc on the left showing the moon; light: disc on the right showing the sun */
+.sm-tt[data-mode="dark"]  .sm-tt-knob { transform: translateX(0) rotateY(180deg); }
+.sm-tt[data-mode="light"] .sm-tt-knob { transform: translateX(calc(var(--w) - var(--k) - (var(--h) - var(--k)))) rotateY(360deg); }
+.sm-tt[data-mode="dark"]  .sm-tt-ic-moon { opacity: 0; }
+.sm-tt[data-mode="light"] .sm-tt-ic-sun  { opacity: 0; }
+.sm-tt[data-mode="light"] .sm-tt-track { background: #e2e8f0; border-color: #cbd5e1; }
+.sm-tt[data-mode="light"] .sm-tt-ic { color: #64748b; }
+.sm-tt-sun { border: 1px solid #d3dae6; }
+.sm-tt:active .sm-tt-knob { transition-duration: .3s; }
+
+/* floating copy, used on pages without a desktop (sign-in, setup) */
+.sm-tt-float { position: fixed; top: 16px; right: 16px; z-index: 9999; }
+
+/* ==========================================================================
+   THE CHANGE  (circular reveal from the switch + icons flipping in 3D)
+   ========================================================================== */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
+html.sm-flip .dock-item, html.sm-flip .desktop-icon, html.sm-flip .widget-card {
+  animation: smFlip3d .95s cubic-bezier(.3,1.25,.5,1) both;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+html.sm-flip .desktop-dock-wrapper, html.sm-flip #desktopIcons, html.sm-flip #desktopWidgetsPanel { perspective: 900px; }
+@keyframes smFlip3d {
+  0%   { transform: perspective(600px) rotateY(0deg) scale(1); }
+  40%  { transform: perspective(600px) rotateY(200deg) scale(1.16); }
+  100% { transform: perspective(600px) rotateY(360deg) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.sm-flip .dock-item, html.sm-flip .desktop-icon, html.sm-flip .widget-card { animation: none; }
+  .sm-tt-knob, .sm-tt-track, .sm-tt-track::before, .sm-tt-stars, .sm-tt-clouds { transition-duration: .01s; }
+  .sm-tt-stars i { animation: none; }
+}
+
+/* ==========================================================================
+   LIGHT: FORM CONTROLS  (checkbox, radio, range, date pickers, file button)
+   ========================================================================== */
+:root[data-theme="light"] input[type="checkbox"],
+:root[data-theme="light"] input[type="radio"] {
+  background-color: #fff; border: 1.5px solid #9aa6b8; box-shadow: none;
+}
+:root[data-theme="light"] input[type="checkbox"]:hover,
+:root[data-theme="light"] input[type="radio"]:hover { border-color: var(--sm-accent); background-color: #fff; box-shadow: none; }
+:root[data-theme="light"] input[type="checkbox"]:checked,
+:root[data-theme="light"] input[type="checkbox"]:indeterminate,
+:root[data-theme="light"] input[type="radio"]:checked { background-color: var(--sm-accent); border-color: var(--sm-accent); }
+:root[data-theme="light"] input[type="checkbox"]:checked::after { border-color: #fff; }
+:root[data-theme="light"] input[type="radio"]::before { background: #fff; }
+:root[data-theme="light"] input[type="checkbox"]:focus-visible,
+:root[data-theme="light"] input[type="radio"]:focus-visible { box-shadow: 0 0 0 3px var(--sm-accent-soft); }
+:root[data-theme="light"] input[type="checkbox"]:disabled,
+:root[data-theme="light"] input[type="radio"]:disabled { background-color: var(--sm-raised); border-color: var(--sm-line-strong); }
+
+:root[data-theme="light"] input[type="range"] { background: var(--sm-line-strong); }
+:root[data-theme="light"] input[type="range"]::-webkit-slider-thumb,
+:root[data-theme="light"] input[type="range"]::-moz-range-thumb { border-color: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, .35); }
+:root[data-theme="light"] input[type="date"],
+:root[data-theme="light"] input[type="datetime-local"],
+:root[data-theme="light"] input[type="time"],
+:root[data-theme="light"] input[type="number"] { background: #fff; }
+:root[data-theme="light"] input[type="date"]::-webkit-calendar-picker-indicator,
+:root[data-theme="light"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+:root[data-theme="light"] input[type="time"]::-webkit-calendar-picker-indicator { filter: none; opacity: .6; }
+:root[data-theme="light"] input[type="file"]::file-selector-button { background: #fff; border-color: var(--sm-line-strong); color: var(--sm-text); }
+:root[data-theme="light"] input[type="file"]::file-selector-button:hover { background: var(--sm-hover); }
+:root[data-theme="light"] select option, :root[data-theme="light"] select optgroup { background: #fff; color: var(--sm-text); }
+:root[data-theme="light"] ::placeholder { color: var(--sm-text-4); }
+
+/* dialog backdrops: a light scrim, not a gray fog */
+:root[data-theme="light"] .desktop-modal-backdrop,
+:root[data-theme="light"] [style*="inset"][style*="rgba(var(--shade)"] { background: rgba(15, 23, 42, .36) !important; }
+
+/* The wallpaper is the same in both themes, so everything that sits directly on it keeps the dark look:
+   desktop icon labels, the logo block and the node switcher. */
+:root[data-theme="light"] .desktop-icons-container,
+:root[data-theme="light"] .desktop-logo-mark,
+:root[data-theme="light"] .desktop-title-mark,
+:root[data-theme="light"] .desktop-sub-mark,
+:root[data-theme="light"] .desktop-server-switcher-pill {
+  --sm-canvas: #090b10; --sm-base: #0e1117; --sm-surface: #141821; --sm-raised: #1a1f2b; --sm-hover: #212837; --sm-press: #29314a;
+  --sm-line: #222838; --sm-line-strong: #2f374b;
+  --sm-text: #f3f5f9; --sm-text-2: #c3cad8; --sm-text-3: #939db2; --sm-text-4: #64748b;
+  --text-primary: #f3f5f9; --text-secondary: #c3cad8; --text-muted: #939db2;
+  --bg-surface: #141821; --bg-system: #0e1117; --bg-canvas: #090b10;
+  --border-subtle: #222838; --border-default: #2f374b; --border-color: #2f374b;
+  --wash: 255, 255, 255; --shade: 0, 0, 0; --panel-rgb: 15, 23, 42;
+  --sm-shadow-card: 0 10px 28px -14px #000;
+  color: var(--sm-text);
+}
+
+/* ==========================================================================
+   LIGHT: NO SHADOWS, NO GLOWS  (hairline borders only)
+   ========================================================================== */
+:root[data-theme="light"] {
+  --sm-shadow-win: none; --sm-shadow-pop: none; --sm-shadow-card: none; --shadow-sm: none;
+}
+:root[data-theme="light"] .desktop-window,
+:root[data-theme="light"] .desktop-window.active,
+:root[data-theme="light"] .desktop-dock,
+:root[data-theme="light"] .dock-tile,
+:root[data-theme="light"] .desktop-icon-tile,
+:root[data-theme="light"] .dock-toggle-tile,
+:root[data-theme="light"] .widget-card,
+:root[data-theme="light"] .desktop-widgets-panel > *,
+:root[data-theme="light"] .desktop-icon:hover .desktop-icon-tile,
+:root[data-theme="light"] .dock-item:hover .dock-tile,
+:root[data-theme="light"] .dock-toggle-item:hover .dock-toggle-tile,
+:root[data-theme="light"] .dock-peek-trigger:hover { box-shadow: none !important; }
+:root[data-theme="light"] .desktop-window.active { border-color: #bdc6d4; }
+/* switch in light: flat sun, no halo, no track shadow, no cloud shadow */
+
+/* wallpaper edges: same dark vignette as dark mode (no pale edge), no clock text glow */
+:root[data-theme="light"] .desktop-environment::before {
+  background: radial-gradient(circle at 50% 50%, transparent 60%, rgba(9, 13, 22, 0.5) 100%);
+}
+:root[data-theme="light"] .widget-time-main,
+:root[data-theme="light"] .widget-card * { text-shadow: none !important; }
+:root[data-theme="light"] .widget-card { backdrop-filter: none; -webkit-backdrop-filter: none; transform: none; }
+:root[data-theme="light"] .widget-card:hover { transform: none; }

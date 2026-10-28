@@ -13,7 +13,17 @@ window.applyAccentColor = function(accentKey) {
     rose: { primary: '#fb7185', soft: 'rgba(251,113,133,0.16)', line: 'rgba(251,113,133,0.4)', ink: '#20040a' },
     amber: { primary: '#fbbf24', soft: 'rgba(251,191,36,0.16)', line: 'rgba(251,191,36,0.4)', ink: '#1f1402' }
   };
-  const theme = accents[acc] || accents.cyan;
+  // light mode needs deeper accents so text and buttons keep their contrast on white
+  const accentsLight = {
+    cyan: { primary: '#0284c7', soft: 'rgba(2,132,199,0.12)', line: 'rgba(2,132,199,0.36)', ink: '#ffffff' },
+    violet: { primary: '#7c3aed', soft: 'rgba(124,58,237,0.12)', line: 'rgba(124,58,237,0.36)', ink: '#ffffff' },
+    emerald: { primary: '#059669', soft: 'rgba(5,150,105,0.12)', line: 'rgba(5,150,105,0.36)', ink: '#ffffff' },
+    rose: { primary: '#e11d48', soft: 'rgba(225,29,72,0.12)', line: 'rgba(225,29,72,0.36)', ink: '#ffffff' },
+    amber: { primary: '#b45309', soft: 'rgba(180,83,9,0.12)', line: 'rgba(180,83,9,0.36)', ink: '#ffffff' }
+  };
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const set = isLight ? accentsLight : accents;
+  const theme = set[acc] || set.cyan;
   const root = document.documentElement;
   root.style.setProperty('--accent-primary', theme.primary);
   root.style.setProperty('--accent-cyan', theme.primary);
@@ -70,23 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let serverTzName = '';
   let serverTzOffsetMinutes = 0;
 
-  // Load custom wallpaper if saved in localStorage
-  const savedWallpaper = localStorage.getItem('shellman_wallpaper');
+  // Wallpaper: one per theme (see wallpaper.js)
   const desktopEnv = document.getElementById('desktop');
   const ws = document.getElementById('desktopWorkspace');
-  if (savedWallpaper) {
-    if (desktopEnv) {
-      desktopEnv.style.backgroundImage = `linear-gradient(180deg, rgba(8, 12, 20, 0.42) 0%, rgba(6, 9, 15, 0.65) 100%), url("${savedWallpaper}")`;
-      desktopEnv.style.backgroundSize = 'cover';
-      desktopEnv.style.backgroundPosition = 'center center';
-      desktopEnv.style.backgroundRepeat = 'no-repeat';
-      desktopEnv.style.backgroundAttachment = 'fixed';
-    }
-    if (ws) {
-      ws.style.background = 'transparent';
-      ws.style.backgroundImage = 'none';
-    }
-  }
+  if (window.ShellmanWallpaper) window.ShellmanWallpaper.apply();
 
   const updateClock = () => {
     if (serverTimeOffsetMs !== null) {

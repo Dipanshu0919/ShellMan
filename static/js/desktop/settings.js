@@ -117,8 +117,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           if (!serversList || serversList.length === 0) {
             listContainer.innerHTML = `
               <div class="settings-card" style="text-align:center; padding:3rem 1.5rem;">
-                <svg style="width:48px;height:48px;color:#64748b;margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-                <div style="font-size:0.95rem; font-weight:600; color:#cbd5e1; margin-bottom:0.3rem;">No Servers Configured</div>
+                <svg style="width:48px;height:48px;color:var(--sm-text-4);margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                <div style="font-size:0.95rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.3rem;">No Servers Configured</div>
                 <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1rem;">Add your first remote Linux VPS or dedicated server to begin managing it agentlessly.</p>
                 <button class="btn btn-primary btn-sm" id="emptyAddServerBtn_${setWinId}">+ Add Your First Server</button>
               </div>
@@ -134,7 +134,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                     <span class="status-dot ${s.is_online ? 'connected' : 'disconnected'}" title="${s.is_online ? 'Online' : 'Offline'}"></span>
                     <div>
                       <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="font-weight:600; font-size:0.85rem; color:#f8fafc;">${escapeHtml(s.name)}</span>
+                        <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary);">${escapeHtml(s.name)}</span>
                         ${isCurrent ? '<span style="font:700 0.68rem/1 var(--font-mono, ui-monospace, monospace); color:var(--sm-accent); letter-spacing:.04em;">[ACTIVE]</span>' : ''}
                       </div>
                       <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
@@ -142,7 +142,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                           ? `<span>GitHub Codespace: ${escapeHtml(s.codespace_name || '')}</span>`
                           : `<span>${escapeHtml(s.username)}@${escapeHtml(s.host)}:${s.port}</span>
                         <span style="margin:0 4px;">&bull;</span>
-                        <span style="color:#94a3b8;">${s.auth_type === 'key' ? 'SSH Key' : 'Password'}</span>`}
+                        <span style="color:var(--text-muted);">${s.auth_type === 'key' ? 'SSH Key' : 'Password'}</span>`}
                       </div>
                     </div>
                   </div>
@@ -249,7 +249,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           modalBackdrop.innerHTML = `
             <div class="file-modal-box" style="width:560px; max-width:92vw; max-height:calc(100% - 24px); display:flex; flex-direction:column; overflow:hidden;">
               <div class="file-modal-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:700; font-size:0.88rem; color:#f8fafc;">
+                <span style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">
                   ${isEdit ? `Edit Server Details: ${escapeHtml(serverToEdit.name)}` : 'Add New Server Node'}
                 </span>
                 <button class="win-btn win-close" id="srvMClose_${setWinId}">×</button>
@@ -257,7 +257,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <div class="file-modal-body" style="padding:1.1rem; display:flex; flex-direction:column; gap:0.85rem; font-size:0.78rem; flex:1 1 auto; min-height:0; overflow-y:auto;">
                 ${isEdit ? '' : `
                 <div>
-                  <label style="display:block; font-weight:600; margin-bottom:0.35rem; color:#cbd5e1;">Server Type</label>
+                  <label style="display:block; font-weight:600; margin-bottom:0.35rem; color:var(--text-secondary);">Server Type</label>
                   <div style="display:flex; gap:1.25rem; align-items:center;">
                     <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;"><input type="radio" name="mKind_${setWinId}" value="ssh" checked><span>SSH server (VPS)</span></label>
                     <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;"><input type="radio" name="mKind_${setWinId}" value="codespace"><span>GitHub Codespace</span></label>
@@ -265,28 +265,28 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 </div>`}
                 <div style="display:flex; gap:0.75rem;">
                   <div style="flex:2;">
-                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Server Friendly Name *</label>
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Server Friendly Name *</label>
                     <input type="text" class="form-control" id="mSrvName_${setWinId}" value="${isEdit ? escapeHtml(serverToEdit.name) : ''}" placeholder="e.g. Production Web App" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
                   </div>
                   <div style="flex:1;" data-sshonly>
-                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">SSH Port *</label>
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">SSH Port *</label>
                     <input type="number" class="form-control" id="mSrvPort_${setWinId}" value="${isEdit ? serverToEdit.port : '22'}" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
                   </div>
                 </div>
 
                 <div style="display:flex; gap:0.75rem;" data-sshonly>
                   <div style="flex:2;">
-                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Host / IP Address *</label>
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Host / IP Address *</label>
                     <input type="text" class="form-control" id="mSrvHost_${setWinId}" value="${isEdit ? escapeHtml(serverToEdit.host) : ''}" placeholder="e.g. 20.198.72.44 or vps.example.com" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
                   </div>
                   <div style="flex:1;">
-                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Username *</label>
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Username *</label>
                     <input type="text" class="form-control" id="mSrvUser_${setWinId}" value="${isEdit ? escapeHtml(serverToEdit.username) : 'root'}" placeholder="root" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
                   </div>
                 </div>
 
                 <div data-sshonly>
-                  <label style="display:block; font-weight:600; margin-bottom:0.35rem; color:#cbd5e1;">Authentication Method</label>
+                  <label style="display:block; font-weight:600; margin-bottom:0.35rem; color:var(--text-secondary);">Authentication Method</label>
                   <div style="display:flex; gap:1.25rem; align-items:center;">
                     <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;">
                       <input type="radio" name="mAuthType_${setWinId}" value="password" ${(!isEdit || serverToEdit.auth_type === 'password') ? 'checked' : ''}>
@@ -301,35 +301,35 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
                 <!-- Password Auth Fields -->
                 <div id="mPasswordBox_${setWinId}" data-sshonly style="display:${(!isEdit || serverToEdit.auth_type === 'password') ? 'block' : 'none'};">
-                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">
+                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">
                     ${isEdit ? 'Password (leave blank to keep current)' : 'Password *'}
                   </label>
                   <div style="display:flex; position:relative;">
                     <input type="password" class="form-control" id="mSrvPassword_${setWinId}" placeholder="${isEdit ? '••••••••' : 'Enter SSH user password'}" style="width:100%; font-size:0.8rem; padding:0.4rem 2rem 0.4rem 0.6rem;" autocomplete="current-password">
                     <button type="button" class="btn btn-ghost btn-xs" id="mTogglePass_${setWinId}" style="position:absolute; right:4px; top:50%; transform:translateY(-50%); padding:2px 6px; display:flex; align-items:center;">
-                      <svg style="width:14px;height:14px;color:#94a3b8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                      <svg style="width:14px;height:14px;color:var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     </button>
                   </div>
                 </div>
 
                 <!-- SSH Key Auth Fields -->
                 <div id="mKeyBox_${setWinId}" data-sshonly style="display:${(isEdit && serverToEdit.auth_type === 'key') ? 'block' : 'none'};">
-                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">
+                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">
                     ${isEdit ? 'SSH Private Key (leave blank to keep current)' : 'SSH Private Key *'}
                   </label>
                   <textarea class="form-control" id="mSrvKey_${setWinId}" rows="4" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..." style="width:100%; font-family:var(--font-mono); font-size:0.72rem; padding:0.4rem 0.6rem;"></textarea>
                   
-                  <label style="display:block; font-weight:600; margin-top:0.5rem; margin-bottom:0.25rem; color:#cbd5e1;">
+                  <label style="display:block; font-weight:600; margin-top:0.5rem; margin-bottom:0.25rem; color:var(--text-secondary);">
                     Key Passphrase (optional)
                   </label>
                   <input type="password" class="form-control" id="mSrvPassphrase_${setWinId}" placeholder="Enter passphrase if key is encrypted" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="current-password">
                 </div>
 
                 <div id="mCsBox_${setWinId}" style="display:${(isEdit && serverToEdit.kind === 'codespace') ? 'block' : 'none'};">
-                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">GitHub token ${isEdit ? '(leave blank to keep current)' : '*'}</label>
+                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">GitHub token ${isEdit ? '(leave blank to keep current)' : '*'}</label>
                   <input type="password" class="form-control" id="mCsToken_${setWinId}" placeholder="ghp_… or github_pat_… (needs Codespaces access)" autocomplete="off" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
-                  <div style="font-size:0.7rem; color:#94a3b8; margin:0.3rem 0 0.6rem;">Classic token: scope <b>codespace</b>. Fine-grained token: <b>Codespaces</b> read and write. It is stored encrypted and only used to start, stop and connect.</div>
-                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Codespace *</label>
+                  <div style="font-size:0.7rem; color:var(--text-muted); margin:0.3rem 0 0.6rem;">Classic token: scope <b>codespace</b>. Fine-grained token: <b>Codespaces</b> read and write. It is stored encrypted and only used to start, stop and connect.</div>
+                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Codespace *</label>
                   <div style="display:flex; gap:0.4rem;">
                     <input type="text" class="form-control" id="mCsName_${setWinId}" value="${(isEdit && serverToEdit.codespace_name) ? escapeHtml(serverToEdit.codespace_name) : ''}" placeholder="e.g. fluffy-space-garbanzo-abc123" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;">
                     <button type="button" class="btn btn-secondary btn-sm" id="mCsFind_${setWinId}">Find my Codespaces</button>
@@ -337,8 +337,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   <div id="mCsList_${setWinId}" style="margin-top:0.4rem; display:flex; flex-direction:column; gap:0.25rem;"></div>
                   ${isEdit ? '' : `
                   <button type="button" class="btn btn-ghost btn-xs" id="mCsNewToggle_${setWinId}" style="margin-top:0.5rem;">+ Create a new Codespace</button>
-                  <div id="mCsNew_${setWinId}" style="display:none; margin-top:0.5rem; padding:0.6rem; border:1px solid rgba(255,255,255,0.1); border-radius:8px;">
-                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:#cbd5e1;">Repository</label>
+                  <div id="mCsNew_${setWinId}" style="display:none; margin-top:0.5rem; padding:0.6rem; border:1px solid rgba(var(--wash),0.1); border-radius:8px;">
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Repository</label>
                     <div style="display:flex; gap:0.4rem;">
                       <div class="sm-combo" id="mCsCombo_${setWinId}">
                         <input type="text" class="form-control" id="mCsRepo_${setWinId}" placeholder="owner/repo (type to filter)" autocomplete="off" style="font-size:0.8rem; padding:0.4rem 0.6rem;">
@@ -347,27 +347,27 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <button type="button" class="btn btn-secondary btn-sm" id="mCsRepoFind_${setWinId}">My repos</button>
                     </div>
                     <div style="display:flex; gap:0.4rem; margin-top:0.5rem; align-items:flex-end;">
-                      <div style="flex:1;"><label style="display:block; font-size:0.72rem; color:#94a3b8;">Branch (optional)</label>
+                      <div style="flex:1;"><label style="display:block; font-size:0.72rem; color:var(--text-muted);">Branch (optional)</label>
                         <input type="text" class="form-control" id="mCsRef_${setWinId}" placeholder="default branch" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;"></div>
-                      <div style="width:110px;"><label style="display:block; font-size:0.72rem; color:#94a3b8;">Idle stop (min)</label>
+                      <div style="width:110px;"><label style="display:block; font-size:0.72rem; color:var(--text-muted);">Idle stop (min)</label>
                         <input type="number" class="form-control" id="mCsIdle_${setWinId}" value="30" min="5" max="240" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;"></div>
                     </div>
                     <div style="display:flex; gap:0.4rem; margin-top:0.5rem;">
                       <select class="form-control" id="mCsMachine_${setWinId}" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;"><option value="">Machine size: load first</option></select>
                       <button type="button" class="btn btn-secondary btn-sm" id="mCsMachLoad_${setWinId}">Load sizes</button>
                     </div>
-                    <div style="font-size:0.7rem; color:#fbbf24; margin-top:0.5rem;">Creating starts the machine and its billing right away. A bigger machine uses more core-hours per hour.</div>
+                    <div style="font-size:0.7rem; color:var(--c-warn); margin-top:0.5rem;">Creating starts the machine and its billing right away. A bigger machine uses more core-hours per hour.</div>
                     <div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.5rem;">
                       <button type="button" class="btn btn-primary btn-sm" id="mCsCreate_${setWinId}">Create Codespace</button>
                       <span id="mCsNewMsg_${setWinId}" style="font-size:0.74rem;"></span>
                     </div>
                   </div>`}
-                  <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.5rem;">The Codespace needs an SSH server (the default GitHub image has one). The ShellMan host needs the <code>gh</code> CLI. A stopped Codespace is never started by ShellMan unless you press Start.</div>
+                  <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.5rem;">The Codespace needs an SSH server (the default GitHub image has one). The ShellMan host needs the <code>gh</code> CLI. A stopped Codespace is never started by ShellMan unless you press Start.</div>
                 </div>
 
                 <div id="mTestStatus_${setWinId}" style="display:none; padding:0.45rem 0.75rem; border-radius:4px; font-size:0.75rem;"></div>
               </div>
-              <div class="file-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 1.1rem; border-top:1px solid rgba(255,255,255,0.08); flex:0 0 auto;">
+              <div class="file-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 1.1rem; border-top:1px solid rgba(var(--wash),0.08); flex:0 0 auto;">
                 <button type="button" class="btn btn-secondary btn-sm" id="mTestBtn_${setWinId}">
                   Test Connection
                 </button>
@@ -423,12 +423,12 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           const csFind = modalBackdrop.querySelector(`#mCsFind_${setWinId}`);
           if (csFind) csFind.onclick = async () => {
             const list = modalBackdrop.querySelector(`#mCsList_${setWinId}`);
-            list.innerHTML = '<span style="color:#94a3b8;font-size:0.74rem;">Asking GitHub…</span>';
+            list.innerHTML = '<span style="color:var(--text-muted);font-size:0.74rem;">Asking GitHub…</span>';
             const tokenVal = modalBackdrop.querySelector(`#mCsToken_${setWinId}`).value.trim();
             const res = await (window.ShellmanCodespace ? window.ShellmanCodespace.discover(tokenVal) : { success: false, error: 'Codespace UI not loaded' });
-            if (!res.success) { list.innerHTML = `<span style="color:#f87171;font-size:0.74rem;">${escapeHtml(res.error || 'Failed')}</span>`; return; }
-            if (!res.codespaces.length) { list.innerHTML = '<span style="color:#94a3b8;font-size:0.74rem;">No Codespaces found for this token.</span>'; return; }
-            list.innerHTML = res.codespaces.map(c => `<button type="button" class="btn btn-ghost btn-xs" data-cs="${escapeHtml(c.name)}" style="text-align:left;justify-content:flex-start;"><b>${escapeHtml(c.display_name)}</b> &nbsp;<span style="color:#94a3b8">${escapeHtml(c.repository)} · ${c.cpus} cores · ${escapeHtml(c.state)}</span></button>`).join('');
+            if (!res.success) { list.innerHTML = `<span style="color:var(--c-bad);font-size:0.74rem;">${escapeHtml(res.error || 'Failed')}</span>`; return; }
+            if (!res.codespaces.length) { list.innerHTML = '<span style="color:var(--text-muted);font-size:0.74rem;">No Codespaces found for this token.</span>'; return; }
+            list.innerHTML = res.codespaces.map(c => `<button type="button" class="btn btn-ghost btn-xs" data-cs="${escapeHtml(c.name)}" style="text-align:left;justify-content:flex-start;"><b>${escapeHtml(c.display_name)}</b> &nbsp;<span style="color:var(--text-muted)">${escapeHtml(c.repository)} · ${c.cpus} cores · ${escapeHtml(c.state)}</span></button>`).join('');
             list.querySelectorAll('[data-cs]').forEach(b => b.onclick = () => {
               modalBackdrop.querySelector(`#mCsName_${setWinId}`).value = b.dataset.cs;
               const nm = modalBackdrop.querySelector(`#mSrvName_${setWinId}`);
@@ -440,7 +440,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           const csNewToggle = modalBackdrop.querySelector(`#mCsNewToggle_${setWinId}`);
           if (csNewToggle) {
             const q = id => modalBackdrop.querySelector(`#${id}_${setWinId}`);
-            const say = (text, color) => { const m = q('mCsNewMsg'); m.textContent = text; m.style.color = color || '#94a3b8'; };
+            const say = (text, color) => { const m = q('mCsNewMsg'); m.textContent = text; m.style.color = color || 'var(--sm-accent)'; };
             const token = () => q('mCsToken').value.trim();
             csNewToggle.onclick = () => { const box = q('mCsNew'); box.style.display = box.style.display === 'none' ? 'block' : 'none'; };
             // Repo picker: our own dropdown, filtered as you type
@@ -520,7 +520,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             testBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Testing...`;
             statusBox.style.display = 'block';
             statusBox.style.background = 'rgba(56,189,248,0.1)';
-            statusBox.style.color = '#38bdf8';
+            statusBox.style.color = 'var(--c-teal)';
             statusBox.textContent = 'Connecting to remote SSH daemon...';
 
             const payload = {
@@ -548,16 +548,16 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               res = await resp.json();
               if (res.success) {
                 statusBox.style.background = 'rgba(16,185,129,0.12)';
-                statusBox.style.color = '#34d399';
+                statusBox.style.color = 'var(--c-ok)';
                 statusBox.textContent = '✓ SSH Authentication Successful! Server is reachable.';
               } else {
                 statusBox.style.background = 'rgba(239,68,68,0.12)';
-                statusBox.style.color = '#f87171';
+                statusBox.style.color = 'var(--c-bad)';
                 statusBox.textContent = `✗ Connection Failed: ${res.message || 'Authentication error'}`;
               }
             } catch (e) {
               statusBox.style.background = 'rgba(239,68,68,0.12)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = `Error: ${e}`;
             } finally {
               testBtn.disabled = false;
@@ -581,7 +581,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             if (isCs ? !name : (!name || !host || !username)) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = isCs ? 'A friendly name is required.' : 'Name, Host, and Username are required.';
               return;
             }
@@ -606,7 +606,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               } else {
                 statusBox.style.display = 'block';
                 statusBox.style.background = 'rgba(239,68,68,0.12)';
-                statusBox.style.color = '#f87171';
+                statusBox.style.color = 'var(--c-bad)';
                 statusBox.textContent = res.error || 'Failed to save server.';
                 saveBtn.disabled = false;
                 saveBtn.textContent = isEdit ? 'Save Changes' : 'Create Server';
@@ -614,7 +614,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             } catch (e) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = 'Save error: ' + e;
               saveBtn.disabled = false;
               saveBtn.textContent = isEdit ? 'Save Changes' : 'Create Server';
@@ -637,8 +637,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   </div>
                   <div style="min-width:0; flex:1;">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                      <span style="font-weight:700; font-size:0.95rem; color:#f8fafc;" id="adminUsername_${setWinId}">admin</span>
-                      <span style="font-size:0.68rem; background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">SUPER ADMINISTRATOR</span>
+                      <span style="font-weight:700; font-size:0.95rem; color:var(--text-primary);" id="adminUsername_${setWinId}">admin</span>
+                      <span style="font-size:0.68rem; background:rgba(16,185,129,0.15); color:var(--c-ok); border:1px solid rgba(16,185,129,0.3); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">SUPER ADMINISTRATOR</span>
                     </div>
                     <div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px;">
                       Full privileges &bull; Interactive SSH, SFTP, and terminal execution
@@ -649,22 +649,22 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
               <!-- Change Password Card -->
               <div class="settings-card">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Change Administrator Password</div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.25rem;">Change Administrator Password</div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">Update master credentials for this ShellMan management instance.</p>
 
                 <div style="display:flex; flex-direction:column; gap:0.75rem; max-width:440px;">
                   <div>
-                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:#cbd5e1;">Current Password *</label>
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:var(--text-secondary);">Current Password *</label>
                     <input type="password" class="form-control" id="admCurPass_${setWinId}" placeholder="Enter current password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="current-password">
                   </div>
 
                   <div>
-                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:#cbd5e1;">New Password (min 6 characters) *</label>
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:var(--text-secondary);">New Password (min 6 characters) *</label>
                     <input type="password" class="form-control" id="admNewPass_${setWinId}" placeholder="Enter new strong password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="new-password">
                   </div>
 
                   <div>
-                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:#cbd5e1;">Confirm New Password *</label>
+                    <label style="display:block; font-weight:600; margin-bottom:0.25rem; font-size:0.75rem; color:var(--text-secondary);">Confirm New Password *</label>
                     <input type="password" class="form-control" id="admConfPass_${setWinId}" placeholder="Confirm new password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;" autocomplete="new-password">
                   </div>
 
@@ -681,11 +681,11 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <!-- Two-Factor Authentication Card -->
               <div class="settings-card" style="margin-top:1.25rem;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.35rem;">
-                  <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; display:flex; align-items:center; gap:0.45rem;">
+                  <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); display:flex; align-items:center; gap:0.45rem;">
                     <svg style="width:15px;height:15px;color:var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                     Two-Factor Authentication (TOTP)
                   </div>
-                  <span id="totpBadge_${setWinId}" style="font-size:0.68rem; font-weight:700; padding:0.12rem 0.5rem; border-radius:4px; background:rgba(148,163,184,0.15); color:#94a3b8;">
+                  <span id="totpBadge_${setWinId}" style="font-size:0.68rem; font-weight:700; padding:0.12rem 0.5rem; border-radius:4px; background:rgba(148,163,184,0.15); color:var(--text-muted);">
                     CHECKING...
                   </span>
                 </div>
@@ -701,7 +701,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <!-- Session Termination -->
               <div class="settings-card" style="margin-top:1.25rem; display:flex; align-items:center; justify-content:space-between;">
                 <div>
-                  <div style="font-weight:600; font-size:0.82rem; color:#f8fafc;">Active Session</div>
+                  <div style="font-weight:600; font-size:0.82rem; color:var(--text-primary);">Active Session</div>
                   <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Logged in via web session. End session and require authentication on next visit.</div>
                 </div>
                 <a href="/logout" class="btn btn-danger btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem;">
@@ -733,14 +733,14 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               const isEnabled = res.success && res.enabled;
               if (isEnabled) {
                 totpBadge.style.background = 'rgba(16,185,129,0.15)';
-                totpBadge.style.color = '#34d399';
+                totpBadge.style.color = 'var(--c-ok)';
                 totpBadge.style.border = '1px solid rgba(16,185,129,0.3)';
                 totpBadge.textContent = 'ACTIVE (PROTECTED)';
 
                 totpSection.innerHTML = `
                   <div style="display:flex; flex-direction:column; gap:0.75rem;">
-                    <div style="font-size:0.78rem; color:#cbd5e1; display:flex; align-items:center; gap:0.4rem;">
-                      <svg style="width:14px;height:14px;color:#34d399;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <div style="font-size:0.78rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.4rem;">
+                      <svg style="width:14px;height:14px;color:var(--c-ok);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                       Two-factor authentication is currently active on your administrator account.
                     </div>
                     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
@@ -748,7 +748,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                         <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                         View Backup Recovery Codes
                       </button>
-                      <button class="btn btn-secondary btn-sm" id="btnShowDisable2FA_${setWinId}" style="color:#f87171; border-color:rgba(239,68,68,0.3);">
+                      <button class="btn btn-secondary btn-sm" id="btnShowDisable2FA_${setWinId}" style="color:var(--c-bad); border-color:rgba(239,68,68,0.3);">
                         Disable Two-Factor Authentication
                       </button>
                     </div>
@@ -762,7 +762,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                         </div>
                         <div style="display:flex; gap:0.4rem;">
                           <button class="btn btn-secondary btn-xs" id="btnCopyActiveCodes_${setWinId}" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Copy All Codes</button>
-                          <button class="btn btn-secondary btn-xs" id="btnRegenCodes_${setWinId}" style="font-size:0.7rem; padding:0.2rem 0.5rem; color:#fbbf24; border-color:rgba(245,158,11,0.3);">Regenerate Fresh Codes</button>
+                          <button class="btn btn-secondary btn-xs" id="btnRegenCodes_${setWinId}" style="font-size:0.7rem; padding:0.2rem 0.5rem; color:var(--c-warn); border-color:rgba(245,158,11,0.3);">Regenerate Fresh Codes</button>
                         </div>
                       </div>
                       <div id="backupCodesGrid_${setWinId}" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.45rem; margin-top:0.6rem;">
@@ -771,7 +771,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                     </div>
 
                     <div id="disable2FAForm_${setWinId}" style="display:none; margin-top:0.5rem; max-width:380px; padding:0.75rem; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:6px;">
-                      <label style="display:block; font-size:0.75rem; font-weight:600; color:#cbd5e1; margin-bottom:0.3rem;">Confirm Master Password to Disable</label>
+                      <label style="display:block; font-size:0.75rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.3rem;">Confirm Master Password to Disable</label>
                       <input type="password" id="disable2FAPass_${setWinId}" class="form-control" placeholder="Current master password" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; margin-bottom:0.5rem;" autocomplete="current-password">
                       <div id="disable2FAStatus_${setWinId}" style="display:none; font-size:0.72rem; margin-bottom:0.4rem;"></div>
                       <div style="display:flex; gap:0.5rem;">
@@ -793,11 +793,11 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 const renderCodes = (codes) => {
                   activeCodesList = codes || [];
                   if (!activeCodesList.length) {
-                    codesGrid.innerHTML = '<span style="font-size:0.75rem; color:#f87171; grid-column:1/-1;">No backup codes remaining. Click "Regenerate Fresh Codes" to generate 8 new recovery codes.</span>';
+                    codesGrid.innerHTML = '<span style="font-size:0.75rem; color:var(--c-bad); grid-column:1/-1;">No backup codes remaining. Click "Regenerate Fresh Codes" to generate 8 new recovery codes.</span>';
                     return;
                   }
                   codesGrid.innerHTML = activeCodesList.map(c => `
-                    <code style="background:rgba(0,0,0,0.35); padding:0.35rem 0.5rem; border-radius:4px; font-size:0.8rem; text-align:center; color:var(--sm-accent); font-family:monospace; border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); user-select:all; display:block;">${c}</code>
+                    <code style="background:rgba(var(--shade),0.35); padding:0.35rem 0.5rem; border-radius:4px; font-size:0.8rem; text-align:center; color:var(--sm-accent); font-family:monospace; border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); user-select:all; display:block;">${c}</code>
                   `).join('');
                 };
 
@@ -809,10 +809,10 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                     if (cRes.success && Array.isArray(cRes.backup_codes)) {
                       renderCodes(cRes.backup_codes);
                     } else {
-                      codesGrid.innerHTML = `<span style="font-size:0.72rem; color:#f87171; grid-column:1/-1;">${cRes.error || 'Failed to load backup codes.'}</span>`;
+                      codesGrid.innerHTML = `<span style="font-size:0.72rem; color:var(--c-bad); grid-column:1/-1;">${cRes.error || 'Failed to load backup codes.'}</span>`;
                     }
                   } catch (e) {
-                    codesGrid.innerHTML = `<span style="font-size:0.72rem; color:#f87171; grid-column:1/-1;">Network error loading codes: ${e}</span>`;
+                    codesGrid.innerHTML = `<span style="font-size:0.72rem; color:var(--c-bad); grid-column:1/-1;">Network error loading codes: ${e}</span>`;
                   }
                 };
 
@@ -872,7 +872,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   const stat = totpSection.querySelector(`#disable2FAStatus_${setWinId}`);
                   if (!pw) {
                     stat.style.display = 'block';
-                    stat.style.color = '#f87171';
+                    stat.style.color = 'var(--c-bad)';
                     stat.textContent = 'Password is required.';
                     return;
                   }
@@ -888,18 +888,18 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       load2FAState();
                     } else {
                       stat.style.display = 'block';
-                      stat.style.color = '#f87171';
+                      stat.style.color = 'var(--c-bad)';
                       stat.textContent = dRes.error || 'Failed to disable 2FA.';
                     }
                   } catch (e) {
                     stat.style.display = 'block';
-                    stat.style.color = '#f87171';
+                    stat.style.color = 'var(--c-bad)';
                     stat.textContent = 'Network error: ' + e;
                   }
                 };
               } else {
                 totpBadge.style.background = 'rgba(239,68,68,0.12)';
-                totpBadge.style.color = '#f87171';
+                totpBadge.style.color = 'var(--c-bad)';
                 totpBadge.style.border = '1px solid rgba(239,68,68,0.25)';
                 totpBadge.textContent = 'DISABLED';
 
@@ -909,7 +909,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <svg style="width:13px;height:13px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                       Enable Two-Factor Authentication
                     </button>
-                    <div id="totpWizard_${setWinId}" style="display:none; margin-top:1rem; padding:1rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px;"></div>
+                    <div id="totpWizard_${setWinId}" style="display:none; margin-top:1rem; padding:1rem; background:rgba(var(--wash),0.03); border:1px solid var(--border-color); border-radius:8px;"></div>
                   </div>
                 `;
 
@@ -935,12 +935,12 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                               </div>
                             </div>
                             <div style="flex:1; min-width:240px;">
-                              <div style="font-size:0.85rem; font-weight:700; color:#f8fafc; margin-bottom:0.25rem;">1. Scan Barcode</div>
+                              <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.25rem;">1. Scan Barcode</div>
                               <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem; line-height:1.4;">
                                 Open Google Authenticator, Authy, or 1Password and scan this QR code.
                               </p>
-                              <div style="font-size:0.72rem; color:#94a3b8; margin-bottom:0.25rem;">Manual Entry Secret Key:</div>
-                              <div style="display:flex; align-items:center; gap:0.4rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:6px; padding:0.35rem 0.6rem;">
+                              <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:0.25rem;">Manual Entry Secret Key:</div>
+                              <div style="display:flex; align-items:center; gap:0.4rem; background:rgba(var(--shade),0.3); border:1px solid var(--border-color); border-radius:6px; padding:0.35rem 0.6rem;">
                                 <code style="font-size:0.8rem; font-family:monospace; color:var(--sm-accent); flex:1; letter-spacing:0.05em;">${sRes.secret}</code>
                                 <button class="btn btn-secondary btn-xs" id="btnCopySecret_${setWinId}" style="padding:0.2rem 0.5rem; font-size:0.7rem;">Copy</button>
                               </div>
@@ -957,13 +957,13 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                               Store these backup codes safely. If you lose access to your device, each code can be used once to log in.
                             </p>
                             <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:0.4rem;">
-                              ${sRes.backup_codes.map(c => `<code style="background:rgba(0,0,0,0.3); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.75rem; text-align:center; color:#cbd5e1; font-family:monospace;">${c}</code>`).join('')}
+                              ${sRes.backup_codes.map(c => `<code style="background:rgba(var(--shade),0.3); padding:0.2rem 0.4rem; border-radius:4px; font-size:0.75rem; text-align:center; color:var(--text-secondary); font-family:monospace;">${c}</code>`).join('')}
                             </div>
                           </div>
 
                           <!-- Step 3: Verification -->
                           <div style="display:flex; flex-direction:column; gap:0.4rem; max-width:340px;">
-                            <label style="font-size:0.78rem; font-weight:700; color:#f8fafc;">3. Verify Authenticator Code</label>
+                            <label style="font-size:0.78rem; font-weight:700; color:var(--text-primary);">3. Verify Authenticator Code</label>
                             <div style="display:flex; gap:0.5rem;">
                               <input type="text" id="inpVerifyCode_${setWinId}" maxlength="6" class="form-control" placeholder="123456"
                                      autocomplete="one-time-code"
@@ -998,7 +998,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                         const code = codeInp.value.trim();
                         if (code.length < 6) {
                           statDiv.style.display = 'block';
-                          statDiv.style.color = '#f87171';
+                          statDiv.style.color = 'var(--c-bad)';
                           statDiv.textContent = 'Enter the 6-digit code from your authenticator.';
                           return;
                         }
@@ -1016,14 +1016,14 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                             load2FAState();
                           } else {
                             statDiv.style.display = 'block';
-                            statDiv.style.color = '#f87171';
+                            statDiv.style.color = 'var(--c-bad)';
                             statDiv.textContent = vRes.error || 'Verification failed.';
                             confirmBtn.disabled = false;
                             confirmBtn.textContent = 'Verify & Enable';
                           }
                         } catch (err) {
                           statDiv.style.display = 'block';
-                          statDiv.style.color = '#f87171';
+                          statDiv.style.color = 'var(--c-bad)';
                           statDiv.textContent = 'Network error: ' + err;
                           confirmBtn.disabled = false;
                           confirmBtn.textContent = 'Verify & Enable';
@@ -1061,21 +1061,21 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             if (!current_password) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = 'Current password is required.';
               return;
             }
             if (!new_password) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = 'New password is required.';
               return;
             }
             if (new_password !== confirm_password) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = 'New passwords do not match.';
               return;
             }
@@ -1093,7 +1093,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               if (res.success) {
                 statusBox.style.display = 'block';
                 statusBox.style.background = 'rgba(16,185,129,0.12)';
-                statusBox.style.color = '#34d399';
+                statusBox.style.color = 'var(--c-ok)';
                 statusBox.textContent = '✓ Password updated successfully!';
                 curInp.value = '';
                 newInp.value = '';
@@ -1102,13 +1102,13 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               } else {
                 statusBox.style.display = 'block';
                 statusBox.style.background = 'rgba(239,68,68,0.12)';
-                statusBox.style.color = '#f87171';
+                statusBox.style.color = 'var(--c-bad)';
                 statusBox.textContent = res.error || 'Failed to update password.';
               }
             } catch (e) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
-              statusBox.style.color = '#f87171';
+              statusBox.style.color = 'var(--c-bad)';
               statusBox.textContent = 'Network error: ' + e;
             } finally {
               submitBtn.disabled = false;
@@ -1123,6 +1123,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           const currentFontPct = Math.round((currentFontPx / 16) * 100);
           const currentTermTheme = localStorage.getItem('shellman_terminal_theme') || 'shellman';
           const currentAccent = localStorage.getItem('shellman_accent') || 'cyan';
+          const look = window.ShellmanLook ? window.ShellmanLook.get() : { fonts: {}, custom: {}, widgetsScale: 100, iconLabel: 100, radius: 100 };
+          const lookAreas = window.ShellmanLook ? window.ShellmanLook.AREAS : {};
 
           const accents = [
             { id: 'cyan', name: 'Cyan', color: '#38bdf8' },
@@ -1137,9 +1139,24 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <h3 class="settings-section-title">Desktop Appearance & Display</h3>
               <p class="settings-section-desc">Personalize system typography, font scale, wallpaper, and visual theme.</p>
 
+              <!-- Light / Dark theme -->
+              <div class="settings-card" style="margin-bottom:1.25rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                  <div>
+                    <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary); margin-bottom:0.25rem;">Theme</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">Dark, light, or follow this device. Saved in this browser. You can also use the sun and moon switch on the desktop.</div>
+                  </div>
+                  <span data-theme-toggle style="display:inline-flex;"></span>
+                </div>
+                <div style="display:flex; gap:0.6rem; margin-top:0.85rem; flex-wrap:wrap;" id="themeModeRow_${setWinId}">
+                  ${[['dark','Dark'],['light','Light'],['system','Match device']].map(([k,l]) => `
+                    <button type="button" class="btn btn-secondary btn-sm theme-mode-btn" data-mode="${k}" style="border-radius:999px; padding:6px 14px; ${(window.ShellmanTheme && ShellmanTheme.mode() === k) ? 'border-color:var(--sm-accent); color:var(--sm-accent);' : ''}">${l}</button>`).join('')}
+                </div>
+              </div>
+
               <!-- 0. Accent Color Picker Card -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
-                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc; margin-bottom:0.25rem;">System Accent Color</div>
+                <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary); margin-bottom:0.25rem;">System Accent Color</div>
                 <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.85rem;">
                   Choose the primary accent color. The entire UI (active windows, sliding dock indicator, telemetry rings, gauges, buttons) follows seamlessly.
                 </div>
@@ -1147,10 +1164,10 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   ${accents.map(acc => `
                     <button type="button" class="accent-color-btn" data-accent="${acc.id}" style="
                       display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px;
-                      background: ${currentAccent === acc.id ? 'var(--sm-surface, rgba(255,255,255,0.08))' : 'rgba(255,255,255,0.03)'};
-                      border: 1.5px solid ${currentAccent === acc.id ? acc.color : 'rgba(255,255,255,0.1)'};
+                      background: ${currentAccent === acc.id ? 'var(--sm-surface, rgba(255,255,255,0.08))' : 'rgba(var(--wash),0.04)'};
+                      border: 1.5px solid ${currentAccent === acc.id ? acc.color : 'rgba(var(--wash),0.12)'};
                       box-shadow: ${currentAccent === acc.id ? `0 0 12px ${acc.color}50` : 'none'};
-                      color: #f8fafc; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.2s ease;
+                      color: var(--text-primary); font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.2s ease;
                     ">
                       <span style="width:11px; height:11px; border-radius:50%; background:${acc.color}; box-shadow:0 0 8px ${acc.color};"></span>
                       <span>${acc.name}</span>
@@ -1163,7 +1180,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <div class="settings-card" style="margin-bottom:1.25rem;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
                   <div>
-                    <div style="font-weight:700; font-size:0.88rem; color:#f8fafc;">System Font Size & Typography Scale</div>
+                    <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">System Font Size & Typography Scale</div>
                     <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
                       Applies globally across all windows, Task Manager, File Manager, Nginx editor, headers, and menus.
                     </div>
@@ -1193,13 +1210,13 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 </div>
 
                 <!-- Live Preview Box -->
-                <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:0.85rem 1rem;">
+                <div style="background:rgba(var(--panel-rgb),0.6); border:1px solid rgba(var(--wash),0.08); border-radius:6px; padding:0.85rem 1rem;">
                   <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); font-weight:700; margin-bottom:0.4rem;">Live Preview</div>
                   <div id="fontPreviewBox_${setWinId}" style="display:flex; flex-direction:column; gap:0.4rem;">
-                    <div style="font-size:0.95rem; font-weight:700; color:#f8fafc;">Task Manager & App Window Header</div>
+                    <div style="font-size:0.95rem; font-weight:700; color:var(--text-primary);">Task Manager & App Window Header</div>
                     <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.45;">Process PID 1814781 (gunicorn) is active and running with 0% CPU and 9.6% RAM.</div>
                     <div style="display:flex; gap:0.5rem; align-items:center; margin-top:2px;">
-                      <span style="display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:12px; background:rgba(52,211,153,0.14); color:#34d399; font-size:0.72rem; font-weight:600;">
+                      <span style="display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:12px; background:rgba(52,211,153,0.14); color:var(--c-ok); font-size:0.72rem; font-weight:600;">
                         <span style="width:6px; height:6px; border-radius:50%; background:#34d399;"></span>Active
                       </span>
                       <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--sm-accent);">/var/www/site/app.py</span>
@@ -1209,9 +1226,44 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 </div>
               </div>
 
+              <!-- 1b. Fonts & Look Card -->
+              <div class="settings-card" style="margin-bottom:1.25rem;" id="lookCard_${setWinId}">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-wrap:wrap; margin-bottom:.25rem;">
+                  <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">Fonts & Look</div>
+                  <button class="btn btn-ghost btn-xs" id="lookReset_${setWinId}">Reset all to default</button>
+                </div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.85rem;">
+                  Pick a different font for each part of the desktop. Changes apply instantly and are saved in this browser. Fonts that are not installed on your computer are fetched from Google Fonts the first time you choose them.
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:.85rem;">
+                  ${Object.entries(lookAreas).map(([area, info]) => `
+                    <div>
+                      <label style="display:block; font-size:.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:.25rem;">${info.label}</label>
+                      <select class="form-control look-font" data-area="${area}" style="width:100%; font-size:.78rem; padding:.4rem .55rem;">
+                        ${info.list.map(f => `<option value="${f.id}" ${(look.fonts[area] || 'default') === f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
+                        <option value="custom" ${look.fonts[area] === 'custom' ? 'selected' : ''}>Other font (type its name)…</option>
+                      </select>
+                      <input class="form-control look-custom" data-area="${area}" placeholder="e.g. Comic Sans MS" value="${(look.custom[area] || '').replace(/"/g, '&quot;')}" style="width:100%; margin-top:.3rem; font-size:.78rem; padding:.35rem .55rem; display:${look.fonts[area] === 'custom' ? 'block' : 'none'};">
+                      <div style="font-size:.68rem; color:var(--text-muted); margin-top:.2rem; line-height:1.35;">${info.hint}</div>
+                    </div>`).join('')}
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:.85rem; margin-top:1.1rem;">
+                  ${[['widgetsScale', 'Desktop widgets size', 70, 130, 5], ['iconLabel', 'Desktop icon label size', 70, 160, 5], ['radius', 'Corner roundness', 0, 200, 10]].map(([k, label, lo, hi, step]) => `
+                    <div>
+                      <label style="display:flex; justify-content:space-between; font-size:.74rem; font-weight:700; color:var(--text-secondary); margin-bottom:.25rem;"><span>${label}</span><span class="look-val" data-k="${k}" style="font-family:var(--font-mono); color:var(--sm-accent);">${look[k]}%</span></label>
+                      <input type="range" class="look-range" data-k="${k}" min="${lo}" max="${hi}" step="${step}" value="${look[k]}" style="width:100%; accent-color:var(--sm-accent); cursor:pointer;">
+                    </div>`).join('')}
+                </div>
+                <div style="margin-top:1rem; background:rgba(var(--panel-rgb),0.6); border:1px solid rgba(var(--wash),0.08); border-radius:6px; padding:.75rem 1rem;">
+                  <div style="font-size:1rem; font-weight:700; font-family:var(--sm-font-display);">Heading preview: 18:42 Tuesday</div>
+                  <div style="font-size:.8rem; margin:.25rem 0;">The quick brown fox jumps over the lazy dog. 0123456789</div>
+                  <div style="font-family:var(--font-mono); font-size:.78rem; color:var(--sm-accent);">$ sudo systemctl restart nginx &nbsp; /home/user/app.py</div>
+                </div>
+              </div>
+
               <!-- 2. Terminal Color Theme Card -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
-                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc; margin-bottom:0.25rem;">Terminal Color Theme</div>
+                <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary); margin-bottom:0.25rem;">Terminal Color Theme</div>
                 <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.85rem;">
                   Choose the color theme for all SSH terminal instances and the integrated code terminal.
                 </div>
@@ -1222,31 +1274,45 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 </div>
               </div>
 
-              <!-- 2. Preset Wallpapers -->
+              <!-- 2. Wallpaper (one per theme, chosen from presets) -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.75rem;">Preset Wallpapers</div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.85rem;">
-                  <div class="wallpaper-card" data-url="/static/images/wallpaper-8k.jpg" style="border:2px solid var(--sm-accent); border-radius:6px; overflow:hidden; cursor:pointer; background:#070b14;">
-                    <div style="height:95px; background:url('/static/images/wallpaper-8k.jpg') center/cover; position:relative;">
-                      <span style="position:absolute; bottom:4px; left:4px; font-size:0.68rem; background:rgba(0,0,0,0.7); color:#f8fafc; padding:2px 6px; border-radius:3px;">Default Studio</span>
-                    </div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.75rem;">Wallpaper</div>
+                <div id="wallCurrent_${setWinId}" style="display:grid; grid-template-columns:1fr 1fr; gap:0.85rem; margin-bottom:1.1rem;"></div>
+
+                <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:0.5rem;">
+                  <div style="font-size:0.72rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;">Presets</div>
+                  <div id="wallCount_${setWinId}" style="font-size:0.72rem; color:var(--text-muted);"></div>
+                </div>
+                <div id="wallPresets_${setWinId}" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:0.75rem; margin-bottom:1.1rem;"></div>
+
+                <div style="font-size:0.72rem; font-weight:600; color:var(--text-muted); margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.06em;">Add a preset: upload from device</div>
+                <div id="wallDrop_${setWinId}" style="border:1.5px dashed var(--sm-line-strong,rgba(var(--wash),0.22)); border-radius:8px; padding:0.9rem 1rem; display:flex; align-items:center; gap:0.85rem; flex-wrap:wrap; margin-bottom:1rem;">
+                  <button type="button" class="btn btn-secondary btn-sm" id="wallUploadBtn_${setWinId}">Choose file</button>
+                  <input type="file" id="wallFile_${setWinId}" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/bmp,video/mp4,video/webm,video/ogg,video/quicktime,.mp4,.m4v,.mov,.webm,.ogv,.gif" style="display:none;">
+                  <div style="flex:1; min-width:200px;">
+                    <div id="wallUpMsg_${setWinId}" style="font-size:0.76rem; color:var(--text-secondary);">or drop an image or video here</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">JPG, PNG, WebP, AVIF, BMP, GIF (up to 40 MB) &middot; MP4, WebM, MOV, OGV (up to 300 MB). GIFs and videos play as a live wallpaper (muted, paused when the tab is hidden).</div>
+                    <div id="wallUpBar_${setWinId}" style="display:none; height:4px; border-radius:2px; background:var(--sm-line,rgba(var(--wash),0.12)); margin-top:6px; overflow:hidden;"><div style="height:100%; width:0; background:var(--sm-accent);"></div></div>
                   </div>
                 </div>
-              </div>
 
-              <!-- 3. Custom Wallpaper URL -->
-              <div class="settings-card">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.35rem;">Custom Wallpaper URL</div>
-                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">Set an external image URL as your desktop background.</p>
+                <div style="font-size:0.72rem; font-weight:600; color:var(--text-muted); margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.06em;">Add a preset: image or video URL</div>
                 <div style="display:flex; gap:0.5rem;">
-                  <input type="text" class="form-control" id="customWallUrl_${setWinId}" placeholder="https://images.unsplash.com/..." style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;">
-                  <button class="btn btn-primary btn-sm" id="applyWallBtn_${setWinId}">Apply</button>
-                  <button class="btn btn-ghost btn-sm" id="resetWallBtn_${setWinId}">Reset</button>
+                  <input type="text" class="form-control" id="customWallUrl_${setWinId}" placeholder="https://.../image.jpg  or  .../clip.mp4" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                  <button class="btn btn-primary btn-sm" id="applyWallBtn_${setWinId}">Add</button>
                 </div>
               </div>
             </div>
           `;
 
+          const paintThemeBtns = () => contentPane.querySelectorAll('.theme-mode-btn').forEach(b => {
+            const on = window.ShellmanTheme && ShellmanTheme.mode() === b.dataset.mode;
+            b.style.borderColor = on ? 'var(--sm-accent)' : ''; b.style.color = on ? 'var(--sm-accent)' : '';
+          });
+          contentPane.querySelectorAll('.theme-mode-btn').forEach(b => {
+            b.onclick = () => { if (window.ShellmanTheme) { ShellmanTheme.set(b.dataset.mode, b); setTimeout(paintThemeBtns, 50); } };
+          });
+          if (window.ShellmanTheme) ShellmanTheme.mount();
           contentPane.querySelectorAll('.accent-color-btn').forEach(btn => {
             btn.onclick = () => {
               const accId = btn.dataset.accent;
@@ -1312,6 +1378,34 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             resetFontBtn.onclick = () => applyFontSize(16);
           }
 
+          // Fonts & Look handlers
+          const lookCard = contentPane.querySelector(`#lookCard_${setWinId}`);
+          if (lookCard && window.ShellmanLook) {
+            lookCard.querySelectorAll('.look-font').forEach(sel => {
+              sel.onchange = () => {
+                const area = sel.dataset.area;
+                const custom = lookCard.querySelector(`.look-custom[data-area="${area}"]`);
+                custom.style.display = sel.value === 'custom' ? 'block' : 'none';
+                window.ShellmanLook.set({ fonts: { [area]: sel.value === 'default' ? '' : sel.value } });
+                if (sel.value === 'custom') custom.focus();
+              };
+            });
+            lookCard.querySelectorAll('.look-custom').forEach(inp => {
+              inp.oninput = () => window.ShellmanLook.set({ custom: { [inp.dataset.area]: inp.value } });
+            });
+            lookCard.querySelectorAll('.look-range').forEach(r => {
+              r.oninput = () => {
+                lookCard.querySelector(`.look-val[data-k="${r.dataset.k}"]`).textContent = r.value + '%';
+                window.ShellmanLook.set({ [r.dataset.k]: r.value });
+              };
+            });
+            lookCard.querySelector(`#lookReset_${setWinId}`).onclick = () => {
+              window.ShellmanLook.reset();
+              renderAppearanceTab();
+              if (window.showToast) window.showToast('Fonts and look reset to default', 'success');
+            };
+          }
+
           const settingsTermTheme = contentPane.querySelector(`#settingsTermTheme_${setWinId}`);
           if (settingsTermTheme) {
             settingsTermTheme.onchange = (e) => {
@@ -1321,40 +1415,142 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             };
           }
 
-          const applyWall = (url) => {
-            const desktopEnv = document.getElementById('desktop');
-            const ws = document.getElementById('desktopWorkspace');
-            if (desktopEnv) {
-              desktopEnv.style.backgroundImage = `linear-gradient(180deg, rgba(8, 12, 20, 0.42) 0%, rgba(6, 9, 15, 0.65) 100%), url("${url}")`;
-              desktopEnv.style.backgroundSize = 'cover';
-              desktopEnv.style.backgroundPosition = 'center center';
-              desktopEnv.style.backgroundRepeat = 'no-repeat';
-              desktopEnv.style.backgroundAttachment = 'fixed';
+          const SW = window.ShellmanWallpaper;
+          const esc = (u) => String(u).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+          const cssUrl = (u) => esc(String(u).replace(/'/g, '%27'));
+          const toast = (m, t) => { if (window.showToast) window.showToast(m, t || 'info'); };
+          const thumb = (u, h) => (SW && SW.isVideo(u))
+            ? `<video src="${esc(u)}#t=0.1" muted preload="metadata" playsinline style="display:block; width:100%; height:${h}px; object-fit:cover; pointer-events:none;"></video>`
+            : `<div style="height:${h}px; background:url('${cssUrl(u)}') center/cover;"></div>`;
+          const curBox = contentPane.querySelector(`#wallCurrent_${setWinId}`);
+          const presetBox = contentPane.querySelector(`#wallPresets_${setWinId}`);
+          const countEl = contentPane.querySelector(`#wallCount_${setWinId}`);
+          const isDefault = (u) => /wallpaper-8k\.jpg$/.test(u);
+          const BORDER = 'var(--sm-line-strong,rgba(var(--wash),0.16))';
+
+          const paintWalls = () => {
+            if (!SW) return;
+            const cur = SW.current();
+            if (curBox) {
+              curBox.innerHTML = ['dark', 'light'].map(m => `
+                <div style="border:1px solid ${BORDER}; border-radius:8px; overflow:hidden;">
+                  ${thumb(cur[m], 76)}
+                  <div style="padding:0.35rem 0.6rem; font-size:0.74rem; color:var(--text-secondary); display:flex; justify-content:space-between;">
+                    <span>${m === 'dark' ? 'Dark mode' : 'Light mode'}</span>
+                    <span style="color:var(--text-muted);">${isDefault(cur[m]) ? 'Default' : (SW.isAnimated(cur[m]) ? 'Live' : 'Custom')}</span>
+                  </div>
+                </div>`).join('');
             }
-            if (ws) {
-              ws.style.background = 'transparent';
-              ws.style.backgroundImage = 'none';
-            }
-            localStorage.setItem('shellman_wallpaper', url);
-            if (window.showToast) window.showToast('Wallpaper applied', 'info');
+            if (!presetBox) return;
+            const list = SW.presets();
+            if (countEl) countEl.textContent = list.length + ' / ' + SW.MAX_PRESETS + ' saved';
+            const btn = (u, tgt, label, on) => `<button type="button" class="wall-set" data-url="${esc(u)}" data-target="${tgt}" style="flex:1; padding:0.28rem 0; font-size:0.72rem; border:0; ${tgt === 'dark' ? '' : 'border-left:1px solid ' + BORDER + ';'} cursor:pointer; background:${on ? 'var(--sm-accent-soft, rgba(56,189,248,0.15))' : 'none'}; color:${on ? 'var(--sm-accent)' : 'var(--text-secondary)'}; font-weight:${on ? '600' : '400'};">${label}</button>`;
+            const card = (u, builtin) => {
+              const d = cur.dark === u, l = cur.light === u;
+              const tag = d && l ? 'Dark + Light' : (d ? 'Dark' : (l ? 'Light' : ''));
+              return `
+              <div style="border:1px solid ${d || l ? 'var(--sm-accent)' : BORDER}; border-radius:8px; overflow:hidden;">
+                <div style="position:relative;">
+                  ${thumb(u, 84)}
+                  ${builtin ? '<span style="position:absolute; left:4px; bottom:4px; font-size:0.64rem; background:rgba(0,0,0,0.65); color:#fff; padding:1px 6px; border-radius:3px;">Default Studio</span>' : ''}
+                  ${SW.isAnimated(u) ? '<span style="position:absolute; left:4px; top:4px; font-size:0.62rem; background:rgba(0,0,0,0.65); color:#fff; padding:1px 6px; border-radius:3px;">Live</span>' : ''}
+                  ${tag ? `<span style="position:absolute; right:4px; bottom:4px; font-size:0.62rem; background:var(--sm-accent); color:#fff; padding:1px 6px; border-radius:3px;">${tag}</span>` : ''}
+                  ${builtin ? '' : `<button type="button" class="wall-del" data-url="${esc(u)}" title="Delete preset" style="position:absolute; top:4px; right:4px; width:20px; height:20px; border:0; border-radius:50%; background:rgba(0,0,0,0.65); color:#fff; font-size:13px; line-height:1; cursor:pointer;">&times;</button>`}
+                </div>
+                <div style="display:flex; border-top:1px solid ${BORDER};">
+                  ${btn(u, 'dark', 'Dark', d && !l)}${btn(u, 'light', 'Light', l && !d)}${btn(u, 'both', 'Both', d && l)}
+                </div>
+              </div>`;
+            };
+            presetBox.innerHTML = card(SW.DEFAULT_URL, true) + list.map(u => card(u, false)).join('');
+            presetBox.querySelectorAll('.wall-set').forEach(b => {
+              b.onclick = () => {
+                SW.assign(b.dataset.url, b.dataset.target);
+                paintWalls();
+                toast((SW.isVideo(b.dataset.url) ? 'Live wallpaper' : 'Wallpaper') + ' set for ' + (b.dataset.target === 'both' ? 'dark and light mode' : b.dataset.target + ' mode'));
+              };
+            });
+            presetBox.querySelectorAll('.wall-del').forEach(d => {
+              d.onclick = () => {
+                const u = d.dataset.url;
+                SW.removePreset(u);
+                const m = /^\/wallpapers\/([a-f0-9]{20}\.[a-z0-9]+)$/.exec(u);
+                if (m) fetch('/api/wallpapers/' + m[1], { method: 'DELETE' }).catch(() => {});   // uploaded file: delete it too
+                paintWalls();
+              };
+            });
           };
 
-          contentPane.querySelectorAll('.wallpaper-card').forEach(c => {
-            c.onclick = () => applyWall(c.dataset.url);
-          });
+          // add to presets (does not change what is in use)
+          const addPreset = (url) => {
+            const why = SW.addPreset(url);
+            if (why) { toast(why, 'warning'); return false; }
+            paintWalls();
+            toast('Added to presets. Choose Dark, Light or Both.');
+            return true;
+          };
+
+          // ---- upload from device ----
+          const upBtn = contentPane.querySelector(`#wallUploadBtn_${setWinId}`);
+          const upFile = contentPane.querySelector(`#wallFile_${setWinId}`);
+          const upMsg = contentPane.querySelector(`#wallUpMsg_${setWinId}`);
+          const upBar = contentPane.querySelector(`#wallUpBar_${setWinId}`);
+          const upDrop = contentPane.querySelector(`#wallDrop_${setWinId}`);
+          const IMG_X = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'bmp'], VID_X = ['mp4', 'm4v', 'mov', 'webm', 'ogv'];
+          const upSay = (t, bad) => { if (upMsg) { upMsg.textContent = t; upMsg.style.color = bad ? 'var(--c-bad,#dc2626)' : 'var(--text-secondary)'; } };
+          const uploadFile = (file) => {
+            if (!file) return;
+            if (SW.presets().length >= SW.MAX_PRESETS) { upSay('Preset limit reached (' + SW.MAX_PRESETS + '). Delete one first.', true); return; }
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            const isVid = VID_X.includes(ext);
+            if (!isVid && !IMG_X.includes(ext)) { upSay('Unsupported type. Use an image (JPG, PNG, WebP, GIF, AVIF) or a video (MP4, WebM, MOV, OGV).', true); return; }
+            if (file.size > (isVid ? 300 : 40) * 1048576) { upSay('Too large. Limit is ' + (isVid ? '300' : '40') + ' MB.', true); return; }
+            const fd = new FormData(); fd.append('file', file);
+            const x = new XMLHttpRequest();
+            x.open('POST', '/api/wallpapers/upload');
+            if (upBar) { upBar.style.display = 'block'; upBar.firstElementChild.style.width = '0'; }
+            upSay('Uploading ' + file.name + ' ...');
+            x.upload.onprogress = (ev) => { if (ev.lengthComputable && upBar) upBar.firstElementChild.style.width = Math.round(ev.loaded / ev.total * 100) + '%'; };
+            x.onerror = () => { upSay('Upload failed (network).', true); if (upBar) upBar.style.display = 'none'; };
+            x.onload = () => {
+              if (upBar) upBar.style.display = 'none';
+              let j = {}; try { j = JSON.parse(x.responseText); } catch (_) {}
+              if (x.status === 200 && j.success && j.item) {
+                upSay('Uploaded ' + file.name);
+                addPreset(j.item.url);
+              } else {
+                upSay(j.error || j.message || ('Upload failed (' + x.status + ').'), true);
+              }
+            };
+            x.send(fd);
+          };
+          if (upBtn && upFile) {
+            upBtn.onclick = () => upFile.click();
+            upFile.onchange = () => { uploadFile(upFile.files[0]); upFile.value = ''; };
+          }
+          if (upDrop) {
+            ['dragenter', 'dragover'].forEach(n => upDrop.addEventListener(n, (e) => { e.preventDefault(); upDrop.style.borderColor = 'var(--sm-accent)'; }));
+            ['dragleave', 'drop'].forEach(n => upDrop.addEventListener(n, (e) => { e.preventDefault(); upDrop.style.borderColor = ''; }));
+            upDrop.addEventListener('drop', (e) => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) uploadFile(f); });
+          }
+
+          // files already on the server (cleared browser storage, another browser) come back as presets while there is room
+          fetch('/api/wallpapers').then(r => r.ok ? r.json() : null).then(j => {
+            if (j && j.success) { (j.items || []).forEach(it => SW.addPreset(it.url)); }
+            paintWalls();
+          }).catch(() => {});
+
+          paintWalls();
+          // keep the "in use" tags right if the theme is switched while Settings is open
+          window.addEventListener('shellman-theme', paintWalls);
 
           const applyBtn = contentPane.querySelector(`#applyWallBtn_${setWinId}`);
           const inp = contentPane.querySelector(`#customWallUrl_${setWinId}`);
           if (applyBtn && inp) {
             applyBtn.onclick = () => {
               const u = inp.value.trim();
-              if (u) applyWall(u);
+              if (u && addPreset(u)) inp.value = '';
             };
-          }
-
-          const resetBtn = contentPane.querySelector(`#resetWallBtn_${setWinId}`);
-          if (resetBtn) {
-            resetBtn.onclick = () => applyWall('/static/images/wallpaper-8k.jpg');
           }
         };
 
@@ -1370,13 +1566,13 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
           let permBadge = '';
           if (!hasNotif) {
-            permBadge = '<span style="font-size:0.68rem; background:rgba(148,163,184,0.15); color:#94a3b8; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">UNSUPPORTED</span>';
+            permBadge = '<span style="font-size:0.68rem; background:rgba(148,163,184,0.15); color:var(--text-muted); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">UNSUPPORTED</span>';
           } else if (perm === 'granted') {
-            permBadge = '<span style="font-size:0.68rem; background:rgba(16,185,129,0.15); color:#34d399; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">ALLOWED</span>';
+            permBadge = '<span style="font-size:0.68rem; background:rgba(16,185,129,0.15); color:var(--c-ok); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">ALLOWED</span>';
           } else if (perm === 'denied') {
-            permBadge = '<span style="font-size:0.68rem; background:rgba(239,68,68,0.15); color:#f87171; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">BLOCKED</span>';
+            permBadge = '<span style="font-size:0.68rem; background:rgba(239,68,68,0.15); color:var(--c-bad); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">BLOCKED</span>';
           } else {
-            permBadge = '<span style="font-size:0.68rem; background:rgba(245,158,11,0.15); color:#fbbf24; padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">PROMPT REQUIRED</span>';
+            permBadge = '<span style="font-size:0.68rem; background:rgba(245,158,11,0.15); color:var(--c-warn); padding:0.1rem 0.4rem; border-radius:4px; font-weight:600;">PROMPT REQUIRED</span>';
           }
 
           contentPane.innerHTML = `
@@ -1389,14 +1585,14 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
               <!-- Channels Card -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Alert Notification Channels</div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.25rem;">Alert Notification Channels</div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">Choose how ShellMan notifies you when a monitored server requires attention.</p>
 
                 <div style="display:flex; flex-direction:column; gap:0.9rem;">
                   <!-- In-App Toasts -->
-                  <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.85rem; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid var(--border-color);">
+                  <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.85rem; background:rgba(var(--wash),0.03); border-radius:6px; border:1px solid var(--border-color);">
                     <div>
-                      <div style="font-size:0.82rem; font-weight:600; color:#f8fafc;">In-App Desktop Toast Banners</div>
+                      <div style="font-size:0.82rem; font-weight:600; color:var(--text-primary);">In-App Desktop Toast Banners</div>
                       <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Real-time glassmorphism alerts rendered directly inside the ShellMan desktop workspace.</div>
                     </div>
                     <label style="position:relative; display:inline-block; width:38px; height:20px; margin:0; cursor:pointer;">
@@ -1406,10 +1602,10 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   </div>
 
                   <!-- OS / Browser Notifications -->
-                  <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.85rem; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid var(--border-color);">
+                  <div style="display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.85rem; background:rgba(var(--wash),0.03); border-radius:6px; border:1px solid var(--border-color);">
                     <div>
                       <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <span style="font-size:0.82rem; font-weight:600; color:#f8fafc;">Browser & OS Push Notifications</span>
+                        <span style="font-size:0.82rem; font-weight:600; color:var(--text-primary);">Browser & OS Push Notifications</span>
                         ${permBadge}
                       </div>
                       <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Native desktop push alerts via Web Notifications API / PWA when ShellMan is minimized or in background.</div>
@@ -1427,18 +1623,18 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
               <!-- Configurable Resource Thresholds Card -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Resource Alert Thresholds</div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.25rem;">Resource Alert Thresholds</div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">Set custom numbers for resource thresholds and sustained duration before ShellMan dispatches warnings.</p>
 
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.85rem; margin-bottom:1rem;">
                   <!-- CPU Threshold -->
-                  <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.4rem;">
+                  <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.4rem;">
                       CPU Alert Limit
                     </label>
                     <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.5rem;">
                       <input type="number" id="inpCpuThresh_${setWinId}" min="1" max="100" class="form-control" value="${currentCpuThresh}" style="width:75px; text-align:center; font-weight:700; font-size:0.88rem; padding:0.35rem 0.4rem;">
-                      <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">%</span>
+                      <span style="font-size:0.82rem; font-weight:600; color:var(--text-muted);">%</span>
                     </div>
                     <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
                       ${['60','70','80','85','90','95'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-cpu" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentCpuThresh === v ? 'border-color:var(--sm-accent); color:var(--sm-accent);' : ''}">${v}%</button>`).join('')}
@@ -1446,13 +1642,13 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   </div>
 
                   <!-- RAM Threshold -->
-                  <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.4rem;">
+                  <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.4rem;">
                       RAM Alert Limit
                     </label>
                     <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.5rem;">
                       <input type="number" id="inpRamThresh_${setWinId}" min="1" max="100" class="form-control" value="${currentRamThresh}" style="width:75px; text-align:center; font-weight:700; font-size:0.88rem; padding:0.35rem 0.4rem;">
-                      <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">%</span>
+                      <span style="font-size:0.82rem; font-weight:600; color:var(--text-muted);">%</span>
                     </div>
                     <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
                       ${['60','70','80','85','90','95'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-ram" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentRamThresh === v ? 'border-color:var(--sm-accent); color:var(--sm-accent);' : ''}">${v}%</button>`).join('')}
@@ -1460,13 +1656,13 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   </div>
 
                   <!-- Duration Filter -->
-                  <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
-                    <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.4rem;">
+                  <div style="background:rgba(var(--wash),0.02); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem;">
+                    <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.4rem;">
                       Sustained Duration
                     </label>
                     <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.5rem;">
                       <input type="number" id="inpDuration_${setWinId}" min="1" max="60" class="form-control" value="${currentDuration}" style="width:75px; text-align:center; font-weight:700; font-size:0.88rem; padding:0.35rem 0.4rem;">
-                      <span style="font-size:0.82rem; font-weight:600; color:#94a3b8;">mins</span>
+                      <span style="font-size:0.82rem; font-weight:600; color:var(--text-muted);">mins</span>
                     </div>
                     <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
                       ${['1','2','3','5','10'].map(v => `<button type="button" class="btn btn-secondary btn-xs btn-preset-dur" data-val="${v}" style="font-size:0.68rem; padding:0.15rem 0.4rem; ${currentDuration === v ? 'border-color:var(--sm-accent); color:var(--sm-accent);' : ''}">${v}m</button>`).join('')}
@@ -1475,8 +1671,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 </div>
 
                 <div style="padding:0.6rem 0.8rem; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.2); border-radius:6px; display:flex; align-items:center; gap:0.5rem;">
-                  <svg style="width:16px;height:16px;color:#f87171;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                  <div style="font-size:0.72rem; color:#cbd5e1; line-height:1.4;">
+                  <svg style="width:16px;height:16px;color:var(--c-bad);flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                  <div style="font-size:0.72rem; color:var(--text-secondary); line-height:1.4;">
                     <strong>Node Outage Detection:</strong> Always active. Alerts automatically after 3 failed consecutive polls (~15s) and sends recovery notifications when connectivity returns.
                   </div>
                 </div>
@@ -1485,7 +1681,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               <!-- Test Alert Card -->
               <div class="settings-card" style="display:flex; align-items:center; justify-content:space-between;">
                 <div>
-                  <div style="font-weight:600; font-size:0.82rem; color:#f8fafc;">Test Notification Dispatcher</div>
+                  <div style="font-weight:600; font-size:0.82rem; color:var(--text-primary);">Test Notification Dispatcher</div>
                   <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Trigger a mock health alert to verify both in-app toast and OS push notifications.</div>
                 </div>
                 <button class="btn btn-secondary btn-sm" id="btnTestAlert_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem;">
@@ -1527,7 +1723,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             cpuPresets.forEach(b => {
               const active = b.getAttribute('data-val') === String(num);
               b.style.borderColor = active ? '#38bdf8' : '';
-              b.style.color = active ? '#38bdf8' : '';
+              b.style.color = active ? 'var(--c-teal)' : '';
             });
             if (window.showToast) window.showToast(`CPU alert threshold set to ${num}%`, 'info');
           };
@@ -1547,7 +1743,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             ramPresets.forEach(b => {
               const active = b.getAttribute('data-val') === String(num);
               b.style.borderColor = active ? '#38bdf8' : '';
-              b.style.color = active ? '#38bdf8' : '';
+              b.style.color = active ? 'var(--c-teal)' : '';
             });
             if (window.showToast) window.showToast(`RAM alert threshold set to ${num}%`, 'info');
           };
@@ -1567,7 +1763,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             durPresets.forEach(b => {
               const active = b.getAttribute('data-val') === String(num);
               b.style.borderColor = active ? '#38bdf8' : '';
-              b.style.color = active ? '#38bdf8' : '';
+              b.style.color = active ? 'var(--c-teal)' : '';
             });
             if (window.showToast) window.showToast(`Sustained alert duration set to ${num} minutes`, 'info');
           };
@@ -1609,10 +1805,10 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
               <!-- Export Card -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Export ShellMan Archive</div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.25rem;">Export ShellMan Archive</div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4;">
                   Packages all registered server hosts, custom action scripts, and desktop appearance preferences into a portable JSON document.<br>
-                  <span style="color:#fbbf24; font-weight:600;">Security Notice:</span> Master passwords and SSH private keys are sanitized from the export. You can safely transfer this file across machines.
+                  <span style="color:var(--c-warn); font-weight:600;">Security Notice:</span> Master passwords and SSH private keys are sanitized from the export. You can safely transfer this file across machines.
                 </p>
                 <div>
                   <button class="btn btn-primary btn-sm" id="btnExportConfig_${setWinId}" style="display:inline-flex; align-items:center; gap:0.4rem;">
@@ -1624,7 +1820,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
               <!-- Import Card -->
               <div class="settings-card">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.25rem;">Import Configuration Archive</div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.25rem;">Import Configuration Archive</div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4;">
                   Restore server nodes, custom actions, and desktop preferences from a previously exported <code style="color:var(--sm-accent);">shellman_backup_*.json</code> file. Existing nodes and actions will be merged seamlessly.
                 </p>
@@ -1657,8 +1853,12 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 const prefs = {
                   shellman_theme: localStorage.getItem('shellman_theme') || 'dark',
                   shellman_wallpaper: localStorage.getItem('shellman_wallpaper') || '',
+                  shellman_wall_dark: localStorage.getItem('shellman_wall_dark') || '',
+                  shellman_wall_light: localStorage.getItem('shellman_wall_light') || '',
+                  shellman_wall_presets: localStorage.getItem('shellman_wall_presets') || '',
                   shellman_font_size: localStorage.getItem('shellman_font_size') || '16',
                   shellman_font_family: localStorage.getItem('shellman_font_family') || '',
+                  shellman_look: localStorage.getItem('shellman_look') || '',
                   shellman_toast_alerts: localStorage.getItem('shellman_toast_alerts') || 'true',
                   shellman_push_alerts: localStorage.getItem('shellman_push_alerts') || 'true',
                   shellman_ip_revealed: localStorage.getItem('shellman_ip_revealed') || 'false'
@@ -1706,7 +1906,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               if (!file) {
                 statusBox.style.display = 'block';
                 statusBox.style.background = 'rgba(239,68,68,0.12)';
-                statusBox.style.color = '#f87171';
+                statusBox.style.color = 'var(--c-bad)';
                 statusBox.textContent = 'Please choose a .json backup file first.';
                 return;
               }
@@ -1728,7 +1928,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 if (res.success) {
                   statusBox.style.display = 'block';
                   statusBox.style.background = 'rgba(16,185,129,0.12)';
-                  statusBox.style.color = '#34d399';
+                  statusBox.style.color = 'var(--c-ok)';
                   statusBox.textContent = '✓ ' + (res.message || 'Configuration restored successfully!');
 
                   // Restore UI preferences
@@ -1738,10 +1938,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                         localStorage.setItem(k, v);
                       }
                     }
-                    if (res.preferences.shellman_wallpaper) {
-                      const ws = document.getElementById('desktopWorkspace');
-                      if (ws) ws.style.backgroundImage = `url('${res.preferences.shellman_wallpaper}')`;
-                    }
+                    if (window.ShellmanLook) window.ShellmanLook.reload();
+                    if (window.ShellmanWallpaper) window.ShellmanWallpaper.apply();
                   }
 
                   if (window.showToast) window.showToast('Settings restored successfully!', 'success');
@@ -1749,13 +1947,13 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 } else {
                   statusBox.style.display = 'block';
                   statusBox.style.background = 'rgba(239,68,68,0.12)';
-                  statusBox.style.color = '#f87171';
+                  statusBox.style.color = 'var(--c-bad)';
                   statusBox.textContent = res.error || 'Failed to restore configuration.';
                 }
               } catch (e) {
                 statusBox.style.display = 'block';
                 statusBox.style.background = 'rgba(239,68,68,0.12)';
-                statusBox.style.color = '#f87171';
+                statusBox.style.color = 'var(--c-bad)';
                 statusBox.textContent = 'Invalid file or parsing error: ' + e;
               } finally {
                 impBtn.disabled = false;
@@ -1776,7 +1974,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 <div style="width:72px; height:72px; margin:0 auto 1rem; filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--sm-accent) 45%, transparent));">
                   <img src="/static/images/logo.png" alt="ShellMan Logo" style="width:100%; height:100%; object-fit:contain;">
                 </div>
-                <h2 style="font-size:1.4rem; font-weight:800; color:#f8fafc; margin-bottom:0.25rem; letter-spacing:0.04em;">SHELLMAN OS</h2>
+                <h2 style="font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-bottom:0.25rem; letter-spacing:0.04em;">SHELLMAN OS</h2>
                 <div style="font-size:0.75rem; font-family:var(--font-mono); color:var(--sm-accent); margin-bottom:0.75rem;">Version 1.0.0 Production Release</div>
                 <p style="font-size:0.8rem; color:var(--text-secondary); max-width:480px; margin:0 auto; line-height:1.5;">
                   Modern, agentless, high-performance Linux remote infrastructure desktop environment.
@@ -1784,23 +1982,23 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               </div>
 
               <div class="settings-card">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.75rem;">Architecture Specs</div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.75rem;">Architecture Specs</div>
                 <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.78rem;">
-                  <div style="display:flex; justify-content:space-between; padding-bottom:0.35rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <div style="display:flex; justify-content:space-between; padding-bottom:0.35rem; border-bottom:1px solid rgba(var(--wash),0.06);">
                     <span style="color:var(--text-muted);">Managed VPS Overhead</span>
-                    <span style="font-weight:600; color:#10b981;">0 MB Permanent RAM (Agentless)</span>
+                    <span style="font-weight:600; color:var(--c-ok2);">0 MB Permanent RAM (Agentless)</span>
                   </div>
-                  <div style="display:flex; justify-content:space-between; padding-bottom:0.35rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <div style="display:flex; justify-content:space-between; padding-bottom:0.35rem; border-bottom:1px solid rgba(var(--wash),0.06);">
                     <span style="color:var(--text-muted);">Terminal Emulation</span>
-                    <span style="font-family:var(--font-mono); color:#cbd5e1;">xterm.js + WebSocket PTY</span>
+                    <span style="font-family:var(--font-mono); color:var(--text-secondary);">xterm.js + WebSocket PTY</span>
                   </div>
-                  <div style="display:flex; justify-content:space-between; padding-bottom:0.35rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <div style="display:flex; justify-content:space-between; padding-bottom:0.35rem; border-bottom:1px solid rgba(var(--wash),0.06);">
                     <span style="color:var(--text-muted);">File Transport</span>
-                    <span style="font-family:var(--font-mono); color:#cbd5e1;">SFTP over SSH-2.0</span>
+                    <span style="font-family:var(--font-mono); color:var(--text-secondary);">SFTP over SSH-2.0</span>
                   </div>
                   <div style="display:flex; justify-content:space-between;">
                     <span style="color:var(--text-muted);">Monaco IDE</span>
-                    <span style="font-family:var(--font-mono); color:#cbd5e1;">VS Code Engine (v0.34.0)</span>
+                    <span style="font-family:var(--font-mono); color:var(--text-secondary);">VS Code Engine (v0.34.0)</span>
                   </div>
                 </div>
               </div>
@@ -1837,7 +2035,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       </svg>
                     </div>
                     <div>
-                      <div style="font-weight:700; font-size:0.95rem; color:#f8fafc;">ShellMan Desktop PWA</div>
+                      <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary);">ShellMan Desktop PWA</div>
                       <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
                         ${isStandalone ? 'Currently running inside dedicated native application window.' : 'Install to desktop or dock for single-click launch without browser tabs.'}
                       </div>
@@ -1854,14 +2052,14 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
               <!-- PWA Benefits Grid -->
               <div class="settings-card" style="margin-bottom:1.25rem;">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.75rem;">Native Desktop Features</div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.75rem;">Native Desktop Features</div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:0.75rem;">
                   <div class="pwa-feature-item">
                     <div class="pwa-feature-icon">
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg>
                     </div>
                     <div>
-                      <div style="font-weight:600; color:#f8fafc; font-size:0.8rem;">Dedicated Window</div>
+                      <div style="font-weight:600; color:var(--text-primary); font-size:0.8rem;">Dedicated Window</div>
                       <div style="font-size:0.72rem; color:var(--text-muted);">Runs in a clean, chromeless native window without browser address bars.</div>
                     </div>
                   </div>
@@ -1870,7 +2068,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
                     </div>
                     <div>
-                      <div style="font-weight:600; color:#f8fafc; font-size:0.8rem;">Instant Launch & Caching</div>
+                      <div style="font-weight:600; color:var(--text-primary); font-size:0.8rem;">Instant Launch & Caching</div>
                       <div style="font-size:0.72rem; color:var(--text-muted);">Pre-cached assets and service worker boot the desktop instantaneously.</div>
                     </div>
                   </div>
@@ -1879,7 +2077,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h8M6 16h12"></path></svg>
                     </div>
                     <div>
-                      <div style="font-weight:600; color:#f8fafc; font-size:0.8rem;">Global OS Shortcuts</div>
+                      <div style="font-weight:600; color:var(--text-primary); font-size:0.8rem;">Global OS Shortcuts</div>
                       <div style="font-size:0.72rem; color:var(--text-muted);">Use Ctrl+K, Alt+Tab, and Ctrl+W without browser hotkey interference.</div>
                     </div>
                   </div>
@@ -1888,7 +2086,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
                     </div>
                     <div>
-                      <div style="font-weight:600; color:#f8fafc; font-size:0.8rem;">App Launcher Shortcuts</div>
+                      <div style="font-weight:600; color:var(--text-primary); font-size:0.8rem;">App Launcher Shortcuts</div>
                       <div style="font-size:0.72rem; color:var(--text-muted);">Direct dock shortcuts to SSH Terminal, SFTP Files, and Code IDE.</div>
                     </div>
                   </div>
@@ -1897,7 +2095,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
 
               <!-- Manual Installation Guide Card -->
               <div class="settings-card">
-                <div style="font-weight:700; font-size:0.85rem; color:#f8fafc; margin-bottom:0.35rem;">Installation Instructions by Browser</div>
+                <div style="font-weight:700; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.35rem;">Installation Instructions by Browser</div>
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">If the automatic install button is not supported by your browser, follow these steps:</p>
                 <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.75rem; color:var(--text-secondary);">
                   <div>&bull; <strong>Chrome / Brave / Edge:</strong> Click the install icon in the URL bar (top right) or browser Menu &rarr; "Install ShellMan...".</div>

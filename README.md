@@ -1,596 +1,217 @@
 <p align="center">
-  <img src="static/images/logo-horizontal.png" alt="ShellMan Logo" width="620">
+  <img src="docs/assets/hero.svg" alt="ShellMan: agentless Linux server manager in your browser" width="100%">
 </p>
 
 <p align="center">
-  <strong>The Agentless Linux Remote Infrastructure Workspace & Web Operating Environment</strong><br>
-  <em>Manage all your Linux VPS, clouds, and bare-metal servers from your local machine with 0 MB resident RAM overhead.</em>
+  <a href="docs/deployment.md"><img src="https://img.shields.io/badge/Agent_on_servers-0_MB-0ea5e9?style=for-the-badge" alt="0 MB agent"></a>
+  <a href="docs/deployment.md#option-a-1-command-docker-deployment-recommended"><img src="https://img.shields.io/badge/Docker-ready-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Docker ready"></a>
+  <a href="docs/deployment.md#option-c-native-python-environment"><img src="https://img.shields.io/badge/Python-3.9+-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.9+"></a>
+  <a href="docs/features.md#sqlite-layer"><img src="https://img.shields.io/badge/Storage-SQLite-0f766e?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite"></a>
+  <a href="docs/features.md#pwa"><img src="https://img.shields.io/badge/PWA-installable-8b5cf6?style=for-the-badge" alt="PWA"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-64748b?style=for-the-badge" alt="MIT license"></a>
 </p>
 
 <p align="center">
-  <a href="#the-story-why-shellman"><img src="https://img.shields.io/badge/Agent-0_MB_Overhead-0ea5e9?style=for-the-badge&logo=linux&logoColor=white" alt="Agentless"></a>
-  <a href="#option-a-1-command-docker-deployment-recommended"><img src="https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready"></a>
-  <a href="#quick-start-guide"><img src="https://img.shields.io/badge/Python-3.9+-38bdf8?style=for-the-badge&logo=python&logoColor=white" alt="Python Version"></a>
-  <a href="#2-real-interactive-ssh-pty-terminal"><img src="https://img.shields.io/badge/Terminal-xterm.js_%2B_PTY-10b981?style=for-the-badge&logo=gnometerminal&logoColor=white" alt="Terminal"></a>
-  <a href="#3-sftp-file-manager-with-recursive-folder-drag-and-drop--custom-actions"><img src="https://img.shields.io/badge/Transport-SFTP_over_SSH-f59e0b?style=for-the-badge&logo=files&logoColor=white" alt="SFTP"></a>
-  <a href="#6-real-time-task-manager--linux-process-control"><img src="https://img.shields.io/badge/Processes-POSIX_Control-34d399?style=for-the-badge&logo=htop&logoColor=white" alt="Processes"></a>
-  <a href="#8-nginx-web-server-reverse-proxy-routing--certbot-ssl"><img src="https://img.shields.io/badge/Routing-Nginx_%2B_Certbot_SSL-059669?style=for-the-badge&logo=nginx&logoColor=white" alt="Nginx & Certbot"></a>
-  <a href="#9-progressive-web-app-pwa-support"><img src="https://img.shields.io/badge/PWA-Installable-8b5cf6?style=for-the-badge&logo=pwa&logoColor=white" alt="PWA Ready"></a>
-  <a href="#license"><img src="https://img.shields.io/badge/License-MIT-64748b?style=for-the-badge" alt="License"></a>
+  <a href="#what-is-shellman"><b>Overview</b></a> &nbsp;·&nbsp;
+  <a href="#screenshots"><b>Screenshots</b></a> &nbsp;·&nbsp;
+  <a href="#features-at-a-glance"><b>Features</b></a> &nbsp;·&nbsp;
+  <a href="#quick-start"><b>Quick start</b></a> &nbsp;·&nbsp;
+  <a href="#documentation"><b>Docs</b></a> &nbsp;·&nbsp;
+  <a href="docs/security.md"><b>Security</b></a>
 </p>
 
 ---
 
-## The Story: Why ShellMan?
+## What is ShellMan?
 
-### Tired of Server Panels Eating Up Half Your VPS RAM?
+ShellMan is a **web desktop for managing Linux servers**. You run it on your own laptop, desktop or a private gateway, and it talks to your servers over plain **OpenSSH and SFTP**. Nothing is installed on them: no agent, no daemon, no extra open port. Disconnect and the server is exactly as you left it.
 
-Picture this: You spin up an affordable 1 GB or 2 GB Linux VPS for a project, database, or API service. You want an intuitive dashboard to monitor health, edit configuration files, inspect logs, and upload assets without typing twenty terminal commands for every minor change.
+<p align="center">
+  <img src="docs/assets/architecture.svg" alt="ShellMan runs on your machine and reaches your servers over SSH on port 22" width="100%">
+</p>
 
-So you install a traditional server manager like cPanel, Plesk, Webmin, Cockpit, or aaPanel, and immediately encounter significant drawbacks:
+<table>
+<tr>
+<td width="33%" valign="top"><b>0 MB on your servers</b><br><sub>Your VPS keeps 100% of its RAM and CPU for your workloads.</sub></td>
+<td width="33%" valign="top"><b>Port 22 only</b><br><sub>If SSH works, ShellMan works. No panel port to expose or scan.</sub></td>
+<td width="33%" valign="top"><b>Many servers, one desktop</b><br><sub>Switch between production, staging and home lab from one node picker.</sub></td>
+</tr>
+</table>
 
-- **Bloated Daemons Everywhere**: Node.js runtimes, heavy Python processes, background pollers, and custom web servers are installed directly onto your server.
-- **400 MB to 800 MB RAM Consumed**: Before you have even deployed your application, half your server memory is consumed just running the management panel.
-- **Expanded Attack Surfaces**: You are forced to expose non-standard inbound ports (`8080`, `2087`, `9090`) to the public internet, inviting port scanners and brute-force attempts.
-- **Invasive Uninstalls**: Removing traditional panels often leaves behind stray packages, altered firewall rules, and broken system dependencies.
-
-### The Solution: Run It On Your Machine
-
-> **Why should your remote server waste compute running its own management UI when you have a powerful workstation in front of you?**
-
-**ShellMan flips the architecture on its head.**
-
-Instead of installing an invasive panel on remote servers, you run **ShellMan locally on your laptop, desktop, or private gateway**. ShellMan communicates with your Linux servers exclusively over standard, battle-tested **OpenSSH (Port 22) and SFTP**.
-
-- **0 MB Persistent RAM on your servers**: Absolutely nothing is installed on your remote machines.
-- **No background daemons**: No persistent monitoring daemons or cron jobs consuming remote CPU cycles.
-- **No extra ports required**: If your server accepts standard SSH on port 22, ShellMan works out of the box.
-- **Instant multi-node switching**: Manage staging boxes, production clusters, Raspberry Pis, and home labs from a single desktop interface.
-
-Your remote servers dedicate **100% of their compute and memory to your workloads**.
+> **Why not cPanel, Plesk, Webmin or Cockpit?** Those run a daemon on the server and often use 300 to 800 MB of RAM before your app even starts. ShellMan moves the interface to your side of the connection. [Read the full story and comparison](docs/why-shellman.md).
 
 ---
 
-## Technical Comparison: Traditional Panels vs. ShellMan
+## Screenshots
 
-| Metric / Feature | Traditional Panels (cPanel, Webmin, Cockpit) | ShellMan |
-| :--- | :--- | :--- |
-| **Agent / Daemon Required on Target** | Yes (Persistent resident daemon) | **None (100% Agentless)** |
-| **Managed Server RAM Overhead** | 300 MB - 800 MB | **0 MB (Zero resident footprint)** |
-| **Inbound Firewall Ports Needed** | Custom open ports (`8080`, `9090`, etc.) | **Standard OpenSSH (Port 22 only)** |
-| **Multi-Node Fleet Control** | Often requires paid multi-server licenses | **Built-in instant node switcher** |
-| **File Transfer Experience** | Basic single-file HTML uploaders | **Recursive folder Drag & Drop via SFTP** |
-| **Web Server & SSL Automation** | Manual CLI certbot or complex vhost edits | **1-click Reverse Proxy Routing, Certbot SSL automation, & safe syntax validation with auto-rollback** |
-| **Custom Automations** | Hardcoded menus or complex plugins | **Extensible Custom Actions with safe POSIX variable injection & 33+ vector SVGs** |
-| **Process & Task Management** | Coarse CPU list or heavy background poller | **Agentless POSIX control (SIGTERM, SIGKILL, SIGSTOP, SIGCONT) with RSS & PSS memory metrics** |
-| **Terminal Capability** | Simulated web console | **Real interactive PTY with xterm.js (vim, htop, tmux)** |
-| **Code Editing** | Plain textarea or basic editor | **Full Monaco Editor (VS Code engine)** |
-| **Directory Sync & Backup** | Complex CLI syntax or absent | **Dual-Mode Agentless Rsync (Local &harr; Remote Push/Pull + Server Mirror) with dry-run diffs** |
-| **Scheduled Jobs (Cron)** | Raw crontab text editing | **Visual Crontab Manager with human-readable scheduler & 1-click Run Now subshell tester** |
-| **Git Deployment** | Manual terminal pulls | **Git Continuous Deployment with live commits log, branch tracking, & automated webhook triggers** |
-| **Two-Factor Security** | Often absent or complex addon | **Native TOTP 2FA with pure SVG QR codes & emergency recovery backup codes** |
-| **Interface Style** | Tab-heavy static web pages | **Fluid Multi-Window Web Desktop OS & PWA** |
-| **Clean Exit** | Leaves packages, scripts, & config cruft | **Disconnect SSH and your server is completely untouched** |
+<p align="center">
+  <a href="docs/screenshots/desktop-overview.png"><img src="docs/screenshots/desktop-overview.png" alt="ShellMan desktop with widgets, dock and node switcher" width="100%"></a>
+  <br><sub>The desktop: icons, live widgets, dock, node switcher and the light and dark toggle.</sub>
+</p>
+
+<table>
+<tr>
+<td width="50%" valign="top"><a href="docs/screenshots/file-manager-sftp.png"><img src="docs/screenshots/file-manager-sftp.png" alt="SFTP file manager"></a><br><b>SFTP file manager</b><br><sub>Per-type icons, bulk actions, custom actions panel. <a href="docs/features.md#file-manager">Details</a></sub></td>
+<td width="50%" valign="top"><a href="docs/screenshots/code-workspace.png"><img src="docs/screenshots/code-workspace.png" alt="Code workspace"></a><br><b>Code workspace</b><br><sub>Monaco editor, tree explorer and PTY terminal. <a href="docs/features.md#code-workspace">Details</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/screenshots/fleet-light.png"><img src="docs/screenshots/fleet-light.png" alt="Fleet and History (light mode)"></a><br><b>Fleet and History (light mode)</b><br><sub>All servers at a glance, with CPU, RAM and disk alerts. <a href="docs/features.md#fleet">Details</a></sub></td>
+<td width="50%" valign="top"><a href="docs/screenshots/overview-light.png"><img src="docs/screenshots/overview-light.png" alt="System Overview (light mode)"></a><br><b>System Overview (light mode)</b><br><sub>Flat light theme with its own wallpaper. <a href="docs/features.md#theme">Details</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/screenshots/cloudflare-and-databases.png"><img src="docs/screenshots/cloudflare-and-databases.png" alt="Cloudflare and database explorer"></a><br><b>Cloudflare and database explorer</b><br><sub>DNS records, cache purge, and a read-only SQL console. <a href="docs/features.md#cloudflare">Details</a></sub></td>
+<td width="50%" valign="top"><a href="docs/screenshots/netstat-and-services.png"><img src="docs/screenshots/netstat-and-services.png" alt="Network sockets and services"></a><br><b>Network sockets and services</b><br><sub>Live sockets, listening ports and systemd control. <a href="docs/features.md#netstat">Details</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/screenshots/settings-appearance.png"><img src="docs/screenshots/settings-appearance.png" alt="Wallpapers per theme"></a><br><b>Wallpapers per theme</b><br><sub>Presets, uploads and live wallpapers, set for dark, light or both. <a href="docs/features.md#wallpapers">Details</a></sub></td>
+<td width="50%" valign="top"><a href="docs/screenshots/git-and-sync.png"><img src="docs/screenshots/git-and-sync.png" alt="Git deployment and rsync"></a><br><b>Git deployment and rsync</b><br><sub>Webhook deploys beside agentless rsync. <a href="docs/features.md#git-deploy">Details</a></sub></td>
+</tr>
+</table>
+
+<details>
+<summary><b>More screenshots</b></summary>
+<br>
+
+<table>
+<tr>
+<td width="50%" valign="top"><a href="docs/screenshots/health-alerts.png"><img src="docs/screenshots/health-alerts.png" alt="Health alerts"></a><br><b>Health alerts</b><br><sub>Rules, notification channels and desktop toasts. <a href="docs/features.md#health-alerts">Details</a></sub></td>
+<td width="50%" valign="top"><a href="docs/screenshots/audit-log.png"><img src="docs/screenshots/audit-log.png" alt="Audit log"></a><br><b>Audit log</b><br><sub>Searchable record of every change. <a href="docs/features.md#audit-log">Details</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/screenshots/terminal-window.png"><img src="docs/screenshots/terminal-window.png" alt="SSH terminal"></a><br><b>SSH terminal</b><br><sub>Full PTY with xterm.js. <a href="docs/features.md#terminal">Details</a></sub></td>
+<td width="50%" valign="top"><a href="docs/screenshots/database-and-processes.png"><img src="docs/screenshots/database-and-processes.png" alt="Databases and task manager"></a><br><b>Databases and task manager</b><br><sub>Query console, backups and process control. <a href="docs/features.md#databases">Details</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/screenshots/system-logs.png"><img src="docs/screenshots/system-logs.png" alt="Log viewer"></a><br><b>Log viewer</b><br><sub>Live journalctl with filters. <a href="docs/features.md#services-logs">Details</a></sub></td>
+<td width="50%" valign="top"><a href="docs/screenshots/file-compress.png"><img src="docs/screenshots/file-compress.png" alt="Compress dialog"></a><br><b>Compress dialog</b><br><sub>Choose contents, honor .gitignore, quick excludes. <a href="docs/features.md#file-manager">Details</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="docs/screenshots/admin-security.png"><img src="docs/screenshots/admin-security.png" alt="Account security"></a><br><b>Account security</b><br><sub>Password, 2FA and signed-in devices. <a href="docs/features.md#two-factor">Details</a></sub></td>
+<td width="50%" valign="top"><a href="docs/screenshots/settings-node-management.png"><img src="docs/screenshots/settings-node-management.png" alt="Server nodes"></a><br><b>Server nodes</b><br><sub>SSH credentials, keys and Codespaces. <a href="docs/features.md#desktop">Details</a></sub></td>
+</tr>
+</table>
+
+</details>
 
 ---
 
-## Visual Showcase
+## Features at a glance
 
-### 1. Modern Linux Desktop Operating Environment
-> Atmospheric wallpaper, live system telemetry panel, application dock, and active connected node switcher with privacy IP masking.
-<p align="center">
-  <img src="docs/screenshots/desktop-overview.png" alt="ShellMan Desktop Environment" width="950">
-</p>
+Each feature name links to its full description in [docs/features.md](docs/features.md).
 
-### 2. Remote SFTP File Manager with Recursive Drag-and-Drop & Custom Actions
-> Dual-pane remote file browser with directory tree navigation, persistent resizable properties panel, recursive folder drag-and-drop, and an extensible Custom Actions engine with safe parameter interpolation and live terminal handoff.
-<p align="center">
-  <img src="docs/screenshots/file-manager-sftp.png" alt="ShellMan SFTP File Manager" width="950">
-</p>
+### <img src="docs/assets/icons/desktop.svg" width="22" height="22" alt=""> Workspace
 
-### 3. Authentic Interactive SSH PTY Terminal
-> Low-latency WebSockets streaming xterm.js PTY directly connected to remote Linux instances with full curses navigation.
-<p align="center">
-  <img src="docs/screenshots/terminal-window.png" alt="ShellMan SSH PTY Terminal" width="950">
-</p>
+| | Feature | What it gives you |
+| :---: | :--- | :--- |
+| <img src="docs/assets/icons/desktop.svg" width="22" height="22" alt=""> | **[Multi-window desktop](docs/features.md#desktop)** | Move, resize, snap and minimize windows to a dock, like a real OS. Switch servers from one node picker. |
+| <img src="docs/assets/icons/terminal.svg" width="22" height="22" alt=""> | **[SSH terminal](docs/features.md#terminal)** | A real PTY over WebSockets with xterm.js, so vim, htop and tmux just work. Curated color themes. |
+| <img src="docs/assets/icons/folder.svg" width="22" height="22" alt=""> | **[SFTP file manager](docs/features.md#file-manager)** | Drag whole folders in, per-type file icons, compress with exclude rules, and reusable custom actions. |
+| <img src="docs/assets/icons/code.svg" width="22" height="22" alt=""> | **[Code workspace](docs/features.md#code-workspace)** | Monaco (the VS Code editor) with tabs, a file tree, search and a built-in terminal. |
+| <img src="docs/assets/icons/activity.svg" width="22" height="22" alt=""> | **[Task manager](docs/features.md#task-manager)** | List processes and send SIGTERM, SIGKILL, SIGSTOP or SIGCONT, with RSS and PSS memory. |
+| <img src="docs/assets/icons/logs.svg" width="22" height="22" alt=""> | **[Services and logs](docs/features.md#services-logs)** | Control systemd units and stream journalctl live, with level filters and regex search. |
+| <img src="docs/assets/icons/cpu.svg" width="22" height="22" alt=""> | **[Live telemetry](docs/features.md#telemetry)** | CPU, memory, disk, load and network widgets that follow the active server. |
+| <img src="docs/assets/icons/wifi.svg" width="22" height="22" alt=""> | **[Netstat](docs/features.md#netstat)** | Live sockets plus a leaderboard of the noisiest remote IPs, with one-click ban. |
 
-### 4. Monaco Code Workspace (VS Code Engine) with Integrated Terminal
-> Full remote IDE with multi-tab workspace, folder tree explorer, context menu operations, syntax highlighting, instant asynchronous SFTP save, and built-in interactive PTY shell.
-<p align="center">
-  <img src="docs/screenshots/code-workspace.png" alt="ShellMan Monaco Code Workspace" width="950">
-</p>
+### <img src="docs/assets/icons/globe.svg" width="22" height="22" alt=""> Web servers and domains
 
-### 5. Cloudflare DNS Management & System Security Settings
-> Multi-window desktop workflow featuring full Cloudflare zone & DNS record orchestration alongside native TOTP 2FA authentication, active session controls, and administrative security.
-<p align="center">
-  <img src="docs/screenshots/settings-node-management.png" alt="ShellMan Cloudflare & Security Settings" width="950">
-</p>
+| | Feature | What it gives you |
+| :---: | :--- | :--- |
+| <img src="docs/assets/icons/globe.svg" width="22" height="22" alt=""> | **[Nginx manager](docs/features.md#nginx)** | Virtual hosts, reverse proxies and Certbot SSL. Every save runs <code>nginx -t</code> and rolls back on failure. |
+| <img src="docs/assets/icons/server.svg" width="22" height="22" alt=""> | **[Apache manager](docs/features.md#apache)** | Debian, RHEL and cPanel layouts: sites, config files, modules, logs and SSL. |
+| <img src="docs/assets/icons/cloud.svg" width="22" height="22" alt=""> | **[Cloudflare](docs/features.md#cloudflare)** | Zones, DNS records and 15-year Origin CA certificates from one dashboard. |
 
-### 6. Database Explorer (.db / SQLite / MySQL / Postgres) & Task Manager
-> Agentless database explorer with table viewer, live SELECT query console, 1-click compressed backups, and real-time process monitoring with CPU/RAM metrics.
-<p align="center">
-  <img src="docs/screenshots/database-and-processes.png" alt="ShellMan Database Explorer and Task Manager" width="950">
-</p>
+### <img src="docs/assets/icons/database.svg" width="22" height="22" alt=""> Data and deployment
 
-### 7. Real-Time Journalctl System Log Streamer & Analyzer
-> Streaming Linux system logs with automatic error/failure badge highlighting, log level filters, IP address detection, and regex keyword searching.
-<p align="center">
-  <img src="docs/screenshots/system-logs.png" alt="ShellMan System Logs Viewer" width="950">
-</p>
+| | Feature | What it gives you |
+| :---: | :--- | :--- |
+| <img src="docs/assets/icons/database.svg" width="22" height="22" alt=""> | **[Database explorer](docs/features.md#databases)** | SQLite files, MySQL, MariaDB and PostgreSQL viewers with a query console and backups. |
+| <img src="docs/assets/icons/box.svg" width="22" height="22" alt=""> | **[Docker](docs/features.md#docker)** | Containers, live logs and Compose up, down and restart. |
+| <img src="docs/assets/icons/sync.svg" width="22" height="22" alt=""> | **[File sync](docs/features.md#file-sync)** | Agentless rsync over SSH: push, pull or mirror, with dry-run previews. |
+| <img src="docs/assets/icons/clock.svg" width="22" height="22" alt=""> | **[Cron manager](docs/features.md#cron)** | Visual crontab with plain-English schedules and a Run Now tester. |
+| <img src="docs/assets/icons/git.svg" width="22" height="22" alt=""> | **[Git deployment](docs/features.md#git-deploy)** | Pull on demand or on push through webhooks, then run post-deploy commands. |
+| <img src="docs/assets/icons/layers.svg" width="22" height="22" alt=""> | **[Fleet and history](docs/features.md#fleet)** | One page for every server, with CPU, memory and disk history up to 30 days. |
 
----
+### <img src="docs/assets/icons/shield.svg" width="22" height="22" alt=""> Security and operations
 
-## Key Features
+| | Feature | What it gives you |
+| :---: | :--- | :--- |
+| <img src="docs/assets/icons/shield.svg" width="22" height="22" alt=""> | **[Firewall](docs/features.md#firewall)** | UFW rules and Fail2Ban jails, with one-click ban from the netstat view. |
+| <img src="docs/assets/icons/link.svg" width="22" height="22" alt=""> | **[SSH diagnostics](docs/features.md#ssh-diagnostics)** | Latency, cipher, key exchange and host key details for each connection. |
+| <img src="docs/assets/icons/lock.svg" width="22" height="22" alt=""> | **[Two-factor sign-in](docs/features.md#two-factor)** | TOTP with a vector QR code and single-use recovery codes. |
+| <img src="docs/assets/icons/clipboard.svg" width="22" height="22" alt=""> | **[Audit log](docs/features.md#audit-log)** | Who signed in, changed settings, deleted files or ran a command, with CSV export. |
+| <img src="docs/assets/icons/bell.svg" width="22" height="22" alt=""> | **[Health alerts](docs/features.md#health-alerts)** | CPU, memory, disk and outage rules, sent to the desktop and to your channels. |
+| <img src="docs/assets/icons/users.svg" width="22" height="22" alt=""> | **[Viewer accounts](docs/features.md#viewer-accounts)** | Read-only users for teammates. New features are closed to them by default. |
+| <img src="docs/assets/icons/video.svg" width="22" height="22" alt=""> | **[Terminal recording](docs/features.md#recordings)** | Typed commands are logged per session. Output and passwords are never stored. |
+| <img src="docs/assets/icons/archive.svg" width="22" height="22" alt=""> | **[Encrypted backup](docs/features.md#encrypted-backup)** | One passphrase-encrypted file with servers, actions, rules and preferences. |
 
-### 1. Multi-Window Desktop Workspace & Window Snapping
-- **True Desktop Experience**: Open multiple applications side-by-side. Move, resize, minimize to dock, maximize, and cascade windows smoothly.
-- **Drag-and-Drop Aero Window Snapping**: Drag any window to the left or right edge of the screen to snap to 50% viewport width, or drag to the top edge to maximize. Displays a translucent glassmorphism snap preview overlay with smooth restore on drag release.
-- **Interactive Application Dock**: Launch and switch between Overview, Terminal, File Manager, Code Workspace, Task Manager, Nginx & Domains Manager, Services, Logs, Rsync Sync, Cron Scheduler, Git Deployments, and Settings.
-- **Central Node Switcher**: Seamlessly switch active servers with one click.
-- **Unified Command Palette (Ctrl+K)**: Instant search across desktop apps, registered server nodes, and remote server files over SFTP. Typing a filename (e.g. `nginx.conf`) searches the host and opens it directly in Monaco Code Workspace.
-- **Privacy IP Masking Toggle**: Sensitive server IP addresses are masked by default (`20.219.2***:22`). Click the inline eye icon SVG to reveal or hide unmasked host endpoints instantly.
-- **Persistent Preferences**: Wallpapers, window geometry, and privacy settings persist in local browser storage.
+### <img src="docs/assets/icons/sun.svg" width="22" height="22" alt=""> Look and feel
 
-### 2. Real Interactive SSH PTY Terminal
-- **True Pseudo-Terminal (PTY)**: Backed by Paramiko `invoke_shell(term='xterm-256color')` streamed over low-latency WebSockets directly to `xterm.js`.
-- **Multiple Color Themes**: Choose from 16 curated developer color schemes: **ShellMan Cyberpunk (Default)**, **Dracula**, **One Dark**, **Nord Frost**, **Tokyo Night**, **Catppuccin Mocha**, **Gruvbox Dark**, **Synthwave '84**, **Solarized Dark**, **Solarized Light**, **Material Ocean**, **Cobalt2**, **GitHub Dark**, **Night Owl**, **Monokai Pro**, and **The Matrix Green**. Switch themes on the fly from the terminal toolbar or globally in System Settings, automatically applying to all active terminals and integrated consoles.
-- **Full Curses & Terminal App Support**: Effortlessly run `htop`, `vim`, `nano`, `tmux`, `less`, `tail -f`, and interactive REPLs with zero input lag.
-- **Signal Handling**: Dedicated raw input interception handles <kbd>Ctrl</kbd>+<kbd>C</kbd>, <kbd>Ctrl</kbd>+<kbd>D</kbd>, <kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>L</kbd>, and arrow keys without browser collision.
-- **Dynamic Viewport Auto-Fit**: Window resizes trigger real-time PTY terminal column and row recalculations via `fitAddon`.
-
-### 3. SFTP File Manager with Recursive Folder Drag-and-Drop & Custom Actions
-- **Custom Actions Automation Engine**: Turn recurring shell commands into reusable remote buttons directly embedded in the file manager.
-  - **Safe POSIX Parameter Substitution**: Variables are safely quoted and escaped to prevent command injection: `{{selected_path}}`, `{{selected_name}}`, `{{current_dir}}`, `{{selected_paths}}`, and `{{server_name}}`.
-  - **Embedded Output Panel & Terminal Handoff**: Run actions with live status badges, exit code tracking, stdout/stderr output streaming, rerun button, and a 1-click terminal handoff to continue interactively.
-  - **Confirmation Shield**: Optional confirmation dialog displaying the target server, selected remote paths, and exact command preview before execution.
-  - **Extensive Vector Icon Library**: Searchable 3-column palette featuring 33+ clean vector SVG icons tailored for Linux administration (Deploy, Run, Shield, Lock, Key, Checksum, Archive, Logs, Database, Server, CPU, Cloud, Download, Upload, Restart, Trash, Wrench, Zap, Search, Alert, Code, Backup, Network, Health, Release, Git, Container, Web, Link, Config).
-  - **Export & Import**: Share custom actions between servers and teammates via standardized JSON export/import.
-- **Persistent Drag-to-Resize Properties Drawer**: An interactive vertical split handle allows dragging the right-side properties panel from 220px to 750px. Width persists in local storage across browser reloads. Double-click the handle to restore default width.
-- **Recursive Folder Drag-and-Drop**: Drag entire directory hierarchies from your local workstation directly into the browser — ShellMan automatically creates remote folders recursively (`mkdir -p`) and uploads all nested files.
-- **Target Folder Hover Detection**: Hover dropped files directly over a target folder row or grid tile to upload straight into that subdirectory.
-- **Dual View Modes & Batch Operations**: Switch between a compact details list and a responsive thumbnail grid. Inspect permissions (`chmod`), ownership (`chown`), file sizes, and timestamps. Batch move, copy, compress (`.zip`/`.tar.gz`), and delete items.
-
-### 4. Monaco Code Workspace (VS Code Engine)
-- **Full-Fledged Editor**: Powered by Microsoft Monaco with syntax highlighting, bracket matching, line numbers, and multi-cursor support.
-- **Local File Drag & Drop Integration**: Drag any file directly from your local desktop onto the editor viewport to immediately open it in an editable tab. Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save and upload it directly to the remote server workspace. Dragging files onto the left explorer tree immediately saves them to the active folder and refreshes the directory hierarchy.
-- **Desktop-Grade Right-Click Context Menus**: Full context menu suite on explorer files and folders (New File, New Folder, Rename, Duplicate/Copy, Move with Remote Directory Picker, Open in Terminal, Download, Copy Absolute/Relative Path, Delete) and editor tabs (Close, Close Others, Close All, Save, Copy Path).
-- **Broad Language Support**: Python, JavaScript, TypeScript, Shell Script, Dockerfile, Nginx config, JSON, YAML, HTML, CSS, SQL, and Markdown.
-- **Integrated Terminal Panel**: Collapsible bottom PTY terminal panel synchronized with the active workspace directory for seamless test and build cycles.
-- **Fast Remote Editing**: Hotkeys for Quick Open (<kbd>Ctrl</kbd>+<kbd>P</kbd>) and instant asynchronous SFTP remote save (<kbd>Ctrl</kbd>+<kbd>S</kbd>).
-
-### 5. Live Telemetry & Resource Hub
-- **Hardware Telemetry**: Real-time dials for CPU usage %, RAM distribution (Used / Total), swap memory, and load averages (1m, 5m, 15m).
-- **Disk Partition Mounts**: Visual usage meters for root (`/`), boot mounts, and external drives.
-- **OS & Kernel Specs**: Linux distribution detection, kernel release, uptime counter, and CPU architecture.
-
-### 6. Real-Time Task Manager & Linux Process Control
-- **Agentless Process Telemetry (0 MB Resident Daemon)**: Reads process statistics directly via standard OpenSSH using `/proc` and `ps -eo` inspection — requiring zero agent daemons or background workers on remote servers.
-- **Multi-Metric Memory Footprint (RSS, PSS, VSZ & RAM%)**:
-  - **RSS (Resident Set Size)**: Physical RAM allocated to the process.
-  - **PSS (Proportional Set Size)**: Private memory plus proportional share of shared libraries (`/proc/[pid]/smaps_rollup`), revealing true individual memory weight.
-  - **VSZ (Virtual Size)**: Total virtual memory address space.
-  - **RAM%**: Formatted alongside exact memory footprint (e.g. `45.2 MB (2.3%)`).
-- **Decoded Linux Process State Engine**: Automatically translates Linux `STAT` codes into human-readable states with color-coded badges and explanatory tooltips:
-  - `Running` (`R`): Actively executing instructions on CPU.
-  - `Active` (`S`): Healthy process sleeping and waiting for incoming events or network requests.
-  - `Disk Wait` (`D`): Uninterruptible sleep awaiting disk or hardware I/O.
-  - `Zombie` (`Z`): Defunct process terminated but not yet reaped by its parent.
-  - `Stopped` (`T` / `t`): Paused by job control signals or an active debugger.
-  - `Idle` (`I`): Idle kernel worker thread.
-  - Modifiers: High priority (`<`), Nice low priority (`N`), Locked memory pages (`L`), Session leader (`s`), Multi-threaded (`l`), Foreground process (`+`).
-- **Full POSIX Signal Dispatch**: Right-click or menu actions for instant signal delivery:
-  - `SIGTERM (15)`: Request clean, graceful application shutdown.
-  - `SIGKILL (-9)`: Immediate forced termination for unkillable or frozen tasks.
-  - `SIGSTOP (19)`: Pause / freeze execution without losing process memory.
-  - `SIGCONT (18)`: Resume paused execution.
-  - Quick Copy: 1-click clipboard copy for PID and complete command line arguments.
-- **Host Telemetry Bar**: Integrated header meters displaying live host-wide CPU %, RAM %, and root partition disk % with animated capacity bars.
-- **Column Customization & Instant Filtering**: Select visible columns with localStorage persistence. Filter instantly across PID, username, command name, and argument flags. Sort columns ascending or descending with one click.
-
-### 7. System Services, Journalctl Logs & Live Viewer
-- **Systemd Unit Control**: Inspect all service states (`active`, `running`, `failed`, `inactive`) with one-click Start, Stop, and Restart actions.
-- **Regex Syntax Highlighting**: Journal and system logs are rendered with color-coded syntax formatting: errors (`red`), warnings (`amber`), notice/info (`cyan`), debug (`gray`), IPv4/IPv6 addresses (`blue`), and HTTP status codes.
-- **Continuous Live View Streaming**: Real-time streaming toggle (`Live View: ON/OFF`) polls and streams incoming system log entries continuously into the terminal view without requiring manual refreshes or reopening the window.
-- **Severity Counters & In-Log Filtering**: Live count pills for Total, Errors, Warnings, and Info lines, coupled with instant regex search filtering.
-
-### 8. Nginx Web Server, Reverse Proxy Routing & Certbot SSL
-- **Reverse Proxy Domain Routing**: Route public domains and subdomains to internal backend services and microservices running on local ports (Node.js, Python/Flask/FastAPI, Next.js, Go, or Docker containers).
-- **Automated Let's Encrypt SSL via Certbot**: 1-click HTTPS certificate issuance and renewals via Certbot and the Certbot Nginx plugin, with automated HTTP-to-HTTPS redirect rule generation.
-- **Virtual Host Manager**: Create, enable, disable, and delete virtual host configurations (`/etc/nginx/sites-available` and `/etc/nginx/sites-enabled`) with automated symlink management.
-- **Safe Configuration Editor with Auto-Rollback**: Inspect and modify `/etc/nginx/nginx.conf` and site configs inside an embedded editor. Every save is pre-flight tested using `nginx -t`. If validation fails, changes are instantly rolled back to the backup copy to prevent service downtime.
-- **Service Controls**: One-click configuration reload (`nginx -s reload`), service restart, syntax testing, and native package installer for Nginx and Certbot across Debian, Ubuntu, RHEL/CentOS, and Arch Linux.
-
-### 9. Cloudflare Domains & Authoritative DNS Management
-- **Operator-Level Cloudflare Integration**: Connect your personal Cloudflare account once using a minimum-privilege scoped API token. No SaaS multi-tenant overhead or third-party credential exposure.
-- **Fernet Encrypted Secret Storage**: The Cloudflare API token is encrypted at rest using local per-installation Fernet keys (`0600` permissions) and is never transmitted in browser API responses, HTML, logs, or diagnostic outputs.
-- **Unified Domain Dashboard**: View domain zones, Cloudflare activation state (`active`, `pending`, `error`), assigned authoritative nameservers, SSL/TLS encryption mode, DNSSEC status, and associated ShellMan server node.
-- **Cloudflare Origin CA Certificate Generator (15-Year Validity)**:
-  - Generates RSA 2048-bit private keys locally and signs standard PEM-encoded Certificate Signing Requests (CSR) with domain and wildcard Subject Alternative Names (SANs).
-  - Issues official 15-year certificates via Cloudflare's `/certificates` API.
-  - **1-Click Server Installation**: Deploys certificate and private key directly to `/etc/nginx/ssl/{domain}.crt` and `/etc/nginx/ssl/{domain}.key` via SSH, verifies permissions (`0644` / `0600`), and runs automated `nginx -t` syntax validation.
-  - Completely eliminates 90-day Let's Encrypt renewal failures behind proxied domains.
-- **1-Click Edge Cache Purge**: Instant **Purge Everything** for global cache invalidation upon deployments, or **Purge by URL / Prefix** to invalidate specific stylesheets, scripts, or assets.
-- **Development Mode Toggle**: Temporarily bypasses Cloudflare edge cache for 3 hours with a live visual countdown timer, ensuring HTML, CSS, and JS edits in ShellMan's Monaco editor reflect immediately in the browser.
-- **1-Click "Under Attack Mode"**: Enables Cloudflare edge JavaScript challenge during incoming floods or high `SYN_RECV` states detected in the Live Netstat/DDoS monitor, absorbing malicious traffic before it reaches origin server resources.
-- **24-Hour Traffic Ticker & Telemetry**: Visual edge metrics showing Total Requests, Unique Visitors, Cached vs Uncached bandwidth, and Blocked Threat count.
-- **Export RFC 1035 BIND Zone File**: 1-click download of all DNS records formatted in standard RFC 1035 / BIND format (`.txt`) for emergency offline backups or provider migrations.
-- **Add Domain Workflow**: Add domains to Cloudflare with immediate retrieval of assigned nameservers, 1-click individual and bulk copy buttons, registrar update guidelines, and mail record disruption warnings.
-- **Full DNS Record Manager**: Add, edit, search, and delete records across all major record types: `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, `SRV`, and `CAA`.
-  - **Cloudflare Proxy Toggle**: 1-click toggle for Cloudflare edge proxying (CDN, WAF, DDoS protection) on eligible record types (`A`, `AAAA`, `CNAME`).
-  - **Granular TTL & Priority Controls**: Configure TTL from Automatic down to 1 minute, with priority inputs for `MX` and `SRV`.
-- **Domain-to-Server Linkage**: Connect root `@` or subdomains directly to any ShellMan server IP.
-  - **Private IP Guard**: Detects RFC 1918 / loopback / link-local addresses and warns if a private IP is about to be exposed publicly.
-  - **DNS Conflict Detection**: Detects if an existing record points to a different IP and requires explicit confirmation before overwriting.
-  - **Nginx & SSL Handoff**: 1-click transition to Nginx virtual host configuration and Origin CA HTTPS certificate provisioning.
-- **Live Diagnostics & Reachability Probe**: Probes public DNS resolution, validates origin IP matching, checks HTTP/HTTPS status, and verifies SSL certificate presence.
-
-### 10. Live Netstat & DDoS Socket Monitor
-- **Interactive Active Socket Telemetry**: Displays all live TCP and UDP connections with protocol, connection state, local socket, remote foreign IP, and process/program names via standard `ss` / `netstat`.
-- **DDoS Activity Leaderboard**: Automatically aggregates and ranks remote IP addresses by total concurrent socket count and SYN_RECV state, giving immediate visibility into traffic spikes, port scans, and SYN flood attacks.
-- **State Breakdown**: Instant metric counters for Total Active, Established, SYN_RECV, and Time Wait sockets.
-- **Interactive Filtering & Auto-Refresh**: Real-time search across IP, port, or process, state filter dropdown (`ESTABLISHED`, `SYN_RECV`, `TIME_WAIT`, `CLOSE_WAIT`), 1-click IP copy, and configurable live polling intervals (`3s`, `5s`, `10s`, or paused).
-
-### 11. Progressive Web App (PWA) Support
-- **Installable Desktop App**: Install ShellMan as a native desktop application in Chrome, Brave, Edge, or Safari with custom window controls overlay.
-- **Distraction-Free**: Runs in standalone mode without browser tabs, address bars, or extension clutter.
-
-### 12. Two-Factor Authentication (2FA / TOTP)
-- **Time-Based One-Time Passwords (TOTP)**: Protect master administrator access using standard authenticator apps (Google Authenticator, Authy, 1Password, Bitwarden).
-- **Pure Vector QR Code**: High-contrast SVG QR barcode generated dynamically without raster image dependencies.
-- **Emergency Recovery Backup Codes**: Generates 8 one-time alphanumeric backup recovery codes (`XXXX-XXXX`) during 2FA activation with a 1-click copy/download modal to prevent lockouts.
-- **Dedicated Recovery Flow**: Login prompt includes an alternative "Use a backup code instead" option that validates single-use codes seamlessly with or without dashes.
-- **Safe 2FA Deactivation**: Requires entering the current master administrator password to disable 2FA, preventing unauthorized deactivations.
-
-### 13. Configuration Backup & Migration (Export / Import)
-- **Unified JSON Portability**: Export your complete ShellMan setup into a single portable `.json` archive.
-- **Credential Sanitization**: Server nodes are exported with passwords and private keys stripped, making backups safe to share or store.
-- **Seamless Restore**: Import restores custom automation actions, server nodes, and visual preferences (`theme`, `wallpaper`, `font-size`) across machines.
-
-### 14. Server Health Monitoring & Configurable Alerts
-- **Configurable Resource Thresholds**: Customize exact trigger thresholds for **CPU Utilization** (e.g. 60% to 95%) and **RAM Utilization** (e.g. 60% to 95%) with custom value inputs.
-- **Sustained Duration Filter**: Set minimum duration (1 to 10 minutes) before an alert fires to eliminate false alarms from transient compilation or backup spikes.
-- **Node Outage Detection**: Automatically alerts when a host fails 3 consecutive telemetry polls (~15s) and dispatches recovery notices upon reconnection.
-- **Dual Delivery Channels**: Real-time glassmorphism in-app toast banners plus native OS push notifications via Web Notifications API / PWA. Includes a test alert dispatcher.
-
-### 15. Agentless File Sync (Rsync over SSH)
-- **Dual Sync Engine**:
-  - **Mode 1: Local &harr; Remote Sync**: Transfer and synchronize folders directly between your local workstation running ShellMan and the remote server over SSH:
-    - **Push (`Local &rarr; Remote Server`)**: Uploads and synchronizes local project directories to remote server destinations.
-    - **Pull (`Remote Server &rarr; Local`)**: Downloads and mirrors remote directories to your local machine.
-    - **Zero-Dependency SSH Auth**: Uses POSIX `SSH_ASKPASS` and temporary key permissions (`chmod 0600`) — fully supporting both password and private key authentication without needing `sshpass`.
-  - **Mode 2: Server Backup & Mirror**: Direct server-side directory replication (e.g., `/var/www/` &rarr; `/var/backups/www/`) executed entirely on the remote host via the persistent SSH session without pulling data over your local connection.
-- **Interactive Directory Browser (Local & Remote)**: Built-in modal directory picker supporting both remote server SFTP and local workstation filesystems with breadcrumb navigation, double-click traversal, quick presets (`~/`, `~/Projects`, `~/Documents`, `/var/www/`, `/opt/`, `/etc/`), and real-time directory creation (`+ New Folder`).
-- **Safe Dry-Run Preview (`-n`)**: Evaluates transfer operations beforehand, presenting the exact files to be synchronized, total files count, and byte statistics before applying changes.
-- **Flexible Options**: Toggle Archive mode (`-a`), network stream compression (`-z`), and exact mirror deletion (`--delete`).
-- **Exclude Pattern Filters**: Ignore build artifacts and cache folders (`.git`, `node_modules`, `__pycache__`, `*.tmp`, `.DS_Store`).
-- **Live Output Stream**: Formatted terminal output pane with status badges (`IDLE`, `ANALYZING`, `PREVIEW OK`, `SYNCING`, `SUCCESS`, `FAILED`) and exit code tracking.
-
-### 16. Cron Job Manager (Scheduler)
-- **Visual Crontab Manager**: Inspect, add, edit, toggle, and delete scheduled cron entries on remote servers without manual terminal editing.
-- **Human-Readable Decoder**: Automatically translates raw cron syntax (`0 2 * * *`) into plain English descriptions ("Daily at 02:00").
-- **Schedule Presets**: 1-click presets for Hourly, Daily, Weekly, Monthly, Every 5/15 Minutes, and System Startup (`@reboot`).
-- **Immediate Execution Tester**: "Run Now" action executes any scheduled cron command in a subshell over SSH and displays stdout/stderr output immediately.
-- **Native 38px Utility Toolbar**: Integrated live search filter, schedule badges, and clean vector SVG icons.
-
-### 17. Git Continuous Deployment & Webhooks
-- **Repository Linking**: Link Git repositories to any server directory with branch tracking (`main`, `master`, `staging`) and interactive SFTP Directory Picker support.
-- **Live Git Inspection**: Inspect real-time branch status, remote origin URL, working tree clean/dirty state, and recent commit history (hash, author, relative time, message).
-- **1-Click Pull Latest**: Pull updates and automatically execute post-deployment commands (e.g. `npm install && npm run build` or `systemctl reload nginx`).
-- **Automated Deployment Webhooks**: Generates unique webhook URLs (`POST /api/deploy/webhook/<token>`) for GitHub and GitLab to automate deployment on `git push`.
-- **Native 38px Utility Toolbar**: Filter across deployments, status badges, and deployment logs.
-
-### 18. Docker & Container Manager
-- **100% Agentless Container Discovery**: Inspects Docker engine and active/stopped containers over standard SSH via `docker ps -a --format '{{json .}}'` with 0 MB resident RAM overhead.
-- **Full Lifecycle Operations**: 1-click Start, Graceful Stop (`-t 10`), Restart, Pause, and Forced Remove (`rm -f`).
-- **Live Container Log Streaming**: Tail and stream container logs directly into an interactive modal viewer with syntax formatting, timestamps, search filter, and clipboard copy.
-- **Docker Compose Automation**: Execute `docker compose up -d --build`, `down`, and `restart` in remote directories with custom compose file paths.
-- **Performance Telemetry**: Inspect non-streaming container CPU %, Memory usage, and Network I/O metrics on demand.
-
-### 19. Database Explorer & Backups (SQLite .db Viewer, MySQL, PostgreSQL)
-- **Interactive SQLite .db / .sqlite File Viewer**:
-  - Open and inspect any remote SQLite database file directly from the SFTP File Manager (double-click integration) or path input.
-  - Automatic table schema viewer (`PRAGMA table_info`), primary key badges, and column data types.
-  - Paginated row browser with responsive data grid.
-  - Safe read-only SQL console: executes custom `SELECT`, `PRAGMA`, and `EXPLAIN` queries while blocking mutations (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`).
-  - Auto-Discovery: 1-click scanner searches `/var/www`, `/home`, and `/opt` to locate SQLite database files automatically.
-- **MySQL & MariaDB Explorer**: Connects via local Unix socket without exposing ports, browse databases and tables, and preview rows.
-- **PostgreSQL Explorer**: Connects using peer authentication, lists active databases and public schema tables.
-- **1-Click Compressed Dump Generator**: Creates compressed backups (`.db.gz` or `.sql.gz`) in `/tmp/` ready for immediate SFTP retrieval.
-
-### 20. Firewall (UFW) & Fail2Ban Security Shield
-- **Visual UFW Firewall Control**: Real-time status display (`Active` / `Inactive`), default traffic policy readout, and numbered rule table.
-- **Rule Management**: Add allow/deny/limit rules for ports and specific IP addresses; delete rules with 1-click confirmation.
-- **Fail2Ban Jail Inspector**: Queries active intrusion jails (e.g. `sshd`), lists currently banned malicious IPs, and offers 1-click unban.
-- **DDoS Monitor Integration**: Connected directly with the Live Netstat & DDoS socket monitor. Click "Ban" next to any abusive foreign IP to immediately block it at firewall rule position 1 (`sudo ufw insert 1 deny from <ip> to any`).
-
-### 21. SSH Connection Diagnostics Dashboard ("The Secret Weapon")
-- **Encrypted Transport Verification**: Proves raw SSH transport authenticity directly in the UI.
-- **Live Round-Trip Latency (RTT)**: High-precision ping measured in milliseconds via OpenSSH keepalive global requests without spawning shell subshells.
-- **Cryptographic Cipher Breakdown**: Active symmetric bulk cipher (e.g., `chacha20-poly1305@openssh.com`, `aes256-gcm`), Key Exchange engine (`curve25519-sha256`), and MAC digest.
-- **Strict KEX & Anti-Terrapin Verification**: Displays whether strict key exchange negotiation is active.
-- **Host Key SHA-256 Fingerprint**: Instant fingerprint inspection and 1-click clipboard copy.
-- **Socket & Protocol Banners**: Displays remote OpenSSH banner, client banner, socket endpoint, and SFTP subsystem pool status.
-
-### 22. Desktop Customizer & Real Application Dock
-- **Customize Desktop & Dock**: Right-click any desktop icon or dock item and choose *Customize Desktop & Dock...* to choose which of the 19 registered apps appear as desktop shortcuts and which are pinned to the dock. Reset to defaults at any time.
-- **Running Apps Appear in the Dock**: An app that is open but not pinned shows up after a separator, like a native dock. Minimized apps stay there, dim, with a hollow running indicator. Click to restore, or right-click and choose **Keep in Dock** to pin it permanently.
-- **Dock Context Menu**: Open, Add to / Remove from Desktop, Unpin from Dock, Close window (or Close all windows when several are open), Customize, and Hide Dock. The hidden state persists across reloads.
-- **Desktop Icon Sizes**: Compact, Normal, or Large. Icons wrap into new columns instead of hiding, auto-scale to fit the free area beside the widgets, and show app names on up to two lines.
-- **Hardware App**: CPU cores, RAM layout, storage block devices, and `lshw` topology. It is available as a desktop shortcut and can be pinned to the dock.
-
-### 23. Appearance, Themes & Wallpaper
-- **Accent Colors**: Cyan, Violet, Emerald, Rose, or Amber. The accent drives active windows, dock indicators, gauges, buttons, and the node prompt.
-- **Font Scale**: A slider from 12 to 24 px with a live preview.
-- **15 Terminal Themes**: ShellMan Cyberpunk, Dracula, One Dark, Nord Frost, Tokyo Night, Catppuccin Mocha, Gruvbox Dark, Solarized Dark and Light, Material Ocean, Cobalt2, GitHub Dark, Night Owl, Monokai Pro, and The Matrix Green. One setting applies to the SSH terminal and the Code Workspace terminal.
-- **Wallpaper**: Use the built-in 8K wallpaper with one-click reset. The choice persists locally and is included in Backup & Export preferences.
-
-### 24. Live Desktop Widgets & Responsive Layout
-- **Widgets Panel**: Clock (with a server time zone label), live CPU, RAM, and disk gauges (click to open System Overview), and an uptime and platform card. All of it follows the active node.
-- **`$` Prompt Node Switcher**: The active node is shown as a shell prompt (`$ Connected Node`, name, `user@host`). `$` is accent coloured when the node is reachable and grey when it is offline. Every status marker in the app uses the same `$`. Offline nodes are dimmed in the switcher list.
-- **Adapts to Any Screen**: Layouts for ultrawide, laptop, tablet, and phone. On phones the widgets stack, the node pill centres, and the dock and icon grid stay usable. Pages outside the desktop (system bar and node modal) share the same design.
-- **Installable & Persistent**: Window geometry, dock, icon size, accent, font scale, and terminal theme persist in browser storage.
-
-### 26. Server-Side Alerts & Notification Channels
-- **Runs Without a Browser**: A background engine checks every node on a fixed interval (`SHELLMAN_ALERT_INTERVAL`, default 60 s), so alerts fire even when no ShellMan tab is open. Set `SHELLMAN_ALERTS=0` to disable it. A file lock (`.alerts.lock`) ensures only one gunicorn worker runs the engine.
-- **Rules**: Presets for node offline, CPU, RAM, disk, load and more, each with a threshold, a sustained duration, a severity and a cooldown. An alert fires after consecutive breaches, resolves after two clean checks, and re-notifies only after the cooldown. Open incidents survive restarts.
-- **Channels**: Telegram, Slack, Discord, generic webhook (optional HMAC signature in `X-ShellMan-Signature`) and email (SMTP). Every channel has a Test button. Secrets are stored encrypted and never returned to the browser.
-- **Safe Outgoing Requests**: Webhook URLs must be http or https, link-local and cloud metadata addresses are blocked, and redirects are not followed.
-- **In-App Bell**: A notification bell shows open incidents with acknowledge, acknowledge-all and clear actions.
-
-### 27. Audit Log
-- **What Is Recorded**: Logins (success, failure, lockout, 2FA), password and 2FA changes, server add/edit/delete, terminal sessions, file writes and deletes, git and system actions, automation runs, backup export/import and alert changes. Each entry stores time, user, IP, action, target and result.
-- **Viewer and Export**: Settings → Audit Log filters by action, user and result, and exports CSV (formula-injection safe).
-- **Filters**: Search text, user, failures only, and a From/To date range with quick buttons (Today, 7 days, 30 days, All time). CSV export uses the same filters.
-- **Retention**: Settings → Audit Log → Retention & cleanup sets how many days to keep (default 180) and a maximum entry count (default 20,000). 0 means no limit. Cleanup runs at startup, at least hourly while the log is written, and on Save. You can also delete by age, by the selected date range, or everything; the purge itself is recorded. Writing the log never breaks the action being logged.
-
-### 28. Encrypted Full Backup & Restore
-- **One File**: `Settings → Backup → Encrypted full backup` creates a `.smbak` file with servers (including saved passwords and keys), actions, alert rules and channels, and preferences.
-- **Passphrase Encryption**: The file is encrypted with Fernet, using a key derived from your passphrase by PBKDF2-HMAC-SHA256 (600,000 iterations). Without the passphrase it cannot be read. A lost passphrase cannot be recovered.
-- **Restore**: Import asks for the passphrase and merges into the current install. A wrong passphrase changes nothing. Imported actions always require confirmation before they run.
-
-### 29. Lightweight SQLite Data Layer
-- **Standard-library only**: ShellMan talks to SQLite through Python's built-in `sqlite3`, with a small data layer in `models/orm.py` instead of SQLAlchemy. This saves about 20 MB of RAM and two dependencies, and existing databases open unchanged (same tables, columns and date format).
-- **Easy queries**: models read like before. `Server.query.get_or_404(3)`, `Server.query.filter_by(host=h).first()`, `AlertEvent.query.filter(AlertEvent.resolved_at.is_(None)).order_by(AlertEvent.id.desc()).all()`, `.count()`, `.update({...})`, `.delete()`. Changes to loaded objects are saved by `db.session.commit()`.
-- **Raw SQL when needed**: `db.rows(sql, params)`, `db.scalar(sql, params)` and `db.isolated(sql, params)` (own connection, used by the audit log). Parameters are always passed separately, never formatted into the SQL text.
-- **Safe under load**: one connection and one session per thread, writes use `BEGIN IMMEDIATE` with a 15 s busy timeout, and each request ends with a rollback of anything uncommitted.
-- **Adding a model**: subclass `db.Model`, declare `db.Column(...)` fields and import it in `app.py`; `db.create_all()` creates the table. Adding a column to an existing table: call `db.add_column_if_missing(table, column, ddl)` in the start-up migration block.
-
-### 30. GitHub Codespaces & Time Budgets
-- **Add a Codespace like a server**: in System Settings, Server Nodes, choose "GitHub Codespace", paste a GitHub token and press "Find my Codespaces" (or type the name). The token is stored encrypted and is only used to start, stop and connect. A classic token needs the `codespace` scope; a fine-grained token needs Codespaces read and write. Terminal, file manager, tasks, Docker and the other apps then work as on any SSH server.
-- **Requirements**: the ShellMan host needs the GitHub CLI (`gh`) and the OpenSSH client (`ssh`, `ssh-keygen`); the Docker image installs both. The Codespace itself needs an SSH server (the default GitHub image has one; custom devcontainers need the `sshd` feature). Each open connection runs one `gh` process, which costs some extra memory.
-- **Create a new Codespace**: in the add dialog press "+ Create a new Codespace", load your repos, choose a branch (optional), idle-stop time and machine size, then Create. ShellMan creates it through the GitHub API and fills in its name; press Create Server to save it. Creating starts the machine and billing at once, and the machine can take a few minutes to become available. A private repo may need the `repo` scope on a classic token.
-- **SSH key**: ShellMan creates its own passphrase-free key at `instance/codespace_ed25519` the first time it connects and uses it for every Codespace, so your personal keys (even ones with a passphrase) are never used or prompted for. Keep `instance/` private and include it in your own file backups; the encrypted export does not contain this key, but ShellMan simply creates a new one if it is missing.
-- **Never wakes a sleeping Codespace**: ShellMan checks the state through the GitHub API before every connection and refuses to connect while the Codespace is stopped, because `gh codespace ssh` would otherwise start it silently and burn your hours. Press Start in "Time & Power" when you want it running.
-- **Time budget**: open "Time & Power" on a Codespace and set a limit in hours per day, week (starts Monday), month or in total (UTC). You see the time remaining in the panel and in a small chip at the bottom left of the desktop. ShellMan warns once at a chosen percentage (default 80%) through your alert channels, and at 100% it either stops the Codespace (action "Stop") or only notifies (action "Warn"). While the budget is used up, Start and new connections are refused.
-- **Extensions**: "+1 hour" and "+2 hours" add extra time for the current period only; it does not carry into the next period.
-- **Core-hours**: tick "count core-hours" to weigh time by the machine size (a 4-core Codespace running 1 hour uses 4 core-hours), which matches how GitHub bills.
-- **Needs the alert engine**: usage is measured once a minute by the background alert engine, so do not set `SHELLMAN_ALERTS=0` if you use budgets. Gaps longer than 5 minutes (for example while ShellMan was off) are not counted.
-- **It is an estimate**: ShellMan counts the time it sees the Codespace running. GitHub's own billing page is the final number, and storage is billed separately and is not included. Set the budget a little below your real limit.
-- **Limits**: local to remote rsync (File Sync) is not available for Codespaces yet. A rebuilt Codespace gets a new host key; ShellMan does not pin Codespace host keys because the GitHub tunnel already authenticates the machine. `SHELLMAN_GITHUB_API` overrides the API address (for GitHub Enterprise or tests).
-
-### 31. Read-only Users (Viewer Accounts)
-- **Two roles**: an **Administrator** can do everything. A **Viewer** can only look: the dashboard, Fleet & History, system overview, processes, services, logs, network info, Docker lists and alerts. A viewer cannot open a terminal, read or change files, run commands, change firewall, cron, Nginx, Git, database or Cloudflare settings, add or edit servers, see the audit log or export backups.
-- **Manage people**: Settings, Admin & Security, "People who can sign in". Add a person with a username, password and role, change a role, reset a password or delete an account. Changing a role or password signs that person out of every browser. ShellMan always keeps at least one administrator, and you cannot delete the account you are signed in with.
-- **Closed by default**: every request from a viewer is checked in one place (`roles.py`) against a short allow-list, so a feature added later stays closed to viewers until you add it to that list on purpose. Viewers may still change their own password and manage their own 2FA.
-- **Existing accounts stay administrators.** The new `role` column is added automatically when ShellMan starts.
-
-### 32. Terminal Session Recording
-- **What is saved**: each command a person types in the ShellMan terminal is written to the Audit Log as `terminal.command`, with who typed it, which server, the time and the person's IP. Each session also logs `terminal.open` and `terminal.close` (number of commands and length).
-- **What is not saved**: the screen output is never stored, so secrets that programs print stay out. Text typed at a password prompt (sudo, ssh, mysql and similar) is replaced by `[hidden input]`, and values that look like secrets (`password=...`, `--token ...`, `-pSECRET`) are replaced by `***`.
-- **Honest limits**: it records what was typed, so a line completed with Tab is marked `[Tab]` and a line taken from history with the arrow keys is marked `[history recall]`, because the final command is not visible from keystrokes alone. Text typed inside a full-screen program (vim, htop) is recorded as typed lines too.
-- **Control**: turn it off or on under Audit Log, "Record typed terminal commands". The normal audit retention (days and maximum entries) applies, so recordings clean themselves up.
-
-### 33. Fleet Dashboard & Metric History
-- **Fleet**: one page with a card for every server showing CPU, memory and disk bars, load, a one-hour CPU sparkline and when it was last read. Cards that need attention (offline, or any value at 75% or more) sort first. Click a card to open its graphs.
-- **History**: CPU, memory and disk graphs for the last 1 hour, 6 hours, 24 hours, 7 days or 30 days, with a hover tooltip. Gaps appear where a server was off or stopped.
-- **No extra load**: the background alert engine already reads each server once per check, so history stores one reading per server per minute from the same read. The Fleet page and graphs read stored data and never open their own SSH connections. Stopped GitHub Codespaces are skipped and never woken.
-- **Small and self-cleaning**: readings are plain SQLite rows (about 0.4 MB per server per week). By default 7 days are kept; administrators can choose 1 to 90 days, switch recording off or clear it in the History tab. Graphs are averaged into at most 240 points.
-- **Needs the alert engine**: do not set `SHELLMAN_ALERTS=0` if you want Fleet and History to fill in. `SHELLMAN_ALERT_INTERVAL` (default 60 seconds) controls how often servers are read; history keeps at most one reading per minute.
-
-### 25. Extra Editing & File Shortcuts
-- **Search in Files**: The Code Workspace has a sidebar search across the opened workspace folder (`/workspace/search-code`).
-- **File Manager Keyboard Control**: Navigate, rename, and delete from the keyboard (see the shortcut table below).
-- **Smart Compress (.zip / .tar.gz / .tar)**: The Compress dialog can skip everything listed in `.gitignore` (root and nested files), lets you untick individual files and folders with checkboxes, offers quick-exclude chips (`node_modules`, `.git`, `__pycache__`, `.venv`, `.env`, `*.log`, build folders, IDE folders), and accepts custom patterns. Works without git installed on the server.
-- **Everything Is Cancellable**: Closing a window, or pressing ×, Cancel or Esc on any dialog, aborts every request it started and kills the matching job on the server (compress, copy, move, extract, rsync, git, docker, certbot, database queries and so on), so nothing keeps the SSH connection busy. Any operation running longer than 2 seconds appears in a **Running** panel with its own cancel button. Progress toasts have a × as well.
-- **Batch Operations**: Archive, extract, copy, move, chmod, and delete several selected items in one action.
+| | Feature | What it gives you |
+| :---: | :--- | :--- |
+| <img src="docs/assets/icons/sun.svg" width="22" height="22" alt=""> | **[Light and dark](docs/features.md#theme)** | A flat, quiet light theme and the original dark one, switched with an animated toggle. |
+| <img src="docs/assets/icons/image.svg" width="22" height="22" alt=""> | **[Wallpapers](docs/features.md#wallpapers)** | Up to 10 presets. Upload images, GIFs or videos and give dark and light mode their own. |
+| <img src="docs/assets/icons/type.svg" width="22" height="22" alt=""> | **[Fonts and look](docs/features.md#fonts)** | Pick fonts, font scale, icon size and corner roundness. |
+| <img src="docs/assets/icons/phone.svg" width="22" height="22" alt=""> | **[Installable app](docs/features.md#pwa)** | Install it as a PWA and use it without browser chrome. |
+| <img src="docs/assets/icons/layout.svg" width="22" height="22" alt=""> | **[Widgets and layout](docs/features.md#widgets)** | Clock and resource widgets, dock customizer, ultrawide to phone layouts. |
 
 ---
 
----
+## Quick start
 
-## Quick Start Guide
-
-### Option A: 1-Command Docker Deployment (Recommended)
-
-Run ShellMan with a single Docker command. All encryption keys, server credentials, and SQLite state are persisted in the `shellman_data` volume:
+**Docker** (recommended). Keys, server credentials and the SQLite database persist in the `shellman_data` volume:
 
 ```bash
 docker run -d \
-  -p 9874:9874 \
+  -p 127.0.0.1:9874:9874 \
   -v shellman_data:/app/instance \
   --name shellman \
   --restart unless-stopped \
   dipanshu0919/shellman
 ```
 
-Navigate to `http://localhost:9874` to access your environment.
-
-### Option B: Docker Compose
-
-Clone the repository and run via Docker Compose:
+**Python** (3.9+, with `openssh-client` and `rsync` installed):
 
 ```bash
 git clone https://github.com/Dipanshu0919/ShellMan.git
 cd ShellMan
-
-docker compose up -d
-```
-
-To view live container logs:
-```bash
-docker compose logs -f
-```
-
-### Option C: Native Python Environment
-
-#### 1. Requirements
-- **Python 3.9+**
-- Standard Linux, macOS, or Windows (WSL recommended) environment
-- `openssh-client` and `rsync`
-
-#### 2. Setup & Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/Dipanshu0919/ShellMan.git
-cd ShellMan
-
-# 2. Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 3. Install dependencies
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# 4. Launch ShellMan
 python3 app.py
 ```
 
-Open your browser and navigate to:
-```text
-http://127.0.0.1:9874
-```
+Open **http://127.0.0.1:9874**. On the first visit a **setup wizard** asks you to create the administrator account. ShellMan ships with **no default password**.
 
-### First-Time Setup Wizard (No Default Credentials)
-> [!IMPORTANT]
-> **ShellMan does not ship with insecure default passwords.**
-> On your very first visit, you will automatically be directed to the **First-Time Setup Wizard** (`/setup`) where you create your master administrator username and secure password. Once created, the wizard locks permanently and launches you directly into your desktop environment.
+More options (Docker Compose, a public demo instance, first-run setup token) are in the [deployment guide](docs/deployment.md).
 
 ---
 
-## Deploying a Public Live Demo Instance
+## Security in short
 
-To deploy a live read-only or sandbox demonstration of ShellMan for colleagues or the community (e.g. on Render, Railway, Fly.io, or an entry-tier VPS):
+- **Nothing on the target.** No agent or listener means no extra attack surface on your servers.
+- **Secrets are encrypted.** Server passwords, keys and API tokens are stored with Fernet; backups can be passphrase-encrypted.
+- **Sign-in hardening.** TOTP 2FA with replay protection, brute-force lockout, same-site request checks and SSH host key pinning.
+- **Least privilege.** Read-only viewer accounts, closed to new features by default, plus an audit log of every change.
+- **Local by default.** `docker-compose.yml` publishes only on `127.0.0.1`. Put a TLS reverse proxy in front to expose ShellMan.
 
-1. **Deploy Container**: Point your host's Docker or Git deployment pipeline to this repository.
-2. **Environment Variables**:
-   ```ini
-   HOST=0.0.0.0
-   PORT=9874
-   # Optional: a random key is generated and stored in /app/instance if this is unset.
-   # SHELLMAN_SECRET_KEY=<at least 16 random characters>
-   SHELLMAN_COOKIE_SECURE=1
-   SHELLMAN_TRUST_PROXY=1
-   ```
-3. **Persistent Volume**: Attach a persistent disk mount to `/app/instance` to retain the initialized demo account and sample sandbox nodes across restarts.
-4. **Security for Public Demos**:
-   - Provide pre-configured guest/demo credentials in the login page or README.
-   - For public sandboxes, connect the demo to a dedicated isolated test VPS or local mock container rather than production infrastructure.
+The complete list is in [docs/security.md](docs/security.md).
 
 ---
 
-## Cloudflare Integration Guide
+## Documentation
 
-ShellMan includes an operator-level Cloudflare Domain & DNS manager. The integration connects to your personal Cloudflare account once to manage zones, configure DNS records, and link domains to your servers.
-
-### 1. Creating a Minimum-Privilege Scoped API Token
-Do **not** use your Cloudflare Global API Key or an R2 storage token (`cfat_...`). Create a scoped User API Token with only the permissions ShellMan requires:
-
-1. Log in to the [Cloudflare API Tokens Dashboard](https://dash.cloudflare.com/profile/api-tokens).
-2. Click **Create Token** > select **Create Custom Token** > **Get started**.
-3. Name your token (e.g. `ShellMan`).
-4. Under **Permissions**, configure the following 5 entries:
-   - `Account` > `Account Settings` > `Read` *(Required to identify your Cloudflare Account)*
-   - `Zone` > `Zone Settings` > `Edit` *(Required for Under Attack Mode & Dev Mode)*
-   - `Zone` > `Zone` > `Edit`
-   - `Zone` > `SSL and Certificates` > `Edit` *(Required for 15-Year Origin CA Certificate Generator)*
-   - `Zone` > `DNS` > `Edit`
-5. Under **Account Resources**, select: `Include` > `All accounts` *(or your chosen account)*.
-6. Under **Zone Resources**, select: `Include` > `All zones`.
-7. Click **Continue to summary** > **Create Token**, and copy the generated token secret.
-
-![Cloudflare Token Permissions Setup](static/images/cloudflare-token-setup.png)
-
-### 2. Connecting to ShellMan
-1. Open the **Cloudflare Domains** app from the dock or launcher.
-2. Click **Cloudflare Settings** (or the status pill in the top header).
-3. Paste your scoped API token and click **Save & Connect**.
-4. ShellMan verifies the token with Cloudflare, encrypts it at rest in `instance/shellman.db` using your local per-install Fernet key (`instance/.fernet.key`), and automatically syncs existing zones.
-5. The connection is permanently stored in the local SQLite database across ShellMan restarts.
-
-### 3. Adding Domains & Updating Nameservers
-1. In the Domains app, click **+ Add Domain**.
-2. Enter your registered root domain (e.g. `example.com` or `run.place`).
-   > [!NOTE]
-   > - **Apex Domain Requirement**: Cloudflare manages DNS zones at the root domain level (e.g. `run.place`), not individual subdomains (e.g. `dipanshu.run.place`). Subdomains are configured as `A`, `AAAA`, or `CNAME` records inside the domain's **DNS Records** tab.
-   > - **Registrar Requirement**: ShellMan creates the DNS zone in Cloudflare but does not purchase or register domain ownership. You must already own the domain at a registrar (e.g. Namecheap, GoDaddy, Squarespace).
-3. Copy the two assigned Cloudflare nameservers (e.g., `ns1.cloudflare.com` and `ns2.cloudflare.com`).
-4. Log in to your domain registrar and update the nameserver settings from *Default* to *Custom Nameservers*.
-5. Return to ShellMan and click **Check Nameservers Now**. Once verified, the status badge will update to **Active**.
-
-### 4. Linking Domains to ShellMan Server Nodes
-1. Click on your domain in the dashboard to open the **Domain Details** view.
-2. Navigate to the **Server & Nginx Link** tab.
-3. Select your target server node and specify your subdomain (`@` for root, or `api`, `app`).
-4. ShellMan automatically detects the server's public IP address (and warns if a private RFC 1918 address is selected).
-5. Choose whether to enable Cloudflare edge proxying (CDN & DDoS protection) or DNS-only.
-6. Click **Apply & Create DNS A-Record**. If a conflicting record exists, ShellMan highlights the conflict and asks for confirmation before updating.
-7. Click **Open Nginx Manager** to configure a virtual host and point SSL directives to your Cloudflare Origin certificate.
-
-### 5. Generating & Installing 15-Year Origin CA Certificates
-1. In the Domain Details view, navigate to the **SSL & Origin CA** tab.
-2. Review the pre-populated hostnames (e.g., `example.com, *.example.com`).
-3. Click **Generate 15-Year Certificate**. ShellMan generates an RSA 2048 private key locally, submits a signed CSR to Cloudflare, and receives the signed 15-year Origin CA certificate.
-4. Select your target server node from the dropdown.
-5. Click **Install to /etc/nginx/ssl on Server**. ShellMan transfers the certificate to `/etc/nginx/ssl/{domain}.crt` and key to `/etc/nginx/ssl/{domain}.key`, secures permissions (`0644`/`0600`), and executes `nginx -t` to verify configuration syntax.
-6. Set **Cloudflare SSL/TLS Encryption Mode** to **Full (Strict)** to enable 100% end-to-end encrypted traffic between Cloudflare edge and your origin server.
-
----
-
-## Security Architecture
-
-- **Zero-Agent Attack Surface**: Because no daemon runs on your managed server, there are no extra background listeners or open ports vulnerable to exploitation.
-- **Two-Factor Authentication (TOTP)**: Master administrator accounts can be protected with standard 6-digit TOTP authenticator codes and single-use emergency backup recovery codes.
-- **Password Manager Auto-Fill Standard**: Full compliance with W3C autocomplete standards (`username`, `current-password`, `new-password`, `one-time-code`) ensuring automated password management via 1Password, Bitwarden, KeePass, and browser vaults.
-- **Fernet AES-128 Encryption**: Server passwords and SSH private keys are stored using symmetric authenticated encryption (`cryptography.fernet.Fernet`).
-- **IP Masking**: Server IP addresses in the top node pill are masked to prevent accidental leakage during screen shares or streaming, with an interactive toggle button to unmask when needed.
-- **Sanitized Backup Archives**: Settings and server configurations exported for portability are strictly scrubbed of passwords and private keys.
-- **Path Traversal Protection**: All SFTP path parameters are strictly normalized and sanitized against directory traversal attacks (`../`).
-- **Random Session Secret**: The Flask session key comes from `SHELLMAN_SECRET_KEY` or is generated per install and stored in `instance/.secret_key` (0600). Known example values from docs or older releases are rejected, so a session cookie cannot be forged from the source code.
-- **Login Brute-Force Protection**: Failed password attempts are throttled per IP and username with exponential lockout (HTTP 429); wrong 2FA codes are throttled separately. Sessions are renewed on login and expire after 24 h of inactivity (`SHELLMAN_SESSION_HOURS`).
-- **Password Policy and Session Invalidation**: There is no password strength rule: you choose your own password. Changing the password or disabling 2FA signs out every other session. `Settings → Security → Sign out other sessions` does it on demand.
-- **First-Run Setup Token**: Set `SHELLMAN_SETUP_TOKEN` and the first-run page asks for it, so nobody who finds a fresh instance can claim the admin account.
-- **2FA Hardening**: A TOTP code works once only (replay guard), 2FA disable and password change are rate limited, and backup codes are stored encrypted.
-- **SSH Host Key Pinning (TOFU)**: The first connection to a node pins its host key in `instance/known_hosts`. A changed key is refused with a clear warning instead of being trusted silently. After reinstalling a server, call `POST /api/servers/<id>/forget-host-key` and reconnect.
-- **Cross-Site Request Protection**: State-changing requests and the terminal WebSocket are rejected when `Origin` / `Sec-Fetch-Site` show they come from another website. Behind a proxy that rewrites `Host`, list your public origin in `SHELLMAN_TRUSTED_ORIGINS`.
-- **Safe Redirects and Headers**: `next=` only accepts same-site paths. Responses carry `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` and `no-store` on login and API pages.
-- **POST-only Deploy Webhooks**: Webhook tokens are compared in constant time, failures are rate limited, and GET is no longer accepted so the token does not end up in logs or browser history.
-- **Localhost-only Docker Port**: `docker-compose.yml` publishes `127.0.0.1:9874` by default; put a TLS reverse proxy in front to expose it.
-- **Key Authentication**: Full support for standard password authentication as well as RSA and Ed25519 OpenSSH private key pairs (with passphrase support).
-
----
-
-## Productivity Shortcuts
-
-| Shortcut | Action |
+| Guide | What is in it |
 | :--- | :--- |
-| <kbd>Alt</kbd> + <kbd>Tab</kbd> | Interactive Application Switcher |
-| <kbd>Ctrl</kbd> + <kbd>K</kbd> | Unified Command Palette (Apps, Server Nodes & Remote SFTP Files) |
-| <kbd>Ctrl</kbd> + <kbd>P</kbd> | File Search in Monaco Workspace |
-| <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save File directly over SFTP |
-| <kbd>Ctrl</kbd> + <kbd>`</kbd> | Toggle the integrated terminal in Code Workspace |
-| <kbd>F2</kbd> | Rename selected item (File Manager) |
-| <kbd>Delete</kbd> | Delete selected items (File Manager) |
-| <kbd>Enter</kbd> | Open selected item (File Manager) |
-| <kbd>Backspace</kbd> / <kbd>Alt</kbd> + <kbd>←</kbd> | Go back (File Manager) |
-| <kbd>Alt</kbd> + <kbd>↑</kbd> | Go to parent folder (File Manager) |
-| <kbd>Ctrl</kbd> / <kbd>Shift</kbd> + Click | Multi-select (File Manager) |
-| <kbd>Ctrl</kbd> + <kbd>C</kbd> | Piped directly to remote terminal (`SIGINT`) |
-| <kbd>Ctrl</kbd> + <kbd>D</kbd> | Piped directly to remote terminal (`EOF`) |
-| <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Piped directly to remote terminal (`SIGTSTP`) |
+| [Features](docs/features.md) | Every feature in detail: 38 sections from the desktop to wallpapers. |
+| [Deployment](docs/deployment.md) | Docker, Docker Compose, native Python, first-run setup and a public demo. |
+| [Cloudflare guide](docs/cloudflare.md) | Create a scoped API token, add domains, issue Origin CA certificates. |
+| [Security](docs/security.md) | The full security architecture. |
+| [Keyboard shortcuts](docs/shortcuts.md) | File manager and editor shortcuts. |
+| [Why ShellMan](docs/why-shellman.md) | The story and a comparison with traditional panels. |
+
+**Built with** Flask, Paramiko (SSH and SFTP), xterm.js, Monaco and Python's built-in `sqlite3`.
 
 ---
 
 ## License
 
-This project is licensed under the **MIT License**. Feel free to use, modify, and deploy it for personal use, team infrastructure, or enterprise fleets.
+ShellMan is released under the [MIT License](LICENSE). Use it, change it and deploy it for personal projects, team infrastructure or fleets.

@@ -176,147 +176,7 @@ class DatabaseService:
             })
         return found
 
-    # =========================================================================
-    # MySQL / MariaDB Explorer
-    # =========================================================================
-
-    def mysql_status(self, server) -> Dict[str, Any]:
-        """Detects if MySQL / MariaDB service is active and accessible."""
-        cmd = (
-            "if systemctl is-active mysql >/dev/null 2>&1 || systemctl is-active mariadb >/dev/null 2>&1; then "
-            "  echo 'ACTIVE'; "
-            "  mysql --version 2>/dev/null || true; "
-            "else "
-            "  echo 'INACTIVE'; "
-            "fi"
-        )
-        exit_code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=6)
-        lines = stdout.strip().splitlines()
-        is_active = lines and lines[0] == 'ACTIVE'
-        ver = lines[1] if len(lines) > 1 else ''
-        return {
-            'installed': bool(ver),
-            'active': is_active,
-            'version': ver
-        }
-
-    def mysql_list_databases(self, server, user: str = 'root', password: Optional[str] = None) -> List[str]:
-        """Lists MySQL databases."""
-        auth = f"-u {shlex.quote(user)}"
-        if password:
-            auth += f" -p{shlex.quote(password)}"
-        cmd = f"sudo mysql {auth} -e 'SHOW DATABASES;' -s --skip-column-names 2>/dev/null || mysql {auth} -e 'SHOW DATABASES;' -s --skip-column-names 2>/dev/null"
-        exit_code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=10)
-        system_dbs = {'information_schema', 'performance_schema', 'sys'}
-        dbs = []
-        for line in stdout.strip().splitlines():
-            d = line.strip()
-            if d and d not in system_dbs:
-                dbs.append(d)
-        return dbs
-
-    def mysql_list_tables(self, server, database: str, user: str = 'root', password: Optional[str] = None) -> List[str]:
-        """Lists tables in a MySQL database."""
-        auth = f"-u {shlex.quote(user)}"
-        if password:
-            auth += f" -p{shlex.quote(password)}"
-        clean_db = shlex.quote(database)
-        cmd = f"sudo mysql {auth} -D {clean_db} -e 'SHOW TABLES;' -s --skip-column-names 2>/dev/null || mysql {auth} -D {clean_db} -e 'SHOW TABLES;' -s --skip-column-names 2>/dev/null"
-        exit_code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=10)
-        return [l.strip() for l in stdout.strip().splitlines() if l.strip()]
-
-    def mysql_query(self, server, database: str, query: str, user: str = 'root', password: Optional[str] = None) -> Dict[str, Any]:
-        """Executes a read-only query on a MySQL database."""
-        upper_q = query.strip().upper()
-        if not (upper_q.startswith('SELECT') or upper_q.startswith('EXPLAIN') or upper_q.startswith('SHOW') or upper_q.startswith('DESCRIBE')):
-            return {'success': False, 'error': 'Only read-only queries (SELECT, SHOW, DESCRIBE, EXPLAIN) are allowed.'}
-
-        auth = f"-u {shlex.quote(user)}"
-        if password:
-            auth += f" -p{shlex.quote(password)}"
-        clean_db = shlex.quote(database)
-        clean_query = query.strip()
-        if not clean_query.endswith(';'):
-            clean_query += ';'
-
-        cmd = f"sudo mysql {auth} -D {clean_db} -B -e {shlex.quote(clean_query)} 2>/dev/null || mysql {auth} -D {clean_db} -B -e {shlex.quote(clean_query)} 2>/dev/null"
-        exit_code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=15)
-
-        lines = stdout.strip().splitlines()
-        if not lines:
-            return {'success': True, 'columns': [], 'rows': [], 'row_count': 0}
-
-        headers = lines[0].split('\t')
-        rows = [l.split('\t') for l in lines[1:250]]
-        return {
-            'success': True,
-            'columns': headers,
-            'rows': rows,
-            'row_count': len(rows)
-        }
-
-    # =========================================================================
-    # PostgreSQL Explorer
-    # =========================================================================
-
-    def postgres_status(self, server) -> Dict[str, Any]:
-        """Detects if PostgreSQL service is active."""
-        cmd = (
-            "if systemctl is-active postgresql >/dev/null 2>&1; then "
-            "  echo 'ACTIVE'; "
-            "  psql --version 2>/dev/null || true; "
-            "else "
-            "  echo 'INACTIVE'; "
-            "fi"
-        )
-        exit_code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=6)
-        lines = stdout.strip().splitlines()
-        is_active = lines and lines[0] == 'ACTIVE'
-        ver = lines[1] if len(lines) > 1 else ''
-        return {
-            'installed': bool(ver),
-            'active': is_active,
-            'version': ver
-        }
-
-    def postgres_list_databases(self, server) -> List[str]:
-        """Lists PostgreSQL databases via peer auth sudo -u postgres."""
-        cmd = "sudo -u postgres psql -t -A -c \"SELECT datname FROM pg_database WHERE NOT datistemplate AND datname != 'postgres';\" 2>/dev/null || true"
-        exit_code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=10)
-        return [l.strip() for l in stdout.strip().splitlines() if l.strip()]
-
-    def postgres_list_tables(self, server, database: str) -> List[str]:
-        """Lists tables in a PostgreSQL database."""
-        cmd = f"sudo -u postgres psql -d {shlex.quote(database)} -t -A -c \"SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;\" 2>/dev/null || true"
-        exit_code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=10)
-        return [l.strip() for l in stdout.strip().splitlines() if l.strip()]
-
-    def postgres_query(self, server, database: str, query: str) -> Dict[str, Any]:
-        """Executes a read-only query on PostgreSQL."""
-        upper_q = query.strip().upper()
-        if not (upper_q.startswith('SELECT') or upper_q.startswith('EXPLAIN')):
-            return {'success': False, 'error': 'Only read-only queries (SELECT, EXPLAIN) are allowed.'}
-
-        clean_db = shlex.quote(database)
-        cmd = f"sudo -u postgres psql -d {clean_db} -A -F '\t' -c {shlex.quote(query)} 2>/dev/null || true"
-        exit_code, stdout, stderr = ssh_manager.execute(server, cmd, timeout=15)
-        lines = stdout.strip().splitlines()
-        if not lines:
-            return {'success': True, 'columns': [], 'rows': [], 'row_count': 0}
-
-        headers = lines[0].split('\t')
-        rows = []
-        for l in lines[1:]:
-            # psql outputs summary row like '(5 rows)'
-            if l.startswith('(') and 'row' in l:
-                break
-            rows.append(l.split('\t'))
-        return {
-            'success': True,
-            'columns': headers,
-            'rows': rows[:250],
-            'row_count': len(rows)
-        }
+    # MySQL / MariaDB and PostgreSQL live in services/sqlserver_service.py
 
     # =========================================================================
     # 1-Click Database Dump / Backup
@@ -334,15 +194,23 @@ class DatabaseService:
         if db_type == 'sqlite':
             dump_file = f"/tmp/sqlite_{target.split('/')[-1]}_{ts}.db.gz"
             cmd = f"gzip -c {shlex.quote(target)} > {shlex.quote(dump_file)} && chmod 644 {shlex.quote(dump_file)} && ls -lh {shlex.quote(dump_file)}"
-        elif db_type == 'mysql':
-            dump_file = f"/tmp/mysql_{target}_{ts}.sql.gz"
-            auth = f"-u {shlex.quote(user or 'root')}"
-            if password:
-                auth += f" -p{shlex.quote(password)}"
-            cmd = f"(sudo mysqldump {auth} {shlex.quote(target)} 2>/dev/null || mysqldump {auth} {shlex.quote(target)} 2>/dev/null) | gzip -c > {shlex.quote(dump_file)} && chmod 644 {shlex.quote(dump_file)} && ls -lh {shlex.quote(dump_file)}"
-        elif db_type == 'postgres':
-            dump_file = f"/tmp/pg_{target}_{ts}.sql.gz"
-            cmd = f"sudo -u postgres pg_dump {shlex.quote(target)} | gzip -c > {shlex.quote(dump_file)} && chmod 644 {shlex.quote(dump_file)} && ls -lh {shlex.quote(dump_file)}"
+        elif db_type in ('mysql', 'postgres'):
+            from services.sqlserver_service import MySql, Postgres, SAFE_USER_RE, SAFE_NAME_RE
+            if not SAFE_NAME_RE.match(target) or not SAFE_USER_RE.match(user or ('root' if db_type == 'mysql' else 'postgres')):
+                return {'success': False, 'error': 'The database or user name contains characters that are not allowed.'}
+            import re as _re
+            safe = _re.sub(r'[^A-Za-z0-9_.-]', '_', target)
+            dump_file = f"/tmp/{'mysql' if db_type == 'mysql' else 'pg'}_{safe}_{ts}.sql.gz"
+            if db_type == 'mysql':
+                code, o, e = MySql.dump(server, target, user or 'root', password, dump_file)
+            else:
+                code, o, e = Postgres.dump(server, target, user or 'postgres', password, dump_file)
+            if code != 0:
+                return {'success': False, 'error': f"Dump failed: {(e or o).strip().splitlines()[0] if (e or o).strip() else 'unknown error'}"}
+            parts = o.strip().split()
+            size_info = parts[4] if len(parts) >= 5 else 'Unknown'
+            return {'success': True, 'dump_file': dump_file, 'size': size_info,
+                    'message': f"Successfully created compressed backup of {target} ({size_info})."}
         else:
             return {'success': False, 'error': f"Unsupported database type '{db_type}'"}
 

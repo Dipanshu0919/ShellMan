@@ -14,6 +14,7 @@ from models.user import User
 _GET_OK = [re.compile(p) for p in (
     r'^/$',
     r'^/static/',
+    r'^/wallpapers/[a-f0-9]{20}\.[a-z0-9]+$',
     r'^/(favicon\.ico|manifest\.json|manifest\.webmanifest|sw\.js)$',
     r'^/api/servers/list$',
     r'^/api/servers/\d+/(metrics|system/info|processes/list|services/list|network/info|logs/fetch)$',

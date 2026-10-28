@@ -31,30 +31,30 @@
     const st = document.createElement('style');
     st.id = 'smAlertsCss';
     st.textContent = `
-      .sa-card{border:1px solid var(--border-color,#2f374b);border-radius:10px;padding:.9rem 1rem;margin-bottom:1.1rem;background:rgba(255,255,255,.02)}
-      .sa-h{font-weight:700;font-size:.85rem;color:var(--text-primary,#f3f5f9);margin-bottom:.2rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
-      .sa-d{font-size:.74rem;color:var(--text-muted,#939db2);margin-bottom:.8rem;line-height:1.4}
-      .sa-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .6rem;border:1px solid var(--border-color,#2f374b);border-radius:8px;margin-bottom:.4rem;font-size:.78rem;color:var(--text-primary,#f3f5f9)}
+      .sa-card{border:1px solid var(--border-color,var(--sm-line-strong));border-radius:10px;padding:.9rem 1rem;margin-bottom:1.1rem;background:rgba(var(--wash),.02)}
+      .sa-h{font-weight:700;font-size:.85rem;color:var(--text-primary,var(--text-primary));margin-bottom:.2rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+      .sa-d{font-size:.74rem;color:var(--text-muted,var(--text-muted));margin-bottom:.8rem;line-height:1.4}
+      .sa-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .6rem;border:1px solid var(--border-color,var(--sm-line-strong));border-radius:8px;margin-bottom:.4rem;font-size:.78rem;color:var(--text-primary,var(--text-primary))}
       .sa-row .grow{flex:1;min-width:0}
-      .sa-sub{font-size:.7rem;color:var(--text-muted,#939db2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .sa-sub{font-size:.7rem;color:var(--text-muted,var(--text-muted));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .sa-pill{font:700 .62rem/1 var(--font-mono,monospace);letter-spacing:.05em;padding:.2rem .4rem;border-radius:5px;border:1px solid currentColor}
-      .sa-crit{color:#ff5a67}.sa-warn{color:#fbbf24}.sa-ok{color:#34d399}.sa-mute{color:#939db2}
+      .sa-crit{color:var(--c-bad)}.sa-warn{color:var(--c-warn)}.sa-ok{color:var(--c-ok)}.sa-mute{color:var(--text-muted)}
       .sa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.55rem;margin-bottom:.6rem}
-      .sa-grid label{display:block;font-size:.68rem;color:var(--text-muted,#939db2);margin-bottom:.2rem}
+      .sa-grid label{display:block;font-size:.68rem;color:var(--text-muted,var(--text-muted));margin-bottom:.2rem}
       .sa-grid .form-control,.sa-card select.form-control,.sa-card input.form-control{font-size:.78rem;padding:.35rem .5rem;min-height:30px}
       .sa-btn{font-size:.72rem;padding:.25rem .6rem}
-      .sa-empty{font-size:.76rem;color:var(--text-muted,#939db2);padding:.4rem 0}
-      .sa-err{color:#ff8a93;font-size:.74rem;margin-top:.4rem;min-height:1em}
+      .sa-empty{font-size:.76rem;color:var(--text-muted,var(--text-muted));padding:.4rem 0}
+      .sa-err{color:var(--c-bad);font-size:.74rem;margin-top:.4rem;min-height:1em}
       .sa-tbl{width:100%;border-collapse:collapse;font-size:.74rem}
-      .sa-tbl th{text-align:left;color:var(--text-muted,#939db2);font-weight:600;padding:.35rem .4rem;border-bottom:1px solid var(--border-color,#2f374b);position:sticky;top:0;background:var(--bg-surface,#151f32)}
-      .sa-tbl td{padding:.35rem .4rem;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top;color:var(--text-primary,#f3f5f9)}
-      .sa-scroll{max-height:46vh;overflow:auto;border:1px solid var(--border-color,#2f374b);border-radius:8px}
-      .sa-bell{position:fixed;bottom:18px;left:18px;z-index:9000;width:34px;height:34px;border-radius:10px;border:1px solid var(--border-color,#2f374b);background:rgba(15,22,35,.82);color:#e2e8f0;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+      .sa-tbl th{text-align:left;color:var(--text-muted,var(--text-muted));font-weight:600;padding:.35rem .4rem;border-bottom:1px solid var(--border-color,var(--sm-line-strong));position:sticky;top:0;background:var(--bg-surface,var(--sm-surface))}
+      .sa-tbl td{padding:.35rem .4rem;border-bottom:1px solid rgba(var(--wash),.05);vertical-align:top;color:var(--text-primary,var(--text-primary))}
+      .sa-scroll{max-height:46vh;overflow:auto;border:1px solid var(--border-color,var(--sm-line-strong));border-radius:8px}
+      .sa-bell{position:fixed;bottom:18px;left:18px;z-index:9000;width:34px;height:34px;border-radius:10px;border:1px solid var(--border-color,var(--sm-line-strong));background:rgba(var(--panel-rgb),.82);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
       .sa-bell:hover{border-color:var(--sm-accent,#38bdf8)}
       .sa-bell svg{width:16px;height:16px}
       .sa-bell .n{position:absolute;top:-6px;right:-6px;min-width:16px;height:16px;border-radius:8px;background:#ff5a67;color:#fff;font:700 .6rem/16px var(--font-mono,monospace);text-align:center;padding:0 3px;display:none}
       .sa-bell.on .n{display:block}.sa-bell.warn .n{background:#fbbf24;color:#1b1300}
-      .sa-pop{position:fixed;bottom:62px;left:18px;z-index:9001;width:min(360px,calc(100vw - 32px));max-height:60vh;overflow:auto;border:1px solid var(--border-color,#2f374b);border-radius:12px;background:var(--bg-surface,#151f32);box-shadow:0 18px 40px rgba(0,0,0,.55);padding:.7rem;display:none}
+      .sa-pop{position:fixed;bottom:62px;left:18px;z-index:9001;width:min(360px,calc(100vw - 32px));max-height:60vh;overflow:auto;border:1px solid var(--border-color,var(--sm-line-strong));border-radius:12px;background:var(--bg-surface,var(--sm-surface));box-shadow:0 18px 40px rgba(0,0,0,.55);padding:.7rem;display:none}
       .sa-pop.open{display:block}
     `;
     document.head.appendChild(st);
@@ -133,7 +133,7 @@
     ruleForm(rule) {
       const f = this.root.querySelector('#saRuleForm');
       const r = rule || { name: '', metric: 'cpu', server_id: null, threshold: 90, duration_min: 5, cooldown_min: 60, severity: 'warning', enabled: true };
-      f.innerHTML = `<div style="margin-top:.7rem;border-top:1px solid var(--border-color,#2f374b);padding-top:.7rem">
+      f.innerHTML = `<div style="margin-top:.7rem;border-top:1px solid var(--border-color,var(--sm-line-strong));padding-top:.7rem">
         <div class="sa-grid">
           <div><label>Name</label><input class="form-control" id="rfName" value="${esc(r.name)}" placeholder="High CPU"></div>
           <div><label>Watch</label><select class="form-control" id="rfMetric">${Object.keys(METRIC).map(k => `<option value="${k}" ${r.metric === k ? 'selected' : ''}>${METRIC[k]}</option>`).join('')}</select></div>
@@ -201,7 +201,7 @@
         email: [['host', 'SMTP host', 'text'], ['port', 'Port', 'number'], ['security', 'Security (starttls / ssl / none)', 'text'], ['username', 'Username', 'text'], ['password', 'Password', 'password', true], ['from', 'From', 'text'], ['to', 'To (comma separated)', 'text']],
       };
       const draw = (k) => {
-        f.innerHTML = `<div style="margin-top:.7rem;border-top:1px solid var(--border-color,#2f374b);padding-top:.7rem">
+        f.innerHTML = `<div style="margin-top:.7rem;border-top:1px solid var(--border-color,var(--sm-line-strong));padding-top:.7rem">
           <div class="sa-grid">
             <div><label>Name</label><input class="form-control" id="cfName" value="${esc(ch ? ch.name : '')}" placeholder="Ops channel"></div>
             <div><label>Type</label><select class="form-control" id="cfKind" ${ch ? 'disabled' : ''}>${['telegram', 'slack', 'discord', 'webhook', 'email'].map(x => `<option value="${x}" ${x === k ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
@@ -253,7 +253,7 @@
         <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem;align-items:flex-end">
           <input class="form-control" id="auQ" placeholder="Search user, IP, action, target…" style="flex:1;min-width:180px;font-size:.78rem">
           <select class="form-control" id="auUser" style="width:auto;font-size:.78rem"><option value="">All users</option></select>
-          <label style="display:flex;align-items:center;gap:.35rem;font-size:.76rem;color:var(--text-secondary,#c3cad8)"><input type="checkbox" id="auFail"> Failures only</label>
+          <label style="display:flex;align-items:center;gap:.35rem;font-size:.76rem;color:var(--text-secondary,var(--sm-accent))"><input type="checkbox" id="auFail"> Failures only</label>
         </div>
         <div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.6rem;align-items:flex-end">
           <div class="sa-grid" style="display:flex;gap:.45rem;margin:0">
@@ -304,20 +304,20 @@
           <div><label>Delete entries older than (days)</label><input class="form-control" id="auDays" type="number" min="0" max="3650" value="${c.retention_days ?? 180}"></div>
           <div><label>Keep at most (entries)</label><input class="form-control" id="auMax" type="number" min="0" max="5000000" value="${c.max_rows ?? 20000}"></div>
         </div>
-        <label style="display:flex;align-items:flex-start;gap:.5rem;margin:.1rem 0 .7rem;cursor:pointer;font-size:.76rem;color:var(--text-primary,#f3f5f9)">
+        <label style="display:flex;align-items:flex-start;gap:.5rem;margin:.1rem 0 .7rem;cursor:pointer;font-size:.76rem;color:var(--text-primary,var(--text-primary))">
           <input type="checkbox" id="auRecord" ${(c.record_terminal ?? 1) ? 'checked' : ''} style="margin-top:2px">
           <span><b>Record typed terminal commands.</b> Each command a person types in the terminal is saved here as "terminal.command", with who, which server and when. Screen output is never stored, and text typed at password prompts is replaced by [hidden input].</span>
         </label>
         <button class="btn btn-primary sa-btn" id="auSave">Save &amp; clean now</button>
-        <hr style="border:0;border-top:1px solid var(--border-color,#2f374b);margin:.9rem 0">
+        <hr style="border:0;border-top:1px solid var(--border-color,var(--sm-line-strong));margin:.9rem 0">
         <div class="sa-sub" style="margin-bottom:.4rem">Delete manually (cannot be undone — export CSV first if you need a copy):</div>
         <div style="display:flex;gap:.45rem;flex-wrap:wrap;align-items:flex-end">
           <div><label class="sa-sub" style="display:block">Older than (days)</label><input class="form-control" id="auPurgeDays" type="number" min="0" placeholder="e.g. 30" style="width:110px;font-size:.78rem"></div>
           <button class="btn btn-secondary sa-btn" id="auPurgeAge">Delete older</button>
           <button class="btn btn-secondary sa-btn" id="auPurgeRange">Delete the From–To range above</button>
-          <button class="btn btn-secondary sa-btn" id="auPurgeAll" style="color:#ff8a93">Delete everything</button>
+          <button class="btn btn-secondary sa-btn" id="auPurgeAll" style="color:var(--c-bad)">Delete everything</button>
         </div><div class="sa-err" id="auKeepMsg"></div>`;
-      const msg = (t, ok) => { const e = box.querySelector('#auKeepMsg'); e.textContent = t; e.style.color = ok ? '#34d399' : '#ff8a93'; };
+      const msg = (t, ok) => { const e = box.querySelector('#auKeepMsg'); e.textContent = t; e.style.color = ok ? 'var(--c-ok)' : 'var(--c-bad)'; };
       const done = (r) => { if (r && r.success) { msg(`Removed ${r.removed} entries.`, true); this.state.offset = 0; this.load(); this.loadMeta(); } else msg((r && r.error) || 'Failed'); };
       box.querySelector('#auSave').onclick = async () => {
         done(await api('/api/audit/settings', 'PUT', { retention_days: box.querySelector('#auDays').value, max_rows: box.querySelector('#auMax').value, record_terminal: box.querySelector('#auRecord').checked ? 1 : 0 }));
@@ -375,13 +375,13 @@
           <div><label>Backup passphrase (10+ characters)</label><input class="form-control" id="ebPass" type="password" autocomplete="new-password"></div>
         </div>
         <button class="btn btn-primary sa-btn" id="ebExport">Download encrypted backup</button>
-        <hr style="border:0;border-top:1px solid var(--border-color,#2f374b);margin:.9rem 0">
+        <hr style="border:0;border-top:1px solid var(--border-color,var(--sm-line-strong));margin:.9rem 0">
         <div class="sa-sub" style="margin-bottom:.4rem">Restore from an encrypted backup (adds missing items, never deletes yours):</div>
         <div class="sa-grid"><div><label>Backup file</label><input class="form-control" id="ebFile" type="file" accept=".json,.smbak"></div>
           <div><label>Backup passphrase</label><input class="form-control" id="ebPass2" type="password" autocomplete="off"></div></div>
         <button class="btn btn-secondary sa-btn" id="ebImport">Restore</button><div class="sa-err" id="ebErr"></div>`;
       pane.appendChild(d);
-      const err = (m, ok) => { const e = d.querySelector('#ebErr'); e.textContent = m; e.style.color = ok ? '#34d399' : '#ff8a93'; };
+      const err = (m, ok) => { const e = d.querySelector('#ebErr'); e.textContent = m; e.style.color = ok ? 'var(--c-ok)' : 'var(--c-bad)'; };
       d.querySelector('#ebExport').onclick = async () => {
         const r = await fetch('/api/settings/export-full', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: d.querySelector('#ebPw').value, passphrase: d.querySelector('#ebPass').value }) });
@@ -435,7 +435,7 @@
         fresh.forEach(e => { try { new Notification('ShellMan: ' + e.rule_name, { body: e.message, icon: '/static/icons/icon-192.png' }); } catch (_) {} });
       }
       this.last = new Set(act.map(e => e.id));
-      this.pop.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem"><b style="font-size:.82rem;color:#f3f5f9">Alerts</b>
+      this.pop.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem"><b style="font-size:.82rem;color:var(--text-primary)">Alerts</b>
         <span><button class="btn btn-secondary sa-btn" id="smbAll">Acknowledge all</button> <button class="btn btn-secondary sa-btn" id="smbOpen">Open</button></span></div>`
         + (act.length ? act.map(e => `<div class="sa-row"><span class="sa-pill ${e.severity === 'critical' ? 'sa-crit' : 'sa-warn'}">${esc(e.severity.toUpperCase())}</span>
             <div class="grow"><div>${esc(e.rule_name)} · ${esc(e.server_name)}</div><div class="sa-sub" title="${esc(e.message)}">${esc(e.message)}</div></div></div>`).join('')

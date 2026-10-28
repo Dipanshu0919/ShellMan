@@ -4,6 +4,8 @@ from flask import Blueprint, jsonify, request, send_file, Response
 from routes.auth_helpers import login_required
 from models.server import Server
 from services.database_service import database_service
+from services.audit import audit
+from services.sqlserver_service import MySql, Postgres
 from services.ssh_manager import ssh_manager
 
 logger = logging.getLogger('shellman.routes.database')
@@ -60,99 +62,69 @@ def sqlite_discover(server_id):
     return jsonify({'success': True, 'files': files})
 
 # =============================================================================
-# MySQL / MariaDB Endpoints
+# MySQL / MariaDB and PostgreSQL endpoints (read-only viewer over SSH)
 # =============================================================================
 
-@database_bp.route('/api/servers/<int:server_id>/database/mysql/status', methods=['GET'])
-@login_required
-def mysql_status(server_id):
-    server = Server.query.get_or_404(server_id)
-    res = database_service.mysql_status(server)
-    return jsonify({'success': True, 'status': res})
+def _creds(default_user):
+    data = request.get_json(silent=True) or {}
+    user = (data.get('user') or default_user).strip()
+    password = data.get('password') or None
+    return data, user, password
 
-@database_bp.route('/api/servers/<int:server_id>/database/mysql/databases', methods=['POST'])
-@login_required
-def mysql_databases(server_id):
-    server = Server.query.get_or_404(server_id)
-    data = request.json or {}
-    user = data.get('user', 'root')
-    password = data.get('password', None)
-    try:
-        dbs = database_service.mysql_list_databases(server, user=user, password=password)
-        return jsonify({'success': True, 'databases': dbs})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
-@database_bp.route('/api/servers/<int:server_id>/database/mysql/tables', methods=['POST'])
+def _engine(kind):
+    return MySql if kind == 'mysql' else Postgres
+
+
+@database_bp.route('/api/servers/<int:server_id>/database/<kind>/status', methods=['GET'])
 @login_required
-def mysql_tables(server_id):
+def sql_status(server_id, kind):
+    if kind not in ('mysql', 'postgres'):
+        return jsonify({'success': False, 'error': 'Unknown database type.'}), 404
     server = Server.query.get_or_404(server_id)
-    data = request.json or {}
-    db_name = data.get('database', '').strip()
-    user = data.get('user', 'root')
-    password = data.get('password', None)
+    return jsonify({'success': True, 'status': _engine(kind).status(server)})
+
+
+@database_bp.route('/api/servers/<int:server_id>/database/<kind>/databases', methods=['POST', 'GET'])
+@login_required
+def sql_databases(server_id, kind):
+    if kind not in ('mysql', 'postgres'):
+        return jsonify({'success': False, 'error': 'Unknown database type.'}), 404
+    server = Server.query.get_or_404(server_id)
+    _, user, password = _creds('root' if kind == 'mysql' else 'postgres')
+    res = _engine(kind).databases(server, user, password)
+    return jsonify(res), (200 if res.get('success') else 400)
+
+
+@database_bp.route('/api/servers/<int:server_id>/database/<kind>/tables', methods=['POST'])
+@login_required
+def sql_tables(server_id, kind):
+    if kind not in ('mysql', 'postgres'):
+        return jsonify({'success': False, 'error': 'Unknown database type.'}), 404
+    server = Server.query.get_or_404(server_id)
+    data, user, password = _creds('root' if kind == 'mysql' else 'postgres')
+    db_name = (data.get('database') or '').strip()
     if not db_name:
         return jsonify({'success': False, 'error': 'Database name is required.'}), 400
-    tables = database_service.mysql_list_tables(server, db_name, user=user, password=password)
-    return jsonify({'success': True, 'database': db_name, 'tables': tables})
+    res = _engine(kind).tables(server, db_name, user, password)
+    return jsonify(res), (200 if res.get('success') else 400)
 
-@database_bp.route('/api/servers/<int:server_id>/database/mysql/query', methods=['POST'])
+
+@database_bp.route('/api/servers/<int:server_id>/database/<kind>/query', methods=['POST'])
 @login_required
-def mysql_query(server_id):
+def sql_query(server_id, kind):
+    if kind not in ('mysql', 'postgres'):
+        return jsonify({'success': False, 'error': 'Unknown database type.'}), 404
     server = Server.query.get_or_404(server_id)
-    data = request.json or {}
-    db_name = data.get('database', '').strip()
-    query = data.get('query', '').strip()
-    user = data.get('user', 'root')
-    password = data.get('password', None)
+    data, user, password = _creds('root' if kind == 'mysql' else 'postgres')
+    db_name = (data.get('database') or '').strip()
+    query = (data.get('query') or '').strip()
     if not db_name or not query:
         return jsonify({'success': False, 'error': 'Database name and query are required.'}), 400
-    res = database_service.mysql_query(server, db_name, query, user=user, password=password)
-    return jsonify(res)
+    res = _engine(kind).query(server, db_name, query, user, password)
+    audit('database.query', target=f'{kind}:{db_name}', detail=query[:300], ok=bool(res.get('success')))
+    return jsonify(res), (200 if res.get('success') else 400)
 
-# =============================================================================
-# PostgreSQL Endpoints
-# =============================================================================
-
-@database_bp.route('/api/servers/<int:server_id>/database/postgres/status', methods=['GET'])
-@login_required
-def postgres_status(server_id):
-    server = Server.query.get_or_404(server_id)
-    res = database_service.postgres_status(server)
-    return jsonify({'success': True, 'status': res})
-
-@database_bp.route('/api/servers/<int:server_id>/database/postgres/databases', methods=['GET'])
-@login_required
-def postgres_databases(server_id):
-    server = Server.query.get_or_404(server_id)
-    try:
-        dbs = database_service.postgres_list_databases(server)
-        return jsonify({'success': True, 'databases': dbs})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@database_bp.route('/api/servers/<int:server_id>/database/postgres/tables', methods=['POST'])
-@login_required
-def postgres_tables(server_id):
-    server = Server.query.get_or_404(server_id)
-    data = request.json or {}
-    db_name = data.get('database', '').strip()
-    if not db_name:
-        return jsonify({'success': False, 'error': 'Database name is required.'}), 400
-    tables = database_service.postgres_list_tables(server, db_name)
-    return jsonify({'success': True, 'database': db_name, 'tables': tables})
-
-@database_bp.route('/api/servers/<int:server_id>/database/postgres/query', methods=['POST'])
-@login_required
-def postgres_query(server_id):
-    server = Server.query.get_or_404(server_id)
-    data = request.json or {}
-    db_name = data.get('database', '').strip()
-    query = data.get('query', '').strip()
-    if not db_name or not query:
-        return jsonify({'success': False, 'error': 'Database name and query are required.'}), 400
-    res = database_service.postgres_query(server, db_name, query)
-    return jsonify(res)
 
 # =============================================================================
 # 1-Click Backup / Dump Endpoint
@@ -162,14 +134,15 @@ def postgres_query(server_id):
 @login_required
 def dump_database(server_id):
     server = Server.query.get_or_404(server_id)
-    data = request.json or {}
-    db_type = data.get('type', 'sqlite').strip().lower()
-    target = data.get('target', '').strip()
-    user = data.get('user', None)
-    password = data.get('password', None)
+    data = request.get_json(silent=True) or {}
+    db_type = (data.get('type') or 'sqlite').strip().lower()
+    target = (data.get('target') or '').strip()
+    user = (data.get('user') or '').strip() or None
+    password = data.get('password') or None
 
     if not target:
         return jsonify({'success': False, 'error': 'Database name or path is required.'}), 400
 
     res = database_service.dump_database(server, db_type, target, user=user, password=password)
+    audit('database.dump', target=f'{db_type}:{target}', ok=bool(res.get('success')))
     return jsonify(res)

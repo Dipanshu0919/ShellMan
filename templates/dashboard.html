@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
+  <script>(function(){try{var t=localStorage.getItem('shellman_theme')||'dark';if(t==='system')t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';if(t!=='light')t='dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ShellMan</title>
@@ -22,6 +23,8 @@
   <link rel="stylesheet" href="{{ static_v('css/workspace.css') }}">
   <link rel="stylesheet" href="{{ static_v('vendor/xterm/xterm.css') }}">
   <link rel="stylesheet" href="{{ static_v('css/premium.css') }}">
+  <link rel="stylesheet" href="{{ static_v('css/light.css') }}">
+  <script src="{{ static_v('js/theme.js') }}"></script>
   
   <script>
     (function() {
@@ -133,6 +136,7 @@
             <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
           {% endif %}
+          <span data-theme-toggle style="display:inline-flex; align-items:center;"></span>
         </div>
 
         <!-- Desktop Server Dropdown Menu -->
@@ -255,14 +259,14 @@
         <div class="widget-metric-row" style="margin-top:0.65rem;">
           <div class="widget-metric-info" style="margin-bottom:3px;">
             <span class="metric-label">NETWORK SPEED</span>
-            <span class="metric-value" id="wgtNetIface" style="font-size:0.68rem; font-family:var(--font-mono); color:#94a3b8;">eth0</span>
+            <span class="metric-value" id="wgtNetIface" style="font-size:0.68rem; font-family:var(--font-mono); color:var(--text-muted);">eth0</span>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:0.75rem; padding:0.25rem 0.5rem; background:rgba(0,0,0,0.22); border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
-            <span style="color:#34d399; display:flex; align-items:center; gap:3px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:0.75rem; padding:0.25rem 0.5rem; background:rgba(var(--shade),0.22); border-radius:4px; border:1px solid rgba(var(--wash),0.05);">
+            <span style="color:var(--c-ok); display:flex; align-items:center; gap:3px;">
               <span style="font-weight:700;">&#8595;</span>
               <span id="wgtNetRx">0 KB/s</span>
             </span>
-            <span style="color:var(--sm-accent, #38bdf8); display:flex; align-items:center; gap:3px;">
+            <span style="color:var(--sm-accent, var(--c-teal)); display:flex; align-items:center; gap:3px;">
               <span style="font-weight:700;">&#8593;</span>
               <span id="wgtNetTx">0 KB/s</span>
             </span>
@@ -362,7 +366,7 @@
     <span class="btn-label" data-installed-text="ShellMan App (Installed)">Download Desktop App (PWA)</span>
   </div>
   <div class="ctx-sep"></div>
-  <a href="{{ url_for('auth.logout') }}" class="ctx-item" style="text-decoration: none; color: #ef4444;">
+  <a href="{{ url_for('auth.logout') }}" class="ctx-item" style="text-decoration: none; color: var(--c-bad);">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
     Sign Out ({{ session.get('username', 'admin') }})
   </a>
@@ -411,6 +415,10 @@
     <div class="ctx-item" onclick="DesktopApps.launch('nginx'); toggleStartMenu();">
       <svg viewBox="0 0 24 24" fill="none" stroke="#10b981"><rect x="3" y="3" width="18" height="18" rx="3.5"></rect><path d="M7 16V8l5 8V8M16 8v8"></path></svg>
       <span>Nginx Virtual Hosts</span>
+    </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('apache'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444"><rect x="3" y="3" width="18" height="18" rx="4"></rect><path d="M8 17c1-3 2-6 4-9 1 2 2.5 5 4 9M9.5 13.5h5"></path></svg>
+      <span>Apache Web Server</span>
     </div>
     <div class="ctx-item" onclick="DesktopApps.launch('domains'); toggleStartMenu();">
       <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
@@ -493,25 +501,30 @@
 <!-- Desktop OS JavaScript Modules -->
 <script src="{{ static_v('js/requests.js') }}"></script>
 <script src="{{ static_v('js/modal.js') }}"></script>
+<script src="{{ static_v('js/desktop/look.js') }}"></script>
 <script src="{{ static_v('js/desktop/pwa.js') }}"></script>
 <script src="{{ static_v('js/desktop/wm.js') }}"></script>
 <script src="{{ static_v('js/desktop/dock.js') }}"></script>
 <script src="{{ static_v('js/desktop/menu.js') }}"></script>
 <script src="{{ static_v('js/desktop/apps.js') }}"></script>
 <script src="{{ static_v('js/desktop/terminal.js') }}"></script>
+<script src="{{ static_v('js/desktop/fileicons.js') }}"></script>
 <script src="{{ static_v('js/desktop/filemanager.js') }}"></script>
 <script src="{{ static_v('js/desktop/code.js') }}"></script>
 <script src="{{ static_v('js/desktop/taskmanager.js') }}"></script>
 <script src="{{ static_v('js/desktop/nginx.js') }}"></script>
+<script src="{{ static_v('js/desktop/apache.js') }}"></script>
 <script src="{{ static_v('js/desktop/sync.js') }}"></script>
 <script src="{{ static_v('js/desktop/cron.js') }}"></script>
 <script src="{{ static_v('js/desktop/git.js') }}"></script>
 <script src="{{ static_v('js/desktop/domains.js') }}"></script>
+<script src="{{ static_v('js/desktop/wallpaper.js') }}"></script>
 <script src="{{ static_v('js/desktop/settings.js') }}"></script>
 <script src="{{ static_v('js/desktop/alerts_audit.js') }}"></script>
 <script src="{{ static_v('js/desktop/users.js') }}"></script>
 <script src="{{ static_v('js/desktop/fleet.js') }}"></script>
 <script src="{{ static_v('js/desktop/codespace.js') }}"></script>
+<script src="{{ static_v('js/desktop/sqlviewer.js') }}"></script>
 <script src="{{ static_v('js/desktop/apps_ext.js') }}"></script>
 <script src="{{ static_v('js/desktop/main.js') }}"></script>
 

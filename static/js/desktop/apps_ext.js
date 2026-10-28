@@ -36,10 +36,10 @@
       contentHtml: `
         <div class="ssh-diag-container" id="sshDiagContainer_${diagWinId}" style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-sans); position:relative; overflow:hidden;">
           <!-- Top Utility Toolbar -->
-          <div style="height:42px; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.25); display:flex; align-items:center; justify-content:space-between; padding:0 1rem; flex-shrink:0;">
+          <div style="height:42px; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.25); display:flex; align-items:center; justify-content:space-between; padding:0 1rem; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:0.55rem;">
               <span class="status-dot connected" id="diagDot_${diagWinId}"></span>
-              <span style="font-size:0.82rem; font-weight:700; color:#f8fafc;">SSH Session Diagnostics</span>
+              <span style="font-size:0.82rem; font-weight:700; color:var(--text-primary);">SSH Session Diagnostics</span>
               <span class="badge" id="diagNodeBadge_${diagWinId}" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent); font-family:var(--font-mono); font-size:0.7rem;">${escapeHtml(this.serverName)}</span>
             </div>
             <div style="display:flex; align-items:center; gap:0.4rem;">
@@ -53,20 +53,20 @@
           <!-- Body -->
           <div style="flex:1; overflow-y:auto; padding:1.25rem; display:flex; flex-direction:column; gap:1.15rem;" id="diagBody_${diagWinId}">
             <!-- Latency Gauge Banner -->
-            <div style="background:linear-gradient(135deg, rgba(15,23,42,0.8), rgba(30,41,59,0.5)); border:1px solid var(--border-subtle); border-radius:8px; padding:1.15rem 1.4rem; display:flex; justify-content:space-between; align-items:center;">
+            <div style="background:linear-gradient(135deg, rgba(var(--panel-rgb),0.8), rgba(var(--panel-rgb),0.5)); border:1px solid var(--border-subtle); border-radius:8px; padding:1.15rem 1.4rem; display:flex; justify-content:space-between; align-items:center;">
               <div>
                 <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em;">Raw SSH Round-Trip Latency</div>
                 <div style="display:flex; align-items:baseline; gap:0.5rem; margin-top:0.35rem;">
                   <span style="font-size:2.2rem; font-weight:800; font-family:var(--font-mono); color:var(--sm-accent);" id="txtDiagLatency_${diagWinId}">--</span>
                   <span style="font-size:1.1rem; color:var(--text-secondary);">ms</span>
-                  <span id="badgeDiagRating_${diagWinId}" class="badge" style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.5rem; margin-left:0.5rem; background:rgba(255,255,255,0.06); color:#94a3b8;">Testing...</span>
+                  <span id="badgeDiagRating_${diagWinId}" class="badge" style="font-size:0.72rem; font-weight:700; padding:0.2rem 0.5rem; margin-left:0.5rem; background:rgba(var(--wash),0.06); color:var(--text-muted);">Testing...</span>
                 </div>
                 <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.2rem;">Measured via OpenSSH encrypted transport global request without invoking remote shell processes.</div>
               </div>
               <div style="text-align:right;">
                 <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Session Lifetime</div>
-                <div style="font-size:1.2rem; font-weight:700; font-family:var(--font-mono); color:#f8fafc; margin-top:0.25rem;" id="txtDiagUptime_${diagWinId}">--</div>
-                <div style="font-size:0.7rem; color:#34d399; margin-top:2px;" id="txtDiagSftpPool_${diagWinId}">SFTP Pool Active</div>
+                <div style="font-size:1.2rem; font-weight:700; font-family:var(--font-mono); color:var(--text-primary); margin-top:0.25rem;" id="txtDiagUptime_${diagWinId}">--</div>
+                <div style="font-size:0.7rem; color:var(--c-ok); margin-top:2px;" id="txtDiagSftpPool_${diagWinId}">SFTP Pool Active</div>
               </div>
             </div>
 
@@ -86,19 +86,19 @@
 
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem;">
                 <!-- Download Rate (Rx) -->
-                <div style="background:rgba(0,0,0,0.22); border:1px solid rgba(52,211,153,0.2); border-radius:6px; padding:0.85rem 1rem;">
+                <div style="background:rgba(var(--shade),0.22); border:1px solid rgba(52,211,153,0.2); border-radius:6px; padding:0.85rem 1rem;">
                   <div style="display:flex; align-items:center; justify-content:space-between;">
                     <span style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Download Speed (Incoming Rx)</span>
-                    <span style="font-size:0.75rem; color:#34d399; font-weight:700;">&#8595; Rx</span>
+                    <span style="font-size:0.75rem; color:var(--c-ok); font-weight:700;">&#8595; Rx</span>
                   </div>
                   <div style="display:flex; align-items:baseline; gap:0.4rem; margin-top:0.35rem;">
-                    <span style="font-size:1.8rem; font-weight:800; font-family:var(--font-mono); color:#34d399;" id="txtNetRxRate_${diagWinId}">0 KB/s</span>
+                    <span style="font-size:1.8rem; font-weight:800; font-family:var(--font-mono); color:var(--c-ok);" id="txtNetRxRate_${diagWinId}">0 KB/s</span>
                   </div>
-                  <div style="font-size:0.7rem; color:var(--text-muted); margin-top:3px;">Total Received: <span id="txtNetRxTotal_${diagWinId}" style="font-family:var(--font-mono); color:#cbd5e1;">--</span></div>
+                  <div style="font-size:0.7rem; color:var(--text-muted); margin-top:3px;">Total Received: <span id="txtNetRxTotal_${diagWinId}" style="font-family:var(--font-mono); color:var(--text-secondary);">--</span></div>
                 </div>
 
                 <!-- Upload Rate (Tx) -->
-                <div style="background:rgba(0,0,0,0.22); border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); border-radius:6px; padding:0.85rem 1rem;">
+                <div style="background:rgba(var(--shade),0.22); border:1px solid color-mix(in srgb, var(--sm-accent) 20%, transparent); border-radius:6px; padding:0.85rem 1rem;">
                   <div style="display:flex; align-items:center; justify-content:space-between;">
                     <span style="font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Upload Speed (Outgoing Tx)</span>
                     <span style="font-size:0.75rem; color:var(--sm-accent); font-weight:700;">&#8593; Tx</span>
@@ -106,13 +106,13 @@
                   <div style="display:flex; align-items:baseline; gap:0.4rem; margin-top:0.35rem;">
                     <span style="font-size:1.8rem; font-weight:800; font-family:var(--font-mono); color:var(--sm-accent);" id="txtNetTxRate_${diagWinId}">0 KB/s</span>
                   </div>
-                  <div style="font-size:0.7rem; color:var(--text-muted); margin-top:3px;">Total Transmitted: <span id="txtNetTxTotal_${diagWinId}" style="font-family:var(--font-mono); color:#cbd5e1;">--</span></div>
+                  <div style="font-size:0.7rem; color:var(--text-muted); margin-top:3px;">Total Transmitted: <span id="txtNetTxTotal_${diagWinId}" style="font-family:var(--font-mono); color:var(--text-secondary);">--</span></div>
                 </div>
               </div>
 
               <!-- Active Benchmark Result Strip -->
-              <div id="boxBenchmarkResults_${diagWinId}" style="display:none; padding:0.55rem 0.9rem; border-radius:6px; background:color-mix(in srgb, var(--sm-accent) 8%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); font-size:0.75rem; font-family:var(--font-mono); color:#f8fafc; align-items:center; justify-content:space-between;">
-                <span>SSH Tunnel Speed: <strong id="txtBenchDown_${diagWinId}" style="color:#34d399;">-- MB/s</strong> download, <strong id="txtBenchUp_${diagWinId}" style="color:var(--sm-accent);">-- MB/s</strong> upload</span>
+              <div id="boxBenchmarkResults_${diagWinId}" style="display:none; padding:0.55rem 0.9rem; border-radius:6px; background:color-mix(in srgb, var(--sm-accent) 8%, transparent); border:1px solid color-mix(in srgb, var(--sm-accent) 25%, transparent); font-size:0.75rem; font-family:var(--font-mono); color:var(--text-primary); align-items:center; justify-content:space-between;">
+                <span>SSH Tunnel Speed: <strong id="txtBenchDown_${diagWinId}" style="color:var(--c-ok);">-- MB/s</strong> download, <strong id="txtBenchUp_${diagWinId}" style="color:var(--sm-accent);">-- MB/s</strong> upload</span>
                 <span id="txtBenchLatency_${diagWinId}" style="color:var(--text-muted); font-size:0.7rem;">Tested in -- ms</span>
               </div>
             </div>
@@ -128,17 +128,17 @@
 
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Symmetric Bulk Cipher</div>
-                  <div style="font-family:var(--font-mono); font-size:0.8rem; color:#f8fafc; font-weight:600;" id="txtCipher_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-primary); font-weight:600;" id="txtCipher_${diagWinId}">--</div>
                 </div>
 
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Key Exchange (KEX) Engine</div>
-                  <div style="font-family:var(--font-mono); font-size:0.8rem; color:#f8fafc;" id="txtKex_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-primary);" id="txtKex_${diagWinId}">--</div>
                 </div>
 
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Message Authentication Code (MAC)</div>
-                  <div style="font-family:var(--font-mono); font-size:0.78rem; color:#cbd5e1;" id="txtMac_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.78rem; color:var(--text-secondary);" id="txtMac_${diagWinId}">--</div>
                 </div>
 
                 <div>
@@ -156,7 +156,7 @@
 
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Host Key Algorithm</div>
-                  <div style="font-family:var(--font-mono); font-size:0.8rem; color:#f8fafc; font-weight:600;" id="txtHostKeyType_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-primary); font-weight:600;" id="txtHostKeyType_${diagWinId}">--</div>
                 </div>
 
                 <div>
@@ -164,17 +164,17 @@
                     <span style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Host Key SHA-256 Fingerprint</span>
                     <button class="btn btn-ghost btn-xs" id="btnCopyFp_${diagWinId}" style="font-size:0.66rem; padding:0.1rem 0.35rem;">Copy</button>
                   </div>
-                  <div style="font-family:var(--font-mono); font-size:0.72rem; color:#94a3b8; word-break:break-all; background:rgba(0,0,0,0.25); padding:0.35rem 0.5rem; border-radius:4px; margin-top:2px;" id="txtFingerprint_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); word-break:break-all; background:rgba(var(--shade),0.25); padding:0.35rem 0.5rem; border-radius:4px; margin-top:2px;" id="txtFingerprint_${diagWinId}">--</div>
                 </div>
 
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Authentication Mechanism</div>
-                  <div style="font-family:var(--font-mono); font-size:0.8rem; color:#34d399;" id="txtAuthType_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--c-ok);" id="txtAuthType_${diagWinId}">--</div>
                 </div>
 
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Active Parallel Channels</div>
-                  <div style="font-family:var(--font-mono); font-size:0.78rem; color:#cbd5e1;" id="txtChannels_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.78rem; color:var(--text-secondary);" id="txtChannels_${diagWinId}">--</div>
                 </div>
               </div>
             </div>
@@ -189,19 +189,19 @@
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Remote OpenSSH Banner</div>
-                  <div style="font-family:var(--font-mono); font-size:0.76rem; color:#f8fafc;" id="txtServerBanner_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.76rem; color:var(--text-primary);" id="txtServerBanner_${diagWinId}">--</div>
                 </div>
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Local Client Protocol</div>
-                  <div style="font-family:var(--font-mono); font-size:0.76rem; color:#cbd5e1;" id="txtClientBanner_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.76rem; color:var(--text-secondary);" id="txtClientBanner_${diagWinId}">--</div>
                 </div>
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Socket Endpoint</div>
-                  <div style="font-family:var(--font-mono); font-size:0.76rem; color:#f8fafc;" id="txtSocketEndpoint_${diagWinId}">--</div>
+                  <div style="font-family:var(--font-mono); font-size:0.76rem; color:var(--text-primary);" id="txtSocketEndpoint_${diagWinId}">--</div>
                 </div>
                 <div>
                   <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Wire Compression</div>
-                  <div style="font-family:var(--font-mono); font-size:0.76rem; color:#cbd5e1;" id="txtCompression_${diagWinId}">none</div>
+                  <div style="font-family:var(--font-mono); font-size:0.76rem; color:var(--text-secondary);" id="txtCompression_${diagWinId}">none</div>
                 </div>
               </div>
             </div>
@@ -221,7 +221,7 @@
             if (!res.success || !res.connected) {
               root.querySelector(`#txtDiagLatency_${diagWinId}`).textContent = 'Error';
               root.querySelector(`#badgeDiagRating_${diagWinId}`).textContent = res.error || 'Disconnected';
-              root.querySelector(`#badgeDiagRating_${diagWinId}`).style.color = '#ef4444';
+              root.querySelector(`#badgeDiagRating_${diagWinId}`).style.color = 'var(--c-bad)';
               return;
             }
 
@@ -246,8 +246,8 @@
             root.querySelector(`#txtMac_${diagWinId}`).textContent = res.mac;
             const strictEl = root.querySelector(`#txtStrictKex_${diagWinId}`);
             strictEl.innerHTML = res.strict_kex
-              ? `<span style="color:#34d399; font-weight:700;">Active (Strict KEX negotiated)</span>`
-              : `<span style="color:#94a3b8;">Standard KEX</span>`;
+              ? `<span style="color:var(--c-ok); font-weight:700;">Active (Strict KEX negotiated)</span>`
+              : `<span style="color:var(--text-muted);">Standard KEX</span>`;
 
             // Host key
             const bitsStr = res.host_key_bits ? ` (${res.host_key_bits}-bit)` : '';
@@ -368,11 +368,11 @@
       contentHtml: `
         <div class="docker-app-container" id="dockerContainer_${docWinId}" style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-sans); position:relative; overflow:hidden;">
           <!-- Top Utility Toolbar -->
-          <div style="height:42px; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.25); display:flex; align-items:center; justify-content:space-between; padding:0 1rem; flex-shrink:0;">
+          <div style="height:42px; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.25); display:flex; align-items:center; justify-content:space-between; padding:0 1rem; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:0.6rem;">
               <span class="status-dot disconnected" id="docDot_${docWinId}"></span>
               <span style="font-size:0.82rem; font-weight:700;" id="docStatusText_${docWinId}">Checking Docker...</span>
-              <span class="badge" id="docSummaryBadge_${docWinId}" style="background:rgba(255,255,255,0.06); font-size:0.7rem;">--</span>
+              <span class="badge" id="docSummaryBadge_${docWinId}" style="background:rgba(var(--wash),0.06); font-size:0.7rem;">--</span>
             </div>
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <button class="btn btn-secondary btn-xs" id="btnDocCompose_${docWinId}" style="font-size:0.72rem; padding:0.25rem 0.55rem;">
@@ -387,7 +387,7 @@
           </div>
 
           <!-- Secondary Filter & Search Bar -->
-          <div style="padding:0.45rem 1rem; display:flex; justify-content:space-between; align-items:center; gap:0.5rem; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.1); flex-shrink:0;">
+          <div style="padding:0.45rem 1rem; display:flex; justify-content:space-between; align-items:center; gap:0.5rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.1); flex-shrink:0;">
             <input type="text" id="docSearchInp_${docWinId}" placeholder="Search containers by name, image, or port..." class="form-control" style="font-size:0.75rem; padding:0.25rem 0.55rem; width:280px;">
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <select id="docStateFilter_${docWinId}" class="form-control" style="font-size:0.72rem; padding:0.2rem 0.4rem; height:26px;">
@@ -462,14 +462,14 @@
               <tr data-id="${c.id}">
                 <td style="vertical-align:middle; text-align:center;"><span class="${dotClass}" style="margin:0;"></span></td>
                 <td style="vertical-align:middle;">
-                  <div style="font-weight:700; color:#f8fafc; font-size:0.78rem;">${escapeHtml(c.name)}</div>
+                  <div style="font-weight:700; color:var(--text-primary); font-size:0.78rem;">${escapeHtml(c.name)}</div>
                   <div style="font-family:var(--font-mono); font-size:0.68rem; color:var(--text-muted);">${c.short_id}</div>
                 </td>
                 <td style="vertical-align:middle;">
-                  <span style="font-family:var(--font-mono); font-size:0.74rem; color:#cbd5e1;">${escapeHtml(c.image)}</span>
+                  <span style="font-family:var(--font-mono); font-size:0.74rem; color:var(--text-secondary);">${escapeHtml(c.image)}</span>
                 </td>
                 <td style="vertical-align:middle;">
-                  <span class="badge" style="background:rgba(255,255,255,0.06); color:${stateColor}; font-weight:700; text-transform:uppercase; font-size:0.66rem;">${c.state}</span>
+                  <span class="badge" style="background:rgba(var(--wash),0.06); color:${stateColor}; font-weight:700; text-transform:uppercase; font-size:0.66rem;">${c.state}</span>
                   <div style="font-size:0.68rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(c.status)}</div>
                 </td>
                 <td style="vertical-align:middle;">
@@ -487,7 +487,7 @@
                       <button class="btn btn-primary btn-xs btn-doc-action" data-action="start" data-id="${c.id}" title="Start container">Start</button>
                     `}
                     <button class="btn btn-ghost btn-xs btn-doc-logs" data-id="${c.id}" data-name="${escapeHtml(c.name)}" title="Stream container logs">Logs</button>
-                    <button class="btn btn-ghost btn-xs btn-doc-action" data-action="delete" data-id="${c.id}" style="color:#f87171;" title="Delete container">&times;</button>
+                    <button class="btn btn-ghost btn-xs btn-doc-action" data-action="delete" data-id="${c.id}" style="color:var(--c-bad);" title="Delete container">&times;</button>
                   </div>
                 </td>
               </tr>
@@ -588,8 +588,8 @@
           const compDir = await DesktopModal.prompt({
             title: 'Docker Compose Project',
             message: 'Enter directory path containing docker-compose.yml on the remote server:',
-            placeholder: '/var/www/my-project or /home/...',
-            defaultValue: '/var/www/'
+            placeholder: '/home/user/my-project',
+            defaultValue: '/home/'
           });
           if (!compDir) return;
 
@@ -652,7 +652,7 @@
       contentHtml: `
         <div class="db-app-container" id="dbContainer_${dbWinId}" style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-sans); position:relative; overflow:hidden;">
           <!-- Top Tab Navigation -->
-          <div style="height:42px; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.25); display:flex; align-items:center; justify-content:space-between; padding:0 1rem; flex-shrink:0;">
+          <div style="height:42px; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.25); display:flex; align-items:center; justify-content:space-between; padding:0 1rem; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:0.35rem;">
               <button class="btn btn-secondary btn-xs db-tab-btn active" data-tab="sqlite" id="tabBtnSqlite_${dbWinId}" style="font-weight:700;">SQLite (.db Viewer)</button>
               <button class="btn btn-secondary btn-xs db-tab-btn" data-tab="mysql" id="tabBtnMysql_${dbWinId}">MySQL / MariaDB</button>
@@ -669,7 +669,7 @@
           <!-- TAB 1: SQLite Explorer Pane -->
           <div id="paneSqlite_${dbWinId}" style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
             <!-- File Selector Bar -->
-            <div style="padding:0.5rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.15); display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+            <div style="padding:0.5rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.15); display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
               <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted);">Database File:</span>
               <input type="text" id="inpSqlitePath_${dbWinId}" placeholder="/path/to/database.db or .sqlite" class="form-control" style="font-family:var(--font-mono); font-size:0.75rem; padding:0.25rem 0.55rem; flex:1;" value="${escapeHtml(params.path || '')}">
               <button class="btn btn-primary btn-xs" id="btnInspectSqlite_${dbWinId}">Open Database</button>
@@ -686,10 +686,10 @@
             <!-- Main Split Content Area -->
             <div style="flex:1; display:flex; min-height:0;">
               <!-- Left Sidebar: Tables List -->
-              <div style="width:230px; border-right:1px solid var(--border-subtle); background:rgba(0,0,0,0.1); display:flex; flex-direction:column; flex-shrink:0;">
+              <div style="width:230px; border-right:1px solid var(--border-subtle); background:rgba(var(--shade),0.1); display:flex; flex-direction:column; flex-shrink:0;">
                 <div style="padding:0.5rem 0.8rem; border-bottom:1px solid var(--border-subtle); font-size:0.7rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:flex; justify-content:space-between; align-items:center;">
                   <span>Tables</span>
-                  <span class="badge" id="badgeSqliteTablesCount_${dbWinId}" style="background:rgba(255,255,255,0.06); font-size:0.68rem;">0</span>
+                  <span class="badge" id="badgeSqliteTablesCount_${dbWinId}" style="background:rgba(var(--wash),0.06); font-size:0.68rem;">0</span>
                 </div>
                 <div style="flex:1; overflow-y:auto; padding:0.4rem;" id="listSqliteTables_${dbWinId}">
                   <div style="padding:1rem 0.5rem; text-align:center; color:var(--text-muted); font-size:0.75rem;">Enter a .db file path and click Open</div>
@@ -700,7 +700,7 @@
               <!-- Right Pane: Table Data & Query Runner -->
               <div style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden;">
                 <!-- SQL Console & Toolbar -->
-                <div style="padding:0.6rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.08); display:flex; flex-direction:column; gap:0.4rem; flex-shrink:0;">
+                <div style="padding:0.6rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.08); display:flex; flex-direction:column; gap:0.4rem; flex-shrink:0;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Read-Only SQL Query Console</span>
                     <button class="btn btn-secondary btn-xs" id="btnRunSqliteQuery_${dbWinId}" style="font-size:0.7rem; padding:0.15rem 0.5rem;">Execute Query</button>
@@ -709,7 +709,7 @@
                 </div>
 
                 <!-- Table Grid Header Info -->
-                <div style="padding:0.35rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.15); display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:var(--text-secondary); flex-shrink:0;">
+                <div style="padding:0.35rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.15); display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:var(--text-secondary); flex-shrink:0;">
                   <span id="txtTableHeading_${dbWinId}">Table Preview</span>
                   <div style="display:flex; gap:0.35rem; align-items:center;">
                     <span id="txtRowCount_${dbWinId}">0 rows</span>
@@ -731,40 +731,11 @@
             </div>
           </div>
 
-          <!-- TAB 2: MySQL / MariaDB Pane -->
-          <div id="paneMysql_${dbWinId}" style="flex:1; display:none; flex-direction:column; padding:1.25rem; overflow-y:auto;">
-            <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.15rem; max-width:680px;">
-              <h4 style="margin:0 0 0.5rem 0; font-size:0.95rem; font-weight:700; color:#f8fafc;">MySQL / MariaDB Connection</h4>
-              <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Inspect databases and tables directly over local Unix socket / localhost without opening external database ports.</p>
-              
-              <div style="display:flex; gap:0.6rem; align-items:center; margin-bottom:1rem;">
-                <input type="text" id="inpMysqlUser_${dbWinId}" placeholder="User (e.g. root)" class="form-control" style="font-size:0.78rem; width:160px;" value="root" autocomplete="username">
-                <input type="password" id="inpMysqlPass_${dbWinId}" placeholder="Password (leave blank for socket)" class="form-control" style="font-size:0.78rem; width:220px;" autocomplete="current-password">
-                <button class="btn btn-primary btn-sm" id="btnConnectMysql_${dbWinId}">Connect &amp; List Databases</button>
-              </div>
+          <!-- TAB 2: MySQL / MariaDB Pane (built by sqlviewer.js) -->
+          <div id="paneMysql_${dbWinId}" style="flex:1; display:none; flex-direction:column; min-height:0; overflow:hidden;"></div>
 
-              <div id="boxMysqlDbs_${dbWinId}" style="display:none; margin-top:1rem;">
-                <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Select Database:</label>
-                <select id="selMysqlDbs_${dbWinId}" class="form-control" style="font-size:0.78rem; margin-top:3px; max-width:320px;"></select>
-                <div id="boxMysqlTables_${dbWinId}" style="margin-top:0.75rem; font-size:0.75rem;"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- TAB 3: PostgreSQL Pane -->
-          <div id="panePostgres_${dbWinId}" style="flex:1; display:none; flex-direction:column; padding:1.25rem; overflow-y:auto;">
-            <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.15rem; max-width:680px;">
-              <h4 style="margin:0 0 0.5rem 0; font-size:0.95rem; font-weight:700; color:#f8fafc;">PostgreSQL Peer Connection</h4>
-              <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:1rem;">Connects to PostgreSQL using local peer authentication via standard SSH subshell.</p>
-              <button class="btn btn-primary btn-sm" id="btnConnectPostgres_${dbWinId}">Connect &amp; List Databases</button>
-
-              <div id="boxPgDbs_${dbWinId}" style="display:none; margin-top:1rem;">
-                <label style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Select Database:</label>
-                <select id="selPgDbs_${dbWinId}" class="form-control" style="font-size:0.78rem; margin-top:3px; max-width:320px;"></select>
-                <div id="boxPgTables_${dbWinId}" style="margin-top:0.75rem; font-size:0.75rem;"></div>
-              </div>
-            </div>
-          </div>
+          <!-- TAB 3: PostgreSQL Pane (built by sqlviewer.js) -->
+          <div id="panePostgres_${dbWinId}" style="flex:1; display:none; flex-direction:column; min-height:0; overflow:hidden;"></div>
         </div>
       `,
       onInit: (bodyEl, winObj) => {
@@ -774,9 +745,17 @@
 
         // Tab Switching
         const tabs = ['sqlite', 'mysql', 'postgres'];
+        let activeTab = 'sqlite';
+        const sqlViews = {};
+        if (window.ShellmanSql) {
+          ['mysql', 'postgres'].forEach(k => {
+            sqlViews[k] = window.ShellmanSql.mount(root.querySelector(`#pane${k.charAt(0).toUpperCase() + k.slice(1)}_${dbWinId}`), { kind: k, serverId: this.serverId, fetch });
+          });
+        }
         root.querySelectorAll('.db-tab-btn').forEach(btn => {
           btn.onclick = () => {
             const target = btn.dataset.tab;
+            activeTab = target;
             tabs.forEach(t => {
               root.querySelector(`#tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}_${dbWinId}`).classList.toggle('active', t === target);
               root.querySelector(`#pane${t.charAt(0).toUpperCase() + t.slice(1)}_${dbWinId}`).style.display = (t === target) ? 'flex' : 'none';
@@ -800,7 +779,7 @@
             });
 
             if (!res.success) {
-              tablesListEl.innerHTML = `<div style="padding:1rem 0.5rem; text-align:center; color:#f87171; font-size:0.75rem;">${escapeHtml(res.error)}</div>`;
+              tablesListEl.innerHTML = `<div style="padding:1rem 0.5rem; text-align:center; color:var(--c-bad); font-size:0.75rem;">${escapeHtml(res.error)}</div>`;
               return;
             }
 
@@ -813,7 +792,7 @@
             }
 
             tablesListEl.innerHTML = res.tables.map(tbl => `
-              <div class="db-table-row" data-table="${escapeHtml(tbl)}" style="padding:0.35rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.74rem; font-family:var(--font-mono); color:#cbd5e1; display:flex; align-items:center; gap:0.4rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <div class="db-table-row" data-table="${escapeHtml(tbl)}" style="padding:0.35rem 0.6rem; border-radius:4px; cursor:pointer; font-size:0.74rem; font-family:var(--font-mono); color:var(--text-secondary); display:flex; align-items:center; gap:0.4rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; color:var(--sm-accent);"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 <span style="overflow:hidden; text-overflow:ellipsis;">${escapeHtml(tbl)}</span>
               </div>
@@ -832,7 +811,7 @@
               tablesListEl.querySelector('.db-table-row').click();
             }
           } catch (e) {
-            tablesListEl.innerHTML = `<div style="padding:1rem 0.5rem; text-align:center; color:#f87171; font-size:0.75rem;">${escapeHtml(String(e))}</div>`;
+            tablesListEl.innerHTML = `<div style="padding:1rem 0.5rem; text-align:center; color:var(--c-bad); font-size:0.75rem;">${escapeHtml(String(e))}</div>`;
           }
         };
 
@@ -856,7 +835,7 @@
             });
 
             if (!res.success) {
-              tbody.innerHTML = `<tr><td style="text-align:center; padding:2rem; color:#f87171;">${escapeHtml(res.error)}</td></tr>`;
+              tbody.innerHTML = `<tr><td style="text-align:center; padding:2rem; color:var(--c-bad);">${escapeHtml(res.error)}</td></tr>`;
               return;
             }
 
@@ -865,7 +844,7 @@
             // Headers
             thead.innerHTML = `<tr>${res.columns.map(c => `
               <th>
-                <div style="color:#f8fafc; font-weight:700;">${escapeHtml(c.name)}</div>
+                <div style="color:var(--text-primary); font-weight:700;">${escapeHtml(c.name)}</div>
                 <div style="font-size:0.64rem; color:var(--text-muted); font-weight:normal;">${escapeHtml(c.type || 'TEXT')} ${c.pk ? '(PK)' : ''}</div>
               </th>
             `).join('')}</tr>`;
@@ -882,7 +861,7 @@
               </tr>
             `).join('');
           } catch (e) {
-            tbody.innerHTML = `<tr><td style="text-align:center; padding:2rem; color:#f87171;">${escapeHtml(String(e))}</td></tr>`;
+            tbody.innerHTML = `<tr><td style="text-align:center; padding:2rem; color:var(--c-bad);">${escapeHtml(String(e))}</td></tr>`;
           }
         };
 
@@ -903,7 +882,7 @@
             });
 
             if (!res.success) {
-              tbody.innerHTML = `<tr><td style="text-align:center; padding:2rem; color:#f87171;">${escapeHtml(res.error)}</td></tr>`;
+              tbody.innerHTML = `<tr><td style="text-align:center; padding:2rem; color:var(--c-bad);">${escapeHtml(res.error)}</td></tr>`;
               return;
             }
 
@@ -921,7 +900,7 @@
               </tr>
             `).join('');
           } catch (e) {
-            tbody.innerHTML = `<tr><td style="text-align:center; padding:2rem; color:#f87171;">${escapeHtml(String(e))}</td></tr>`;
+            tbody.innerHTML = `<tr><td style="text-align:center; padding:2rem; color:var(--c-bad);">${escapeHtml(String(e))}</td></tr>`;
           }
         };
 
@@ -951,7 +930,7 @@
           if (typeof this.showDirectoryPicker === 'function') {
             this.showDirectoryPicker({
               serverId: this.serverId,
-              initialPath: root.querySelector(`#inpSqlitePath_${dbWinId}`).value.trim() || '/var/www/',
+              initialPath: root.querySelector(`#inpSqlitePath_${dbWinId}`).value.trim() || '/home/',
               title: 'Select SQLite Database File (.db / .sqlite)',
               selectFiles: true,
               fileExtensions: ['.db', '.sqlite', '.sqlite3'],
@@ -963,10 +942,16 @@
           }
         };
 
-        // 1-Click Backup
+        // 1-Click Backup (SQLite file, or the database selected in the MySQL / PostgreSQL tab)
         root.querySelector(`#btnBackupDb_${dbWinId}`).onclick = async () => {
-          if (!currentDbPath) {
-            DesktopModal.alert({ title: 'No Database', message: 'Please open an SQLite database or connect to MySQL/Postgres first.', type: 'warning' });
+          let payload = null;
+          if (activeTab === 'sqlite') {
+            if (currentDbPath) payload = { type: 'sqlite', target: currentDbPath };
+          } else if (sqlViews[activeTab]) {
+            payload = sqlViews[activeTab].backupTarget();
+          }
+          if (!payload) {
+            DesktopModal.alert({ title: 'No Database', message: activeTab === 'sqlite' ? 'Open an SQLite database first.' : 'Connect to the database server and pick a database first.', type: 'warning' });
             return;
           }
 
@@ -976,7 +961,7 @@
             const res = await safeFetchJson(`/api/servers/${this.serverId}/database/dump`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ type: 'sqlite', target: currentDbPath })
+              body: JSON.stringify(payload)
             });
 
             if (res.success) {
@@ -1028,11 +1013,11 @@
       contentHtml: `
         <div class="firewall-app-container" id="fwContainer_${fwWinId}" style="height:100%; display:flex; flex-direction:column; background:var(--bg-canvas); color:var(--text-primary); font-family:var(--font-sans); position:relative; overflow:hidden;">
           <!-- Top Utility Toolbar -->
-          <div style="height:42px; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.25); display:flex; align-items:center; justify-content:space-between; padding:0 1rem; flex-shrink:0;">
+          <div style="height:42px; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.25); display:flex; align-items:center; justify-content:space-between; padding:0 1rem; flex-shrink:0;">
             <div style="display:flex; align-items:center; gap:0.6rem;">
               <span class="status-dot disconnected" id="fwDot_${fwWinId}"></span>
               <span style="font-size:0.82rem; font-weight:700;" id="fwStatusText_${fwWinId}">Checking Firewall...</span>
-              <span class="badge" id="fwPolicyBadge_${fwWinId}" style="background:rgba(255,255,255,0.06); font-size:0.7rem;">--</span>
+              <span class="badge" id="fwPolicyBadge_${fwWinId}" style="background:rgba(var(--wash),0.06); font-size:0.7rem;">--</span>
             </div>
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <button class="btn btn-secondary btn-xs" id="btnToggleFw_${fwWinId}" style="font-size:0.72rem; padding:0.25rem 0.55rem;">Toggle Firewall</button>
@@ -1043,7 +1028,7 @@
           </div>
 
           <!-- Tab Bar -->
-          <div style="padding:0.4rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(0,0,0,0.1); display:flex; gap:0.35rem; flex-shrink:0;">
+          <div style="padding:0.4rem 1rem; border-bottom:1px solid var(--border-subtle); background:rgba(var(--shade),0.1); display:flex; gap:0.35rem; flex-shrink:0;">
             <button class="btn btn-secondary btn-xs fw-tab-btn active" data-tab="ufw" id="tabBtnUfw_${fwWinId}">UFW Active Rules</button>
             <button class="btn btn-secondary btn-xs fw-tab-btn" data-tab="fail2ban" id="tabBtnFail2ban_${fwWinId}">Fail2Ban Jails &amp; Bans</button>
           </div>
@@ -1071,14 +1056,14 @@
           <div id="paneFail2ban_${fwWinId}" style="flex:1; display:none; flex-direction:column; min-height:0; overflow-y:auto; padding:1.25rem;">
             <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; padding:1.15rem; margin-bottom:1rem;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                <span style="font-size:0.85rem; font-weight:700; color:#f8fafc;" id="txtFbStatus_${fwWinId}">Fail2Ban Service</span>
+                <span style="font-size:0.85rem; font-weight:700; color:var(--text-primary);" id="txtFbStatus_${fwWinId}">Fail2Ban Service</span>
                 <span class="badge" id="badgeFbActiveJails_${fwWinId}" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);">--</span>
               </div>
               <p style="font-size:0.74rem; color:var(--text-secondary); margin:0;">Fail2Ban inspects auth logs for brute-force patterns and dynamically updates firewall drop rules.</p>
             </div>
 
             <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:8px; overflow:hidden;">
-              <div style="padding:0.6rem 1rem; border-bottom:1px solid var(--border-subtle); font-size:0.78rem; font-weight:700; color:#f8fafc;">Currently Banned IPs</div>
+              <div style="padding:0.6rem 1rem; border-bottom:1px solid var(--border-subtle); font-size:0.78rem; font-weight:700; color:var(--text-primary);">Currently Banned IPs</div>
               <table class="table" style="font-size:0.75rem; margin:0;">
                 <thead>
                   <tr>
@@ -1153,12 +1138,12 @@
               return `
                 <tr>
                   <td style="font-family:var(--font-mono); color:var(--text-muted); font-weight:700;">[${r.num}]</td>
-                  <td style="font-weight:700; color:#f8fafc; font-family:var(--font-mono);">${escapeHtml(r.to)}</td>
+                  <td style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono);">${escapeHtml(r.to)}</td>
                   <td><span class="badge" style="background:${actBadge}; color:${actColor}; font-weight:700;">${escapeHtml(r.action)}</span></td>
-                  <td style="font-family:var(--font-mono); color:#cbd5e1;">${escapeHtml(r.from)}</td>
+                  <td style="font-family:var(--font-mono); color:var(--text-secondary);">${escapeHtml(r.from)}</td>
                   <td><span style="font-size:0.68rem; color:var(--text-muted);">${r.is_v6 ? 'IPv6' : 'IPv4'}</span></td>
                   <td style="text-align:right;">
-                    <button class="btn btn-ghost btn-xs btn-del-rule" data-num="${r.num}" style="color:#f87171;" title="Delete rule [${r.num}]">&times;</button>
+                    <button class="btn btn-ghost btn-xs btn-del-rule" data-num="${r.num}" style="color:var(--c-bad);" title="Delete rule [${r.num}]">&times;</button>
                   </td>
                 </tr>
               `;
@@ -1219,7 +1204,7 @@
 
             fbTbody.innerHTML = banned.map(b => `
               <tr>
-                <td style="font-family:var(--font-mono); font-weight:700; color:#f8fafc;">${escapeHtml(b.ip)}</td>
+                <td style="font-family:var(--font-mono); font-weight:700; color:var(--text-primary);">${escapeHtml(b.ip)}</td>
                 <td><span class="badge" style="background:color-mix(in srgb, var(--sm-accent) 15%, transparent); color:var(--sm-accent);">${escapeHtml(b.jail)}</span></td>
                 <td style="text-align:right;">
                   <button class="btn btn-secondary btn-xs btn-unban-ip" data-jail="${escapeHtml(b.jail)}" data-ip="${escapeHtml(b.ip)}">Unban</button>
@@ -1373,30 +1358,30 @@
     const overlay = document.createElement('div');
     overlay.className = 'desktop-modal-backdrop';
     overlay.style.cssText = `
-      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.76);
+      position: fixed; inset: 0; background: rgba(var(--shade), 0.76);
       backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
       display: flex; align-items: center; justify-content: center;
       z-index: 100000; padding: 1rem; font-family: var(--font-sans); color: var(--text-primary);
     `;
 
     overlay.innerHTML = `
-      <div style="width: 100%; max-width: 700px; height: 560px; background: var(--bg-surface, #111827); border: 1px solid var(--border-color, #1f2937); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85); display: flex; flex-direction: column; overflow: hidden;">
+      <div style="width: 100%; max-width: 700px; height: 560px; background: var(--bg-surface, var(--bg-system)); border: 1px solid var(--border-color, var(--sm-line-strong)); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.85); display: flex; flex-direction: column; overflow: hidden;">
         <!-- Header -->
-        <div style="height: 44px; padding: 0 1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); flex-shrink: 0;">
-          <div style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; font-size: 0.88rem; color: #f8fafc;">
-            <svg style="width: 18px; height: 18px; color: #10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+        <div style="height: 44px; padding: 0 1rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; background: rgba(var(--wash),0.02); flex-shrink: 0;">
+          <div style="display: flex; align-items: center; gap: 0.55rem; font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">
+            <svg style="width: 18px; height: 18px; color: var(--c-ok2);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
             <span>SQLite Database Picker</span>
-            <span class="badge" style="background: rgba(16,185,129,0.15); color: #10b981; font-family: var(--font-mono); font-size: 0.68rem;">${escapeHtml(sName)}</span>
-            <span class="badge" id="dbPickerCountBadge" style="background: rgba(255,255,255,0.06); color: var(--text-muted); font-size: 0.68rem;">Scanning...</span>
+            <span class="badge" style="background: rgba(16,185,129,0.15); color: var(--c-ok2); font-family: var(--font-mono); font-size: 0.68rem;">${escapeHtml(sName)}</span>
+            <span class="badge" id="dbPickerCountBadge" style="background: rgba(var(--wash),0.06); color: var(--text-muted); font-size: 0.68rem;">Scanning...</span>
           </div>
           <button class="btn btn-secondary btn-xs" id="dbPickerCloseBtn" style="padding: 0.15rem 0.45rem;">&times;</button>
         </div>
 
         <!-- Filter & SFTP Browse Bar -->
-        <div style="padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border-subtle); background: rgba(0,0,0,0.22); display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
-          <div style="flex: 1; display: flex; align-items: center; background: var(--bg-canvas, #090d16); border: 1px solid var(--border-color, #1f2937); border-radius: 6px; padding: 0.2rem 0.55rem;">
-            <svg style="width: 13px; height: 13px; color: #94a3b8; margin-right: 0.4rem; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" id="dbPickerSearchInput" placeholder="Filter databases by filename or directory path..." style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-sans); font-size: 0.78rem; color: #f8fafc;">
+        <div style="padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border-subtle); background: rgba(var(--shade),0.22); display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+          <div style="flex: 1; display: flex; align-items: center; background: var(--bg-canvas, var(--sm-inset)); border: 1px solid var(--border-color, var(--sm-line-strong)); border-radius: 6px; padding: 0.2rem 0.55rem;">
+            <svg style="width: 13px; height: 13px; color: var(--text-muted); margin-right: 0.4rem; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="dbPickerSearchInput" placeholder="Filter databases by filename or directory path..." style="width: 100%; background: transparent; border: none; outline: none; font-family: var(--font-sans); font-size: 0.78rem; color: var(--text-primary);">
           </div>
           <button class="btn btn-secondary btn-xs" id="dbPickerBrowseSftpBtn" style="display: flex; align-items: center; gap: 4px; padding: 0.3rem 0.65rem;" title="Browse Server Folders with SFTP File Picker">
             <svg style="width: 13px; height: 13px; color: var(--sm-accent);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
@@ -1416,7 +1401,7 @@
         </div>
 
         <!-- Footer -->
-        <div style="padding: 0.65rem 1rem; border-top: 1px solid var(--border-subtle); background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-shrink: 0;">
+        <div style="padding: 0.65rem 1rem; border-top: 1px solid var(--border-subtle); background: rgba(var(--shade),0.25); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-shrink: 0;">
           <div style="flex: 1; display: flex; align-items: center; gap: 0.4rem; min-width: 0;">
             <span style="font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0;">Selected Path:</span>
             <input type="text" id="dbPickerManualPath" class="form-control" style="flex: 1; font-family: var(--font-mono); font-size: 0.74rem; padding: 0.2rem 0.5rem;" placeholder="/path/to/database.db">
@@ -1488,14 +1473,14 @@
             <!-- Left: DB Icon & Names -->
             <div style="display:flex; align-items:center; gap:0.65rem; min-width:0; flex:1;">
               <div style="width:32px; height:32px; border-radius:7px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                <svg style="width:16px; height:16px; color:#10b981;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                <svg style="width:16px; height:16px; color:var(--c-ok2);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
               </div>
               <div style="min-width:0; overflow:hidden;">
                 <div style="display:flex; align-items:center; gap:0.4rem;">
-                  <span style="font-weight:600; font-size:0.82rem; color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.name)}</span>
+                  <span style="font-weight:600; font-size:0.82rem; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.name)}</span>
                   ${f.size ? `<span class="badge" style="background:color-mix(in srgb, var(--sm-accent) 12%, transparent); color:var(--sm-accent); font-family:var(--font-mono); font-size:0.66rem;">${escapeHtml(f.size)}</span>` : ''}
                 </div>
-                <div style="font-family:var(--font-mono); font-size:0.71rem; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.path)}</div>
+                <div style="font-family:var(--font-mono); font-size:0.71rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.path)}</div>
               </div>
             </div>
 
@@ -1562,7 +1547,7 @@
           renderList();
         }
       } catch (err) {
-        listEl.innerHTML = `<div style="text-align:center; padding:2.5rem; color:#f87171; font-size:0.8rem;">Error scanning databases: ${err}</div>`;
+        listEl.innerHTML = `<div style="text-align:center; padding:2.5rem; color:var(--c-bad); font-size:0.8rem;">Error scanning databases: ${err}</div>`;
         countBadge.textContent = 'Error';
       }
     };
@@ -1575,7 +1560,7 @@
       if (typeof this.showDirectoryPicker === 'function') {
         this.showDirectoryPicker({
           serverId: sId,
-          initialPath: manualPathInp.value.trim() || '/var/www/',
+          initialPath: manualPathInp.value.trim() || '/home/',
           title: 'Select SQLite Database File (.db / .sqlite)',
           selectFiles: true,
           fileExtensions: ['.db', '.sqlite', '.sqlite3'],

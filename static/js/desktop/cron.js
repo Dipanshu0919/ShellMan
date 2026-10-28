@@ -50,16 +50,16 @@ DesktopAppsController.prototype.launchCron = function (params = {}) {
           </div>
 
           <!-- Modal for Add/Edit -->
-          <div id="cronModal_${cronWinId}" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.65); backdrop-filter:blur(3px); z-index:100; align-items:center; justify-content:center; padding:1.5rem;">
+          <div id="cronModal_${cronWinId}" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(var(--shade),0.65); backdrop-filter:blur(3px); z-index:100; align-items:center; justify-content:center; padding:1.5rem;">
             <div style="width:100%; max-width:540px; background:var(--bg-surface); border:1px solid var(--border-color); border-radius:10px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); display:flex; flex-direction:column; overflow:hidden;">
               <div style="padding:0.85rem 1.25rem; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
-                <span id="cronModalTitle_${cronWinId}" style="font-weight:700; font-size:0.9rem; color:#f8fafc;">Add Scheduled Job</span>
+                <span id="cronModalTitle_${cronWinId}" style="font-weight:700; font-size:0.9rem; color:var(--text-primary);">Add Scheduled Job</span>
                 <button class="btn btn-secondary btn-xs" id="btnCancelModal_${cronWinId}">&times;</button>
               </div>
               <div style="padding:1.25rem; display:flex; flex-direction:column; gap:0.9rem;">
                 <div>
-                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Schedule Preset</label>
-                  <select id="cronPresetSel_${cronWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.4rem; background:var(--bg-secondary); color:#f8fafc;">
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Schedule Preset</label>
+                  <select id="cronPresetSel_${cronWinId}" class="form-control" style="width:100%; font-size:0.8rem; padding:0.4rem; background:var(--bg-secondary); color:var(--text-primary);">
                     <option value="custom">Custom Cron Expression</option>
                     <option value="* * * * *">Every Minute (* * * * *)</option>
                     <option value="*/5 * * * *">Every 5 Minutes (*/5 * * * *)</option>
@@ -74,23 +74,23 @@ DesktopAppsController.prototype.launchCron = function (params = {}) {
                 </div>
 
                 <div>
-                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Cron Schedule Expression</label>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Cron Schedule Expression</label>
                   <input type="text" id="cronExprInp_${cronWinId}" value="0 0 * * *" class="form-control" style="width:100%; font-family:monospace; font-size:0.9rem; padding:0.4rem 0.6rem;" placeholder="* * * * *">
                   <div id="cronHumanDesc_${cronWinId}" style="font-size:0.72rem; color:var(--sm-accent); margin-top:0.3rem;">Daily at midnight (00:00)</div>
                 </div>
 
                 <div>
-                  <label style="display:block; font-size:0.75rem; font-weight:700; color:#cbd5e1; margin-bottom:0.35rem;">Command to Execute</label>
+                  <label style="display:block; font-size:0.75rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.35rem;">Command to Execute</label>
                   <textarea id="cronCmdInp_${cronWinId}" rows="3" class="form-control" style="width:100%; font-family:monospace; font-size:0.8rem; padding:0.4rem 0.6rem;" placeholder="/usr/bin/python3 /opt/scripts/backup.py >> /var/log/backup.log 2>&1"></textarea>
                   <div style="font-size:0.7rem; color:var(--text-muted); margin-top:0.25rem;">Always use absolute paths to system binaries and redirect logs when needed.</div>
                 </div>
 
                 <div style="display:flex; align-items:center; gap:0.5rem;">
                   <input type="checkbox" id="cronEnabledInp_${cronWinId}" checked>
-                  <label for="cronEnabledInp_${cronWinId}" style="font-size:0.78rem; color:#cbd5e1; cursor:pointer;">Job is enabled &amp; active</label>
+                  <label for="cronEnabledInp_${cronWinId}" style="font-size:0.78rem; color:var(--text-secondary); cursor:pointer;">Job is enabled &amp; active</label>
                 </div>
               </div>
-              <div style="padding:0.75rem 1.25rem; border-top:1px solid var(--border-subtle); background:rgba(0,0,0,0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
+              <div style="padding:0.75rem 1.25rem; border-top:1px solid var(--border-subtle); background:rgba(var(--shade),0.2); display:flex; justify-content:flex-end; gap:0.5rem;">
                 <button class="btn btn-secondary btn-sm" id="btnModalClose_${cronWinId}">Cancel</button>
                 <button class="btn btn-primary btn-sm" id="btnModalSave_${cronWinId}">Save Scheduled Job</button>
               </div>
@@ -138,9 +138,9 @@ DesktopAppsController.prototype.launchCron = function (params = {}) {
 
           if (jobsList.length === 0) {
             contentArea.innerHTML = `
-              <div style="text-align:center; padding:4rem 1.5rem; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:8px;">
+              <div style="text-align:center; padding:4rem 1.5rem; background:rgba(var(--wash),0.02); border:1px solid var(--border-color); border-radius:8px;">
                 <svg style="width:36px;height:36px;color:var(--text-muted);margin-bottom:0.75rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                <div style="font-weight:700; font-size:0.95rem; color:#f8fafc; margin-bottom:0.35rem;">No Scheduled Cron Jobs</div>
+                <div style="font-weight:700; font-size:0.95rem; color:var(--text-primary); margin-bottom:0.35rem;">No Scheduled Cron Jobs</div>
                 <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;">This server user currently has no active crontab entries configured.</div>
                 <button class="btn btn-primary btn-sm" id="btnEmptyAdd_${cronWinId}">Create First Cron Job</button>
               </div>
@@ -161,13 +161,13 @@ DesktopAppsController.prototype.launchCron = function (params = {}) {
                 <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; opacity:${j.is_enabled ? '1' : '0.6'};">
                   <div style="flex:1; min-width:0;">
                     <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.35rem; flex-wrap:wrap;">
-                      <code style="font-size:0.8rem; background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); padding:0.15rem 0.5rem; border-radius:4px; color:var(--sm-accent); font-family:monospace; font-weight:700;">${j.schedule}</code>
-                      <span style="font-size:0.75rem; font-weight:600; color:#cbd5e1;">${j.human}</span>
-                      <span style="font-size:0.65rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; ${j.is_enabled ? 'background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(148,163,184,0.15); color:#94a3b8; border:1px solid rgba(148,163,184,0.3);'}">
+                      <code style="font-size:0.8rem; background:rgba(var(--shade),0.3); border:1px solid var(--border-subtle); padding:0.15rem 0.5rem; border-radius:4px; color:var(--sm-accent); font-family:monospace; font-weight:700;">${j.schedule}</code>
+                      <span style="font-size:0.75rem; font-weight:600; color:var(--text-secondary);">${j.human}</span>
+                      <span style="font-size:0.65rem; padding:0.1rem 0.4rem; border-radius:3px; font-weight:700; ${j.is_enabled ? 'background:rgba(16,185,129,0.15); color:var(--c-ok); border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(148,163,184,0.15); color:var(--text-muted); border:1px solid rgba(148,163,184,0.3);'}">
                         ${j.is_enabled ? 'ACTIVE' : 'DISABLED'}
                       </span>
                     </div>
-                    <div style="font-family:monospace; font-size:0.78rem; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${j.command}">
+                    <div style="font-family:monospace; font-size:0.78rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${j.command}">
                       ${j.command}
                     </div>
                   </div>

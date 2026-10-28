@@ -31,7 +31,7 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
       minHeight: 260,
       contentHtml: `
         <div class="terminal-app-container" style="height:100%; display:flex; flex-direction:column; background:${activeTheme.background};">
-          <div class="terminal-toolbar" style="height:36px; background:#0f172a; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; padding:0 0.65rem;">
+          <div class="terminal-toolbar" style="height:36px; background:var(--bg-system); border-bottom:1px solid var(--sm-line-strong); display:flex; align-items:center; justify-content:space-between; padding:0 0.65rem;">
             <div style="display:flex; align-items:center; gap:0.4rem;">
               <span class="status-dot connected" id="dot_${termWinId}"></span>
               <span style="font-family:var(--font-mono); font-size:0.74rem; color:var(--text-secondary);" id="status_${termWinId}">PTY Active</span>
@@ -41,13 +41,13 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
             <div style="display:flex; align-items:center; gap:0.3rem;">
               <div style="display:flex; align-items:center; gap:0.25rem; margin-right:0.2rem;">
                 <span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-mono);">Theme:</span>
-                <select class="form-control" id="theme_${termWinId}" data-terminal-theme-select style="font-size:0.68rem; height:24px; padding:0 4px; background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.1); border-radius:4px; outline:none; cursor:pointer;" title="Terminal Color Theme">
+                <select class="form-control" id="theme_${termWinId}" data-terminal-theme-select style="font-size:0.68rem; height:24px; padding:0 4px; background:var(--bg-surface-elevated); color:var(--text-secondary); border:1px solid rgba(var(--wash),0.1); border-radius:4px; outline:none; cursor:pointer;" title="Terminal Color Theme">
                   ${Object.values(SHELLMAN_TERMINAL_THEMES).map(t => `<option value="${t.id}" ${savedThemeKey === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
                 </select>
               </div>
               <div style="display:flex; align-items:center; gap:0.25rem; margin-right:0.2rem;">
                 <span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-mono);">Idle:</span>
-                <select class="form-control" id="idle_${termWinId}" style="font-size:0.68rem; height:24px; padding:0 4px; background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.1); border-radius:4px; outline:none; cursor:pointer;" title="Auto-disconnect this session after no typing for a while. Off keeps the session open.">
+                <select class="form-control" id="idle_${termWinId}" style="font-size:0.68rem; height:24px; padding:0 4px; background:var(--bg-surface-elevated); color:var(--text-secondary); border:1px solid rgba(var(--wash),0.1); border-radius:4px; outline:none; cursor:pointer;" title="Auto-disconnect this session after no typing for a while. Off keeps the session open.">
                   <option value="0" selected>Never disconnect</option>
                   <option value="5">Disconnect after 5 min</option>
                   <option value="15">Disconnect after 15 min</option>
@@ -94,7 +94,7 @@ DesktopAppsController.prototype.launchTerminal = function (params = {}) {
           cursorBlink: true,
           cursorStyle: 'bar',
           fontSize: Math.max(10, Math.round(14 * (baseFontPx / 16))),
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          fontFamily: (window.ShellmanLook ? window.ShellmanLook.monoStack() : 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'),
           theme: activeTheme,
           allowProposedApi: true,
           scrollback: 5000,
