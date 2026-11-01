@@ -65,7 +65,7 @@ def setup():
             return redirect(url_for('auth.login'))
 
         session.clear()
-        session.permanent = True
+        session.permanent = False  # browser-session cookie: closing the browser logs out
         session['user_id'] = admin.id
         session['username'] = admin.username
         session['sv'] = admin.session_version
@@ -109,7 +109,7 @@ def login():
                 return redirect(url_for('auth.login_2fa'))
 
             session.clear()
-            session.permanent = True
+            session.permanent = False  # browser-session cookie: closing the browser logs out
             session['user_id'] = user.id
             session['username'] = user.username
             session['sv'] = user.session_version
@@ -159,7 +159,7 @@ def login_2fa():
             totp_throttle.reset(*tkeys)
             next_page = safe_next(session.get('2fa_next_url'), url_for('dashboard.index'))
             session.clear()
-            session.permanent = True
+            session.permanent = False  # browser-session cookie: closing the browser logs out
             session['user_id'] = user.id
             session['username'] = user.username
             session['sv'] = user.session_version

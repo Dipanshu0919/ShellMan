@@ -143,11 +143,21 @@ class SSHConnectionManager:
         else:
             connect_kwargs['password'] = server.password
 
+        is_ts = (getattr(server, 'kind', None) or 'ssh') == 'tailscale'
+        if is_ts:
+            from services import tailscale
+            if not tailscale.safe_host(server.host):
+                raise ValueError('Invalid Tailscale host name.')
+
         # Attempt connection with resilience against transient SSH banner drops / connection resets
         for attempt in range(1, 3):
             client = paramiko.SSHClient()
             self._load_host_keys(client)
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())   # first sight only; changed keys are rejected
+            if is_ts:
+                sock = tailscale.proxy_for(server.host, server.port)   # fresh tunnel per attempt; None = direct
+                if sock is not None:
+                    connect_kwargs['sock'] = sock
             try:
                 client.connect(**connect_kwargs)
                 self._remember_host_key(client)

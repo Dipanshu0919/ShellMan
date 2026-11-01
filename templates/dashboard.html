@@ -448,6 +448,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="#22d3ee"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><path d="M14 17h7M14 20h4"></path></svg>
       <span>Fleet &amp; History</span>
     </div>
+    <div class="ctx-item" onclick="DesktopApps.launch('media'); toggleStartMenu();">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#db2777"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M10 9l5 3-5 3z"></path></svg>
+      <span>Media Player</span>
+    </div>
     <div class="ctx-item" onclick="DesktopApps.launch('cron'); toggleStartMenu();">
       <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
       <span>Cron Job Manager (Scheduler)</span>
@@ -513,7 +517,9 @@
 <script src="{{ static_v('js/desktop/terminal.js') }}"></script>
 <script src="{{ static_v('js/desktop/fileicons.js') }}"></script>
 <script src="{{ static_v('js/desktop/filemanager.js') }}"></script>
+<script src="{{ static_v('js/desktop/mediaviewer.js') }}"></script>
 <script src="{{ static_v('js/desktop/code.js') }}"></script>
+<script src="{{ static_v('js/desktop/media.js') }}"></script>
 <script src="{{ static_v('js/desktop/procuniverse.js') }}"></script>
 <script src="{{ static_v('js/desktop/taskmanager.js') }}"></script>
 <script src="{{ static_v('js/desktop/nginx.js') }}"></script>

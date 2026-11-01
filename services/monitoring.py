@@ -80,7 +80,7 @@ class SystemMonitor:
             "echo '---TIME---'; "
             "date +'%s %z %Z'; "
             "echo '---DISK---'; "
-            "df -P -B1 -x tmpfs -x devtmpfs -x overlay -x squashfs -x iso9660 2>/dev/null; "
+            "df -a -P -B1 -x tmpfs -x devtmpfs -x overlay -x squashfs -x iso9660 2>/dev/null; "
             "echo '---NET---'; "
             "cat /proc/net/dev 2>/dev/null; "
             + os_subcmd
@@ -194,6 +194,10 @@ class SystemMonitor:
                     avail_b = int(parts[3])
                     percent = int(parts[4].rstrip('%'))
                     mp = " ".join(parts[5:])
+
+                    # df -a lists every mount (e.g. /home subvolumes); drop zero-size pseudo filesystems
+                    if total_b <= 0:
+                        continue
 
                     # Skip virtual/pseudo mount paths
                     if mp.startswith('/snap') or mp.startswith('/var/lib/docker'):

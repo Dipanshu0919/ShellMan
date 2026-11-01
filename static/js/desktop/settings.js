@@ -138,7 +138,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                         ${isCurrent ? '<span style="font:700 0.68rem/1 var(--font-mono, ui-monospace, monospace); color:var(--sm-accent); letter-spacing:.04em;">[ACTIVE]</span>' : ''}
                       </div>
                       <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
-                        ${s.kind === 'codespace'
+                        ${s.kind === 'tailscale' ? '<span style="color:var(--sm-accent);font-weight:700;letter-spacing:.04em;">TAILSCALE</span><span style="margin:0 4px;">&bull;</span>' : ''}${s.kind === 'codespace'
                           ? `<span>GitHub Codespace: ${escapeHtml(s.codespace_name || '')}</span>`
                           : `<span>${escapeHtml(s.username)}@${escapeHtml(s.host)}:${s.port}</span>
                         <span style="margin:0 4px;">&bull;</span>
@@ -261,6 +261,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   <div style="display:flex; gap:1.25rem; align-items:center;">
                     <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;"><input type="radio" name="mKind_${setWinId}" value="ssh" checked><span>SSH server (VPS)</span></label>
                     <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;"><input type="radio" name="mKind_${setWinId}" value="codespace"><span>GitHub Codespace</span></label>
+                    <label style="display:flex; align-items:center; gap:0.35rem; cursor:pointer;"><input type="radio" name="mKind_${setWinId}" value="tailscale"><span>Tailscale</span></label>
                   </div>
                 </div>`}
                 <div style="display:flex; gap:0.75rem;">
@@ -274,6 +275,11 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                   </div>
                 </div>
 
+                <div id="mTsBox_${setWinId}" style="display:none;">
+                  <div style="color:var(--text-muted); font-size:0.74rem; line-height:1.5;">Reach a machine on your tailnet (home server, Pi, laptop) with no open ports. ShellMan's own host must run Tailscale. Fill the usual fields below, or pick a device.</div>
+                  <button type="button" class="btn btn-secondary btn-xs" id="mTsFind_${setWinId}" style="margin-top:0.4rem;">Pick from tailnet</button>
+                  <div id="mTsList_${setWinId}" style="margin-top:0.4rem; display:flex; flex-direction:column; gap:0.25rem;"></div>
+                </div>
                 <div style="display:flex; gap:0.75rem;" data-sshonly>
                   <div style="flex:2;">
                     <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Host / IP Address *</label>
@@ -403,11 +409,13 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           // Server type: SSH server or GitHub Codespace
           const csBox = modalBackdrop.querySelector(`#mCsBox_${setWinId}`);
           const sshOnly = modalBackdrop.querySelectorAll('[data-sshonly]');
-          let kind = (isEdit && serverToEdit.kind === 'codespace') ? 'codespace' : 'ssh';
+          let kind = isEdit ? (serverToEdit.kind || 'ssh') : 'ssh';
+          const tsBox = modalBackdrop.querySelector(`#mTsBox_${setWinId}`);
           sshOnly.forEach(el => { el.dataset.d = el.style.display || ''; });
           const applyKind = () => {
             const cs = kind === 'codespace';
             csBox.style.display = cs ? 'block' : 'none';
+            tsBox.style.display = kind === 'tailscale' ? 'block' : 'none';
             sshOnly.forEach(el => { el.style.display = cs ? 'none' : el.dataset.d; });
             if (!cs) {   // re-apply password/key box visibility for the selected auth method
               const checked = modalBackdrop.querySelector(`input[name="mAuthType_${setWinId}"]:checked`);
@@ -420,6 +428,25 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             r.onchange = () => { kind = r.value; applyKind(); };
           });
           applyKind();
+          const tsFind = modalBackdrop.querySelector(`#mTsFind_${setWinId}`);
+          if (tsFind) tsFind.onclick = async () => {
+            const list = modalBackdrop.querySelector(`#mTsList_${setWinId}`);
+            const note = (t, bad) => { list.innerHTML = `<span style="color:var(--${bad ? 'c-bad' : 'text-muted'});font-size:0.74rem;">${escapeHtml(t)}</span>`; };
+            note('Asking Tailscale…');
+            let res;
+            try { res = await (await fetch('/api/tailscale/devices')).json(); } catch (e) { return note('Request failed', true); }
+            if (res.error && !res.devices.length) return note(res.error, true);
+            if (!res.devices.length) return note('No other devices on this tailnet.');
+            list.innerHTML = res.devices.map((d, i) => `<button type="button" class="btn btn-ghost btn-xs" data-i="${i}" style="justify-content:space-between;display:flex;gap:1rem;text-align:left;">
+              <span>${escapeHtml(d.name)} <span style="color:var(--text-muted)">${escapeHtml(d.os)}</span></span>
+              <span style="font-family:var(--font-mono);color:var(--text-muted)">${escapeHtml(d.ip)} ${d.online ? '' : '(offline)'}</span></button>`).join('');
+            list.querySelectorAll('button').forEach(b => b.onclick = () => {
+              const d = res.devices[+b.dataset.i];
+              modalBackdrop.querySelector(`#mSrvHost_${setWinId}`).value = d.dns || d.ip;
+              const nm = modalBackdrop.querySelector(`#mSrvName_${setWinId}`);
+              if (!nm.value.trim()) nm.value = d.name;
+            });
+          };
           const csFind = modalBackdrop.querySelector(`#mCsFind_${setWinId}`);
           if (csFind) csFind.onclick = async () => {
             const list = modalBackdrop.querySelector(`#mCsList_${setWinId}`);
@@ -531,7 +558,8 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               auth_type: modalBackdrop.querySelector(`input[name="mAuthType_${setWinId}"]:checked`).value,
               password: passInp.value,
               private_key: modalBackdrop.querySelector(`#mSrvKey_${setWinId}`).value,
-              passphrase: modalBackdrop.querySelector(`#mSrvPassphrase_${setWinId}`).value
+              passphrase: modalBackdrop.querySelector(`#mSrvPassphrase_${setWinId}`).value,
+              kind
             };
 
             try {
@@ -596,7 +624,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(isCs
                   ? { name, kind: 'codespace', codespace_name: modalBackdrop.querySelector(`#mCsName_${setWinId}`).value.trim(), gh_token: modalBackdrop.querySelector(`#mCsToken_${setWinId}`).value.trim() }
-                  : { name, host, port, username, auth_type, password, private_key, passphrase })
+                  : { name, host, port, username, auth_type, password, private_key, passphrase, kind })
               });
               const res = await resp.json();
               if (res.success) {

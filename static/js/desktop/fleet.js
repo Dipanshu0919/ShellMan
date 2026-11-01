@@ -166,7 +166,7 @@ DesktopAppsController.prototype.launchFleet = function (params = {}) {
         const showMets = sm && s.online;
         return `<div class="fl-card ${st === 'crit' ? 'crit' : st === 'off' ? 'crit off' : st === 'warn' ? 'warn' : ''}" data-id="${s.id}" title="Click for history graphs">
           <div class="fl-head"><span class="fl-dot ${st === 'off' ? 'off' : st === 'stale' ? 'stale' : ''}"></span>
-            <span class="fl-name">${esc(s.name)}</span>${s.kind === 'codespace' ? '<span class="fl-tag">CODESPACE</span>' : ''}</div>
+            <span class="fl-name">${esc(s.name)}</span>${s.kind === 'codespace' ? '<span class="fl-tag">CODESPACE</span>' : s.kind === 'tailscale' ? '<span class="fl-tag">TAILSCALE</span>' : ''}</div>
           ${showMets ? `<div class="fl-mets">${bar('CPU', sm.cpu)}${bar('RAM', sm.mem)}${bar('Disk', sm.disk)}</div>${spark(s.live && s.live.length > 8 ? s.live : s.spark, COLORS.cpu)}
             <div class="fl-foot"><span>${s.live && s.live.length > 8 ? 'CPU, live' : 'CPU, last hour'}</span><span>load ${sm.load} · ${esc(ago(sm.age))}</span></div>`
           : `<div class="fl-down">${s.online ? '' : down}<span>${s.online ? 'Waiting for the first reading…' : 'Not reachable, or stopped.'}</span></div>`}

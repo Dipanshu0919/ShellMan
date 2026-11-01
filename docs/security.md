@@ -8,7 +8,7 @@
 - **Sanitized Backup Archives**: Settings and server configurations exported for portability are strictly scrubbed of passwords and private keys.
 - **Path Traversal Protection**: All SFTP path parameters are strictly normalized and sanitized against directory traversal attacks (`../`).
 - **Random Session Secret**: The Flask session key comes from `SHELLMAN_SECRET_KEY` or is generated per install and stored in `instance/.secret_key` (0600). Known example values from docs or older releases are rejected, so a session cookie cannot be forged from the source code.
-- **Login Brute-Force Protection**: Failed password attempts are throttled per IP and username with exponential lockout (HTTP 429); wrong 2FA codes are throttled separately. Sessions are renewed on login and expire after 24 h of inactivity (`SHELLMAN_SESSION_HOURS`).
+- **Login Brute-Force Protection**: Failed password attempts are throttled per IP and username with exponential lockout (HTTP 429); wrong 2FA codes are throttled separately. Sessions are renewed on login, end when the browser is closed (the cookie has no expiry date) and in any case expire after `SHELLMAN_SESSION_HOURS` (24 by default).
 - **Password Policy and Session Invalidation**: There is no password strength rule: you choose your own password. Changing the password or disabling 2FA signs out every other session. `Settings → Security → Sign out other sessions` does it on demand.
 - **First-Run Setup Token**: Set `SHELLMAN_SETUP_TOKEN` and the first-run page asks for it, so nobody who finds a fresh instance can claim the admin account.
 - **2FA Hardening**: A TOTP code works once only (replay guard), 2FA disable and password change are rate limited, and backup codes are stored encrypted.
@@ -21,3 +21,4 @@
 - **Key Authentication**: Full support for standard password authentication as well as RSA and Ed25519 OpenSSH private key pairs (with passphrase support).
 
 Back to the [README](../README.md) · [Deployment](deployment.md)
+- **Sandboxed file view**: The route that streams a remote file for preview sends `Content-Security-Policy: sandbox` with no scripts and `X-Content-Type-Options: nosniff`, so an SVG or HTML file on a managed server cannot run code in ShellMan when opened directly.

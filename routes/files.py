@@ -326,6 +326,45 @@ def upload_file(server_id):
         'errors': errors[:5] if errors else []
     })
 
+# Types Python's mimetypes may not know (or maps wrongly) on a minimal host.
+_EXTRA_MIME = {
+    '.webm': 'video/webm', '.mkv': 'video/x-matroska', '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime',
+    '.ogv': 'video/ogg', '.avi': 'video/x-msvideo', '.3gp': 'video/3gpp',
+    '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.flac': 'audio/flac', '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg', '.oga': 'audio/ogg', '.opus': 'audio/ogg', '.weba': 'audio/webm',
+    '.avif': 'image/avif', '.webp': 'image/webp', '.heic': 'image/heic', '.heif': 'image/heif',
+    '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.bmp': 'image/bmp', '.tif': 'image/tiff', '.tiff': 'image/tiff',
+    '.apng': 'image/apng', '.jfif': 'image/jpeg', '.jxl': 'image/jxl',
+}
+
+# Everything served by /view runs in a sandbox with no scripts: an SVG or HTML file that sits on a
+# managed server must never execute in ShellMan's origin when opened directly.
+_VIEW_CSP = "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox"
+
+
+def _parse_range(header, size):
+    """Parse a single 'bytes=a-b' range. Returns (start, end) inclusive, None for no range, False if unsatisfiable."""
+    if not header or not header.startswith('bytes=') or size <= 0:
+        return None
+    spec = header[6:].split(',')[0].strip()
+    if '-' not in spec:
+        return None
+    a, b = spec.split('-', 1)
+    try:
+        if a == '':                       # suffix range: last N bytes
+            n = int(b)
+            if n <= 0:
+                return False
+            return (max(0, size - n), size - 1)
+        start = int(a)
+        end = int(b) if b != '' else size - 1
+    except ValueError:
+        return None
+    if start >= size or start > end:
+        return False
+    return (start, min(end, size - 1))
+
+
 @files_bp.route('/api/servers/<int:server_id>/files/download')
 @files_bp.route('/api/servers/<int:server_id>/files/view')
 @login_required
@@ -341,17 +380,31 @@ def download_file(server_id):
         file_size = attr.st_size
 
         filename = os.path.basename(path)
-        mime, _ = mimetypes.guess_type(filename)
-        mime = mime or "application/octet-stream"
-        is_inline = request.args.get('inline') == '1' or request.path.endswith('/view')
-        disposition = "inline" if is_inline else f"attachment; filename=\"{filename}\""
+        ext = os.path.splitext(filename)[1].lower()
+        mime = _EXTRA_MIME.get(ext) or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        is_view = request.args.get('inline') == '1' or request.path.endswith('/view')
+        disposition = "inline" if is_view else f"attachment; filename=\"{filename}\""
+
+        rng = _parse_range(request.headers.get('Range'), file_size)
+        if rng is False:
+            try:
+                remote_file.close()
+            except Exception:
+                pass
+            return Response(status=416, headers={"Content-Range": f"bytes */{file_size}"})
+        start, end = rng if rng else (0, max(file_size - 1, 0))
+        length = (end - start + 1) if file_size else 0
 
         def generate():
             try:
-                while True:
-                    chunk = remote_file.read(65536)
+                if start:
+                    remote_file.seek(start)
+                left = length
+                while left > 0:
+                    chunk = remote_file.read(min(65536, left))
                     if not chunk:
                         break
+                    left -= len(chunk)
                     yield chunk
             finally:
                 try:
@@ -359,13 +412,16 @@ def download_file(server_id):
                 except Exception:
                     pass
 
-        return Response(
-            stream_with_context(generate()),
-            mimetype=mime,
-            headers={
-                "Content-Disposition": disposition,
-                "Content-Length": str(file_size)  # ← enables native browser download bar
-            }
-        )
+        headers = {
+            "Content-Disposition": disposition,
+            "Content-Length": str(length),   # enables the native browser download bar
+            "Accept-Ranges": "bytes",        # lets <video>/<audio> seek
+            "X-Content-Type-Options": "nosniff",
+        }
+        if is_view:
+            headers["Content-Security-Policy"] = _VIEW_CSP
+        if rng:
+            headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+        return Response(stream_with_context(generate()), status=206 if rng else 200, mimetype=mime, headers=headers)
     except Exception as e:
         return f"Download failed: {str(e)}", 400

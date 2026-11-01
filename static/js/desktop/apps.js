@@ -278,7 +278,7 @@ class DesktopAppsController {
       return;
     }
 
-    if (!this.serverId && appId !== 'servers' && appId !== 'settings' && appId !== 'fleet' && appId !== 'history') {
+    if (!this.serverId && appId !== 'servers' && appId !== 'settings' && appId !== 'media' && appId !== 'fleet' && appId !== 'history') {
       this.launchSettings({ tab: 'servers' });
       return;
     }
@@ -290,6 +290,9 @@ class DesktopAppsController {
         return this.launchFiles(params);
       case 'code':
         return this.launchCode(params);
+      case 'media':
+      case 'player':
+        return this.launchMedia(params);
       case 'overview':
         return this.launchOverview(params);
       case 'processes':

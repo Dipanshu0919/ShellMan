@@ -504,8 +504,9 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
         const isImage = (name) => {
           const ext = (name.split('.').pop() || '').toLowerCase();
-          return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff', 'avif'].includes(ext);
+          return ['png', 'jpg', 'jpeg', 'jpe', 'jfif', 'gif', 'svg', 'webp', 'apng', 'ico', 'bmp', 'tif', 'tiff', 'avif', 'heic', 'heif'].includes(ext);
         };
+        const isPlayable = (name) => !!(window.ShellmanMedia && window.ShellmanMedia.kind(name));
 
         // =====================================================================
         // CUSTOM ACTIONS ENGINE & SYSTEM HELPERS
@@ -2058,7 +2059,9 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             loadDir(path);
           } else {
             const item = items.find(i => i.path === path);
-            if (item && isImage(item.name)) {
+            if (item && window.ShellmanMedia && ['audio', 'video'].includes(window.ShellmanMedia.kind(item.name))) {
+              DesktopApps.launch('media', { path: item.path });
+            } else if (item && isImage(item.name)) {
               showImagePreviewModal(item);
             } else if (item && (item.name.endsWith('.db') || item.name.endsWith('.sqlite') || item.name.endsWith('.sqlite3'))) {
               DesktopApps.launch('database', { path });
@@ -2463,7 +2466,14 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               // File Context Menu
               const archive = isArchive(item.name);
               const image = isImage(item.name);
+              const playable = isPlayable(item.name);
               showContextMenu(e.clientX, e.clientY, `
+                ${playable ? `
+                  <div class="file-context-item" id="ctx_media" style="color:var(--sm-accent); font-weight:600;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M10 9l5 3-5 3z"></path></svg>
+                    <span>Open in Media Player</span>
+                  </div>
+                ` : ''}
                 ${image ? `
                   <div class="file-context-item" id="ctx_preview_image" style="color:var(--sm-accent); font-weight:600;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -2521,6 +2531,9 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 </div>
               `);
 
+              if (playable) {
+                activeCtxMenu.querySelector('#ctx_media').onclick = () => { hideContextMenu(); DesktopApps.launch('media', { path: item.path }); };
+              }
               if (image) {
                 activeCtxMenu.querySelector('#ctx_preview_image').onclick = () => {
                   hideContextMenu();

@@ -43,6 +43,10 @@ Every ShellMan feature in detail. The short version is in the [README](../README
 36. [Apache Web Server Manager](#apache)
 37. [Light and Dark Theme](#theme)
 38. [Wallpapers: one per theme, uploads and live wallpapers](#wallpapers)
+39. [Effects: living wallpaper, 3D fleet, process universe](#effects)
+40. [Media Player and image viewer](#media)
+41. [Virtual desktops and the 3D workspace switch](#workspaces)
+42. [Tailscale servers](#tailscale)
 
 </details>
 
@@ -55,7 +59,7 @@ Every ShellMan feature in detail. The short version is in the [README](../README
 ## 1. Multi-Window Desktop Workspace & Window Snapping
 - **True Desktop Experience**: Open multiple applications side-by-side. Move, resize, minimize to dock, maximize, and cascade windows smoothly.
 - **Drag-and-Drop Aero Window Snapping**: Drag any window to the left or right edge of the screen to snap to 50% viewport width, or drag to the top edge to maximize. Displays a translucent glassmorphism snap preview overlay with smooth restore on drag release.
-- **Interactive Application Dock**: Launch and switch between Overview, Terminal, File Manager, Code Workspace, Task Manager, Nginx & Domains Manager, Services, Logs, Rsync Sync, Cron Scheduler, Git Deployments, and Settings.
+- **Interactive Application Dock**: Launch and switch between Overview, Terminal, File Manager, Code Workspace, Media Player, Task Manager, Nginx & Domains Manager, Services, Logs, Rsync Sync, Cron Scheduler, Git Deployments, and Settings.
 - **Central Node Switcher**: Seamlessly switch active servers with one click.
 - **Unified Command Palette (Ctrl+K)**: Instant search across desktop apps, registered server nodes, and remote server files over SFTP. Typing a filename (e.g. `nginx.conf`) searches the host and opens it directly in Monaco Code Workspace.
 - **Privacy IP Masking Toggle**: Sensitive server IP addresses are masked by default (`20.219.2***:22`). Click the inline eye icon SVG to reveal or hide unmasked host endpoints instantly.
@@ -97,6 +101,7 @@ Every ShellMan feature in detail. The short version is in the [README](../README
 - **Full-Fledged Editor**: Powered by Microsoft Monaco with syntax highlighting, bracket matching, line numbers, and multi-cursor support.
 - **Local File Drag & Drop Integration**: Drag any file directly from your local desktop onto the editor viewport to immediately open it in an editable tab. Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save and upload it directly to the remote server workspace. Dragging files onto the left explorer tree immediately saves them to the active folder and refreshes the directory hierarchy.
 - **Desktop-Grade Right-Click Context Menus**: Full context menu suite on explorer files and folders (New File, New Folder, Rename, Duplicate/Copy, Move with Remote Directory Picker, Open in Terminal, Download, Copy Absolute/Relative Path, Delete) and editor tabs (Close, Close Others, Close All, Save, Copy Path).
+- **File-type icons and image tabs**: The explorer, tabs and search results use the same per-type icons as the File Manager. An image opens in a viewer tab (zoom, pan, rotate, any format including TIFF and HEIC) and an audio or video file opens in the [Media Player](#media).
 - **Broad Language Support**: Python, JavaScript, TypeScript, Shell Script, Dockerfile, Nginx config, JSON, YAML, HTML, CSS, SQL, and Markdown.
 - **Integrated Terminal Panel**: Collapsible bottom PTY terminal panel synchronized with the active workspace directory for seamless test and build cycles.
 - **Fast Remote Editing**: Hotkeys for Quick Open (<kbd>Ctrl</kbd>+<kbd>P</kbd>) and instant asynchronous SFTP remote save (<kbd>Ctrl</kbd>+<kbd>S</kbd>).
@@ -504,16 +509,54 @@ Settings, Appearance, Wallpaper holds up to 10 presets. Upload an image or a vid
 
 <a id="effects"></a>
 
-## 39. Effects and virtual desktops: living wallpaper, 3D fleet, process universe, 3D workspace switch
+## 39. Effects: living wallpaper, 3D fleet, process universe
 
-Settings, Appearance, Effects has one switch per effect, a Quality setting (Full or Light) and All on / All off buttons. An effect that is off costs nothing, every effect pauses while the browser tab is hidden, and all of them start switched off when the system asks for reduced motion. The choices are stored in this browser (`shellman_fx`).
+Settings, Appearance, Effects has one switch per effect, a Quality setting (Full or Light) and All on / All off buttons. An effect that is off costs nothing, every effect pauses while the browser tab is hidden, and all of them start switched off when the system asks for reduced motion. The living wallpaper is off by default on every system and is switched on in Settings. The choices are stored in this browser (`shellman_fx`).
 
 - **Living wallpaper.** A WebGL fragment shader drawn over the wallpaper, at reduced resolution. CPU load sets the flow speed, RAM sets the fog density, network traffic sets the ripples, and a critical alert shifts the colour to red until it is resolved.
 - **Materialize windows.** A window resolves in with a scanline decode led by a `$` bar, and dissolves into its dock icon when it is closed.
 - **File manager effects.** A beam travels from the file row to its destination for each progress step of a transfer (the existing SSE stream), folders open with a depth zoom, deleted rows are shredded into strips, and compressed rows fold into the first row.
 - **Fleet constellation.** A third tab in Fleet & History. ShellMan is the centre and each server is a body on its own orbit: CPU sets the orbit speed and the size, offline servers go dark, hovering shows CPU, RAM and disk, and clicking flies the camera to that server and opens its history. While an rsync or a Git deployment runs, a comet flies from the centre to that server. Three.js is vendored in `static/vendor/three` and loaded only when this tab opens.
 - **Process universe.** A view in the Task Manager (the Universe button). Processes are bodies sized by RAM and coloured by CPU, busy ones circle faster, zombies drift to the rim, stopped processes get a dashed ring, and a killed process collapses and bursts. Click a body for the normal process menu.
-- **3D workspace switch.** The desktop has virtual desktops (2 to 6, default 4). Each window lives on one workspace; the others are hidden, not closed. `Ctrl+Alt+Left/Right` switches, `Ctrl+Alt+1..9` jumps, `Ctrl+Alt+Shift+Left/Right` carries the active window along, and a right-click on a title bar offers Move to workspace. The pill at the top centre also switches. With the effect on, the windows turn as a 3D cube or a 3D slide (pick one in Settings); with it off the switch is instant. Opening an app that is already running on another workspace jumps to it.
 
-In light mode every effect is flat: no glow and no shadow. Code: `static/js/desktop/fx.js` (switches, shader, window and file effects), `workspaces.js`, `fleet3d.js`, `procuniverse.js`.
+In light mode every effect is flat: no glow and no shadow. Code: `static/js/desktop/fx.js` (switches, shader, window and file effects), `fleet3d.js`, `procuniverse.js`.
 
+
+<a id="media"></a>
+
+## 40. Media Player and image viewer
+
+A dock app for audio, video and images, from a server or from your own computer.
+
+- **Video and audio.** Files stream over SFTP and can be seeked, because the file route answers HTTP `Range` requests. The browser decides which codecs it can play (MP4/H.264, WebM, Ogg, MP3, WAV, FLAC, AAC, Opus and MKV in most browsers); a file it cannot play shows a message and a Download button. Space plays and pauses, the arrow keys seek, `N` and `P` change track, `M` mutes, `F` goes fullscreen. Speed, shuffle, repeat, picture-in-picture and the volume are remembered in this browser (`shellman_media`). Audio shows a live spectrum.
+- **Images, any type.** PNG, JPEG, GIF and APNG, WebP, AVIF, SVG, BMP, ICO and more show natively. TIFF and HEIC/HEIF are decoded in the browser by libraries in `static/vendor/imgdec` that load only when such a file is opened. The viewer zooms with the wheel, pans by dragging, rotates, fits, goes fullscreen and can switch the background (dark, light, checkerboard). A slideshow runs through the images of a folder.
+- **From this computer.** The folder button, or dropping files on the window, plays local files without uploading them.
+- **Where it opens.** The dock and the start menu, `Ctrl+K`, a double-click on an audio or video file in the File Manager, and "Open in Media Player" in its context menu. In the Code Workspace an image opens in a viewer tab, and an audio or video file hands over to the Media Player.
+- **Safety.** `/files/view` sends a Content-Security-Policy with `sandbox` and no scripts, so an SVG or HTML file on a server cannot run code when opened directly.
+
+Code: `static/js/desktop/media.js`, `mediaviewer.js`, and the Range handling in `routes/files.py`.
+
+<a id="workspaces"></a>
+
+## 41. Virtual desktops and the 3D workspace switch
+
+The desktop has 2 to 6 virtual desktops (4 by default). Each window lives on one workspace and the others are hidden, not closed, so terminals and transfers keep running.
+
+- **Switch.** `Ctrl+Alt+←` and `Ctrl+Alt+→` move between workspaces, `Ctrl+Alt+1` to `9` jump to one, and the pill at the top centre of the desktop switches with a click. It shows a dot on workspaces that have windows.
+- **Move windows.** `Ctrl+Alt+Shift+←/→` carries the active window to the next workspace and follows it. A right-click on a window's title bar offers Move to workspace.
+- **Running apps.** Opening an app that is already running on another workspace jumps to that workspace instead of opening a second copy.
+- **3D animation.** With the "3D workspace switch" effect on, the windows turn as a cube or slide as a 3D slide (choose in Settings, Appearance, Effects). With it off the switch is instant. Light quality shortens it, and reduced-motion systems start with it off.
+- **Settings.** The number of workspaces and the animation style are kept in this browser (`shellman_ws`).
+
+Code: `static/js/desktop/workspaces.js`.
+
+<a id="tailscale"></a>
+
+## 42. Tailscale servers
+- **What it is**: reach a machine on your tailnet (home server, Raspberry Pi, laptop) with no open port and no public IP. In System Settings, Server Nodes, Add, choose "Tailscale".
+- **Requirement**: the machine running ShellMan must have Tailscale installed and logged in (`tailscale up`). ShellMan connects with `tailscale nc <host> <port>`, so this also works when the tailnet runs in userspace mode. The target needs a normal SSH server.
+- **Pick from tailnet**: lists devices from `tailscale status --json` with OS, address and online state. Choosing one fills the host (MagicDNS name) and the name. Username and password or key are entered as for any SSH server.
+- **Everything else works as for SSH**: terminal, files, Docker, tasks, alerts, fleet (tagged TAILSCALE). Host keys are pinned as usual.
+- **Safety**: host names are validated (letters, digits, `.`, `-`, `_`, `:` only, no leading `-`) and the proxy is started without a shell.
+- **Cost**: Tailscale's Personal plan is free for non-commercial use. Commercial use needs a paid plan; check tailscale.com/pricing.
+- **No CLI on the ShellMan host?** ShellMan falls back to a direct connection, which works only if the host's OS already routes the tailnet (system-mode `tailscaled`).

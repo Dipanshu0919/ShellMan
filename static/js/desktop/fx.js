@@ -19,8 +19,11 @@
 
   // ---------- settings store ----------
   const read = () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { return null; } };
-  const defaults = () => { const d = { quality: 'full' }; NAMES.forEach(n => { d[n] = !reduceMotion(); }); return d; };
-  let cfg = Object.assign(defaults(), read() || {});
+  const OFF_BY_DEFAULT = ['livewall'];            // heavier effects start switched off
+  const defaults = () => { const d = { quality: 'full', _v: 2 }; NAMES.forEach(n => { d[n] = !reduceMotion() && !OFF_BY_DEFAULT.includes(n); }); return d; };
+  const stored = read();
+  let cfg = Object.assign(defaults(), stored || {});
+  if (stored && !(stored._v >= 2)) { cfg.livewall = false; cfg._v = 2; try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (_) {} }   // earlier builds saved livewall as on by default
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (_) {} };
   const emit = () => { try { window.dispatchEvent(new CustomEvent('shellman-fx-change', { detail: Object.assign({}, cfg) })); } catch (_) {} };
 

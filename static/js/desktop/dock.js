@@ -49,6 +49,17 @@ window.SHELLMAN_APPS = [
     defaultDesktop: true
   },
   {
+    id: 'media',
+    title: 'Media Player',
+    shortTitle: 'Media',
+    desc: 'Play audio and video from your servers, view images of any type',
+    category: 'core',
+    gradient: 'linear-gradient(135deg, #db2777, #9333ea)',
+    icon: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="3.5" fill="rgba(255,255,255,0.18)" stroke="#ffffff" stroke-width="1.5"/><path d="M10 9l5.5 3-5.5 3z" fill="#ffffff"/></svg>',
+    defaultDock: true,
+    defaultDesktop: true
+  },
+  {
     id: 'docker',
     title: 'Docker & Containers',
     shortTitle: 'Docker',

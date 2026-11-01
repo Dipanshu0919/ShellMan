@@ -157,7 +157,10 @@ Each feature name links to its full description in [docs/features.md](docs/featu
 | <img src="docs/assets/icons/desktop.svg" width="22" height="22" alt=""> | **[Multi-window desktop](docs/features.md#desktop)** | Move, resize, snap and minimize windows to a dock, like a real OS. Switch servers from one node picker. |
 | <img src="docs/assets/icons/terminal.svg" width="22" height="22" alt=""> | **[SSH terminal](docs/features.md#terminal)** | A real PTY over WebSockets with xterm.js, so vim, htop and tmux just work. Curated color themes. |
 | <img src="docs/assets/icons/folder.svg" width="22" height="22" alt=""> | **[SFTP file manager](docs/features.md#file-manager)** | Drag whole folders in, per-type file icons, compress with exclude rules, and reusable custom actions. |
-| <img src="docs/assets/icons/code.svg" width="22" height="22" alt=""> | **[Code workspace](docs/features.md#code-workspace)** | Monaco (the VS Code editor) with tabs, a file tree, search and a built-in terminal. |
+| <img src="docs/assets/icons/code.svg" width="22" height="22" alt=""> | **[Code workspace](docs/features.md#code-workspace)** | Monaco (the VS Code editor) with tabs, a file tree with per-type icons, search, image tabs and a built-in terminal. |
+| <img src="docs/assets/icons/video.svg" width="22" height="22" alt=""> | **[Media Player](docs/features.md#media)** | Play audio and video from your servers with seeking, and view images of any type, including TIFF and HEIC. Images also open as tabs in the Code Workspace. |
+| <img src="docs/assets/icons/layout.svg" width="22" height="22" alt=""> | **[Virtual desktops](docs/features.md#workspaces)** | Up to 6 workspaces with their own windows. Switch with <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>←/→</kbd>, with an optional 3D cube or slide. |
+| <img src="docs/assets/icons/globe.svg" width="22" height="22" alt=""> | **[Tailscale servers](docs/features.md#tailscale)** | Add home servers and Pis on your tailnet with no open ports. Pick a device from the list. |
 | <img src="docs/assets/icons/activity.svg" width="22" height="22" alt=""> | **[Task manager](docs/features.md#task-manager)** | List processes and send SIGTERM, SIGKILL, SIGSTOP or SIGCONT, with RSS and PSS memory. |
 | <img src="docs/assets/icons/logs.svg" width="22" height="22" alt=""> | **[Services and logs](docs/features.md#services-logs)** | Control systemd units and stream journalctl live, with level filters and regex search. |
 | <img src="docs/assets/icons/cpu.svg" width="22" height="22" alt=""> | **[Live telemetry](docs/features.md#telemetry)** | CPU, memory, disk, load and network widgets that follow the active server. |
@@ -201,7 +204,7 @@ Each feature name links to its full description in [docs/features.md](docs/featu
 | :---: | :--- | :--- |
 | <img src="docs/assets/icons/sun.svg" width="22" height="22" alt=""> | **[Light and dark](docs/features.md#theme)** | A flat, quiet light theme and the original dark one, switched with an animated toggle. |
 | <img src="docs/assets/icons/image.svg" width="22" height="22" alt=""> | **[Wallpapers](docs/features.md#wallpapers)** | Up to 10 presets. Upload images, GIFs or videos and give dark and light mode their own. |
-| <img src="docs/assets/icons/globe.svg" width="22" height="22" alt=""> | **[Live effects](docs/features.md#effects)** | Living wallpaper shader, windows that materialize, a 3D fleet constellation, a process universe, file-manager beams and 3D virtual-desktop switching. Each is a switch in Settings. |
+| <img src="docs/assets/icons/globe.svg" width="22" height="22" alt=""> | **[Live effects](docs/features.md#effects)** | Living wallpaper shader, windows that materialize, a 3D fleet constellation, a process universe and file-manager beams. Each is a switch in Settings. |
 | <img src="docs/assets/icons/type.svg" width="22" height="22" alt=""> | **[Fonts and look](docs/features.md#fonts)** | Pick fonts, font scale, icon size and corner roundness. |
 | <img src="docs/assets/icons/phone.svg" width="22" height="22" alt=""> | **[Installable app](docs/features.md#pwa)** | Install it as a PWA and use it without browser chrome. |
 | <img src="docs/assets/icons/layout.svg" width="22" height="22" alt=""> | **[Widgets and layout](docs/features.md#widgets)** | Clock and resource widgets, dock customizer, ultrawide to phone layouts. |
@@ -241,7 +244,7 @@ More options (Docker Compose, a public demo instance, first-run setup token) are
 
 - **Nothing on the target.** No agent or listener means no extra attack surface on your servers.
 - **Secrets are encrypted.** Server passwords, keys and API tokens are stored with Fernet; backups can be passphrase-encrypted.
-- **Sign-in hardening.** TOTP 2FA with replay protection, brute-force lockout, same-site request checks and SSH host key pinning.
+- **Sign-in hardening.** TOTP 2FA with replay protection, brute-force lockout, same-site request checks and SSH host key pinning. Sign-in ends when you close the browser.
 - **Least privilege.** Read-only viewer accounts, closed to new features by default, plus an audit log of every change.
 - **Local by default.** `docker-compose.yml` publishes only on `127.0.0.1`. Put a TLS reverse proxy in front to expose ShellMan.
 
@@ -253,11 +256,11 @@ The complete list is in [docs/security.md](docs/security.md).
 
 | Guide | What is in it |
 | :--- | :--- |
-| [Features](docs/features.md) | Every feature in detail: 39 sections from the desktop to effects. |
+| [Features](docs/features.md) | Every feature in detail: 42 sections from the desktop to Tailscale servers. |
 | [Deployment](docs/deployment.md) | Docker, Docker Compose, native Python, first-run setup and a public demo. |
 | [Cloudflare guide](docs/cloudflare.md) | Create a scoped API token, add domains, issue Origin CA certificates. |
 | [Security](docs/security.md) | The full security architecture. |
-| [Keyboard shortcuts](docs/shortcuts.md) | File manager and editor shortcuts. |
+| [Keyboard shortcuts](docs/shortcuts.md) | Desktop, file manager, editor, media player and image viewer shortcuts. |
 | [Why ShellMan](docs/why-shellman.md) | Standalone copy of the story and comparison (also in the README above). |
 
 **Built with** Flask, Paramiko (SSH and SFTP), xterm.js, Monaco and Python's built-in `sqlite3`.

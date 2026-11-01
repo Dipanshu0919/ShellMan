@@ -140,7 +140,8 @@ def test_temp_config():
         host=host,
         port=port,
         username=username,
-        auth_type=auth_type
+        auth_type=auth_type,
+        kind='tailscale' if data.get('kind') == 'tailscale' else 'ssh'
     )
     if auth_type == 'password':
         temp_server.password = password
@@ -203,13 +204,19 @@ def api_add_server():
 
     if not name or not host or not username:
         return jsonify({'success': False, 'error': 'Name, host, and username are required.'}), 400
+    kind = 'tailscale' if data.get('kind') == 'tailscale' else 'ssh'
+    if kind == 'tailscale':
+        from services import tailscale
+        if not tailscale.safe_host(host):
+            return jsonify({'success': False, 'error': 'Invalid Tailscale host (use a device name or 100.x address).'}), 400
 
     server = Server(
         name=name,
         host=host,
         port=port,
         username=username,
-        auth_type=auth_type
+        auth_type=auth_type,
+        kind=kind
     )
     if auth_type == 'password':
         server.password = password
@@ -219,8 +226,14 @@ def api_add_server():
 
     db.session.add(server)
     db.session.commit()
-    audit('server.add', target=f"{server.name} ({server.username}@{server.host}:{server.port})", detail=f"auth={auth_type}")
+    audit('server.add', target=f"{server.name} ({server.username}@{server.host}:{server.port})", detail=f"auth={auth_type}" + (' kind=tailscale' if kind == 'tailscale' else ''))
     return jsonify({'success': True, 'server': server.to_dict()})
+
+@servers_bp.route('/api/tailscale/devices', methods=['GET'])
+@login_required
+def api_tailscale_devices():
+    from services import tailscale
+    return jsonify({'success': True, **tailscale.status()})
 
 @servers_bp.route('/api/servers/<int:server_id>/edit', methods=['POST'])
 @login_required
@@ -251,6 +264,11 @@ def api_edit_server(server_id):
 
     if not name or not host or not username:
         return jsonify({'success': False, 'error': 'Name, host, and username are required.'}), 400
+
+    if (server.kind or 'ssh') == 'tailscale':
+        from services import tailscale
+        if not tailscale.safe_host(host):
+            return jsonify({'success': False, 'error': 'Invalid Tailscale host (use a device name or 100.x address).'}), 400
 
     server.name = name
     server.host = host

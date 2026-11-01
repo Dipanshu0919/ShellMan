@@ -1,4 +1,14 @@
 /* ShellMan — CodeLoader: visible loading state for the Code Workspace (premium.css has the styles) */
+
+/* file-type icons shared with the File Manager (fileicons.js) */
+function smFileIcon(name, isDir, size) {
+  size = size || 16;
+  try { if (window.ShellmanFileIcons) return window.ShellmanFileIcons.render({ name: name || '', is_dir: !!isDir }, size); } catch (_) {}
+  return isDir
+    ? `<svg style="width:${size}px;height:${size}px;color:var(--sm-accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`
+    : `<svg style="width:${size}px;height:${size}px;color:var(--text-muted)" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>`;
+}
+
 (function () {
   if (window.CodeLoader) return;
 
@@ -245,6 +255,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
               <!-- Monaco / Fallback Container -->
               <div class="code-editor-viewport" id="editorViewport_${codeId}" style="flex:1; width:100%; height:100%; overflow:hidden; position:relative;">
                 <div id="monaco_${codeId}" style="width:100%; height:100%; overflow:hidden;"></div>
+                <div id="imgPane_${codeId}" style="display:none; position:absolute; inset:0; z-index:20;"></div>
                 <textarea id="fallbackTxt_${codeId}" style="width:100%; height:100%; background:var(--vs-bg); color:var(--text-primary); font-family:var(--font-mono); font-size:0.88rem; border:none; padding:1rem; resize:none; outline:none; display:none;"></textarea>
                 <div id="dropOverlay_${codeId}" style="display:none; position:absolute; inset:0; background:rgba(var(--panel-rgb),0.88); backdrop-filter:blur(4px); border:2px dashed var(--sm-accent); z-index:100; pointer-events:none; flex-direction:column; align-items:center; justify-content:center; gap:0.6rem; color:var(--sm-accent);">
                   <svg style="width:44px;height:44px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -299,6 +310,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
         let termFitAddon = null;
 
         const monacoContainer = bodyEl.querySelector(`#monaco_${codeId}`);
+        const imgPane = bodyEl.querySelector(`#imgPane_${codeId}`);
         const fallbackTxt = bodyEl.querySelector(`#fallbackTxt_${codeId}`);
         const tabsBar = bodyEl.querySelector(`#tabsBar_${codeId}`);
         const saveBtn = bodyEl.querySelector(`#saveCodeBtn_${codeId}`);
@@ -432,6 +444,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
         const renderTabs = () => {
           if (openTabs.size === 0) {
             tabsBar.innerHTML = `<div style="padding:0 1rem; color:var(--text-muted); font-size:0.73rem;">No file open</div>`;
+            if (imgPane) imgPane.style.display = 'none';
             stFilePath.textContent = 'Ready';
             stDirty.style.display = 'none';
             stLang.textContent = 'Plain Text';
@@ -445,6 +458,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             const isActive = fpath === activePath;
             html += `
               <div class="code-tab ${isActive ? 'active' : ''} ${tab.dirty ? 'dirty' : ''}" data-path="${fpath}" style="height:100%; padding:0 0.75rem; display:inline-flex; align-items:center; gap:0.45rem; background:${isActive ? '#1e1e1e' : '#141926'}; border-right:1px solid rgba(var(--wash),0.06); border-top:2px solid ${isActive ? 'var(--c-teal)' : 'transparent'}; color:${isActive ? '#ffffff' : 'var(--sm-accent)'}; font-size:0.74rem; cursor:pointer; user-select:none; white-space:nowrap;">
+                <span style="display:inline-flex;flex-shrink:0;">${smFileIcon(fileName, false, 14)}</span>
                 <span>${fileName}</span>
                 <span class="code-tab-dirty" style="width:6px; height:6px; border-radius:50%; background:var(--sm-accent); display:${tab.dirty ? 'inline-block' : 'none'};"></span>
                 <span class="code-tab-close" data-close-path="${fpath}" style="font-size:12px; margin-left:2px; opacity:0.6; padding:0 2px; border-radius:2px;" title="Close">×</span>
@@ -452,6 +466,14 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             `;
           }
           tabsBar.innerHTML = html;
+
+          // image tabs live in their own pane on top of the editor
+          if (imgPane) {
+            const showImg = !!(activePath && openTabs.has(activePath) && openTabs.get(activePath).kind === 'image');
+            imgPane.style.display = showImg ? 'block' : 'none';
+            for (const [fp, t] of openTabs.entries()) { if (t.viewer) t.viewer.el.style.display = (showImg && fp === activePath) ? '' : 'none'; }
+            if (showImg) { const v = openTabs.get(activePath).viewer; if (v) { v.refit(); v.focus(); } }
+          }
 
           if (activePath && openTabs.has(activePath)) {
             const activeTab = openTabs.get(activePath);
@@ -466,6 +488,25 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
         const codeLoader = CodeLoader.mount(bodyEl.querySelector(`#editorViewport_${codeId}`), stFilePath);
         const openFile = async (fpath, lineToJump = null) => {
           try {
+            const mk = window.ShellmanMedia ? window.ShellmanMedia.kind(fpath) : null;
+            if (mk === 'audio' || mk === 'video') {
+              // text editor makes no sense for these: hand over to the Media Player
+              DesktopApps.launch('media', { path: fpath });
+              return;
+            }
+            if (mk === 'image') {
+              if (!openTabs.has(fpath)) {
+                const viewer = window.ShellmanMedia.mountImage(imgPane, {
+                  url: window.ShellmanMedia.viewUrl(this.serverId, fpath),
+                  downloadUrl: window.ShellmanMedia.downloadUrl(this.serverId, fpath),
+                  name: fpath.split('/').pop()
+                });
+                openTabs.set(fpath, { kind: 'image', viewer, model: null, content: '', dirty: false, lang: 'image' });
+              }
+              activePath = fpath;
+              renderTabs();
+              return;
+            }
             if (openTabs.has(fpath)) {
               activePath = fpath;
               const tab = openTabs.get(fpath);
@@ -561,6 +602,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           if (tab && tab.model) {
             tab.model.dispose();
           }
+          if (tab && tab.viewer) tab.viewer.destroy();
           openTabs.delete(fpath);
 
           if (activePath === fpath) {
@@ -681,7 +723,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
         const saveActiveFile = async () => {
           if (!activePath) return;
           const tab = openTabs.get(activePath);
-          if (!tab) return;
+          if (!tab || tab.kind === 'image') return;
 
           let targetPath = activePath;
           const isLocal = tab.isLocal || activePath.startsWith('[Local] ');
@@ -789,9 +831,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           container.innerHTML = items.map(item => {
             const indent = depth * 14 + 8;
             const arrow = item.is_dir ? `<span class="code-tree-arrow" style="width:12px; height:12px; display:inline-flex; align-items:center; justify-content:center; color:var(--sm-text-4); margin-right:2px; font-size:9px;">▶</span>` : `<span style="width:14px; display:inline-block;"></span>`;
-            const icon = item.is_dir
-              ? `<svg style="width:13px;height:13px;color:var(--sm-accent);flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>`
-              : `<svg style="width:13px;height:13px;color:var(--text-muted);flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>`;
+            const icon = `<span style="display:inline-flex;flex-shrink:0;">${smFileIcon(item.name, item.is_dir, 16)}</span>`;
 
             return `
               <div class="code-tree-node" style="user-select:none;">
@@ -1451,7 +1491,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
             searchResults.innerHTML = list.map(item => `
               <div class="search-result-item" data-path="${item.file}" data-line="${item.line}" style="padding:0.35rem 0.5rem; border-radius:var(--radius-xs); cursor:pointer; margin-bottom:0.3rem; background:rgba(var(--wash),0.03); border:1px solid rgba(var(--wash),0.05);">
                 <div style="font-size:0.74rem; font-weight:600; color:var(--sm-accent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                  ${item.file.split('/').pop()} <span style="color:var(--text-muted); font-size:0.68rem; font-weight:normal;">:${item.line}</span>
+                  <span style="display:inline-flex;vertical-align:-3px;margin-right:5px;">${smFileIcon(item.file.split('/').pop(), false, 14)}</span>${item.file.split('/').pop()} <span style="color:var(--text-muted); font-size:0.68rem; font-weight:normal;">:${item.line}</span>
                 </div>
                 <div style="font-size:0.7rem; color:var(--text-secondary); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px;">
                   ${item.snippet || item.match || ''}
@@ -1798,6 +1838,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
           if (termInstance) termInstance.dispose();
           for (const tab of openTabs.values()) {
             if (tab.model) tab.model.dispose();
+            if (tab.viewer) tab.viewer.destroy();
           }
           if (editor) editor.dispose();
         };
