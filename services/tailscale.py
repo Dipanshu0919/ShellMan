@@ -8,6 +8,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import time
 
 _HOST_RE = re.compile(r'^[A-Za-z0-9._\-:]+$')
 
@@ -56,6 +57,22 @@ def status():
     devices.sort(key=lambda d: (not d['online'], d['name'].lower()))
     return {'installed': True, 'running': running, 'self': dev(me, True) if me else None,
             'devices': devices, 'error': None if running else 'Tailscale is installed but not running/logged in (`tailscale up`).'}
+
+
+_self_cache = {'t': 0.0, 'ids': set()}
+
+
+def is_self(host: str) -> bool:
+    """True when `host` is this machine's own tailnet name/IP. `tailscale nc` cannot dial itself,
+    so the caller connects to 127.0.0.1 instead."""
+    now = time.time()
+    if now - _self_cache['t'] > 60:
+        me = status().get('self') or {}
+        ids = {str(me.get(k) or '').lower() for k in ('name', 'dns', 'ip')} - {''}
+        if me.get('dns'):
+            ids.add(me['dns'].split('.')[0].lower())
+        _self_cache.update(t=now, ids=ids)
+    return host.lower().rstrip('.') in _self_cache['ids']
 
 
 def proxy_for(host: str, port: int):

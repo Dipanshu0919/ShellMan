@@ -2191,3 +2191,11 @@ input[type="file"]::file-selector-button:hover { background: var(--sm-hover); }
 }
 #cmdPalette .cmd-foot b { color: var(--sm-text-2, var(--sm-text)); font-weight: 600; }
 @media (max-width: 640px) { #cmdPalette .cmd-foot { display: none; } }
+
+/* Node switcher: full-size items; the whole menu scrolls when it would run past the screen (max-height set in JS on open) */
+.desktop-server-dropdown { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; -ms-overflow-style: none; }
+.desktop-server-dropdown::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.server-dropdown-list { max-height: none; overflow: visible; }
+.desktop-server-dropdown { padding-top: 0; padding-bottom: 0; }   /* no gap above/below the sticky parts, so scrolled rows never peek out */
+.desktop-server-dropdown .server-dropdown-header { position: sticky; top: 0; z-index: 1; background: var(--sm-surface); padding-top: .75rem; }
+.desktop-server-dropdown .server-dropdown-foot { position: sticky; bottom: 0; z-index: 1; background: var(--sm-surface); padding: 2px 0 .5rem; margin-top: 4px; }

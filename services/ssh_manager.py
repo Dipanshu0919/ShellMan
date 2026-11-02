@@ -10,6 +10,8 @@ from contextlib import contextmanager
 from typing import Optional, Dict, Tuple
 
 logger = logging.getLogger('shellman.ssh')
+# paramiko logs a full traceback for every failed banner read; the error is raised to us and handled, so silence the duplicate noise
+logging.getLogger('paramiko.transport').setLevel(logging.CRITICAL)
 
 class SSHConnectionManager:
     """
@@ -148,13 +150,16 @@ class SSHConnectionManager:
             from services import tailscale
             if not tailscale.safe_host(server.host):
                 raise ValueError('Invalid Tailscale host name.')
+            ts_self = tailscale.is_self(server.host)
+            if ts_self:
+                connect_kwargs['hostname'] = '127.0.0.1'      # own tailnet address: `tailscale nc` cannot dial itself
 
         # Attempt connection with resilience against transient SSH banner drops / connection resets
         for attempt in range(1, 3):
             client = paramiko.SSHClient()
             self._load_host_keys(client)
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())   # first sight only; changed keys are rejected
-            if is_ts:
+            if is_ts and not ts_self:
                 sock = tailscale.proxy_for(server.host, server.port)   # fresh tunnel per attempt; None = direct
                 if sock is not None:
                     connect_kwargs['sock'] = sock
@@ -196,6 +201,12 @@ class SSHConnectionManager:
                     )
                     time.sleep(0.6)
                     continue
+                if is_ts and ("banner" in err_str or "no existing session" in err_str or isinstance(e, EOFError)):
+                    raise paramiko.SSHException(
+                        f"Tailscale tunnel to {server.host}:{server.port} closed before SSH answered. "
+                        f"Check: the target is online in `tailscale status`, its SSH server is running "
+                        f"(`sudo systemctl status sshd`), and the port is right."
+                    )
                 raise
 
     def get_client(self, server, force_new: bool = False) -> paramiko.SSHClient:

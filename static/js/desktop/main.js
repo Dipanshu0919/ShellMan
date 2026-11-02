@@ -663,6 +663,13 @@ function toggleServerMenu(e) {
   const menu = document.getElementById('serverSelectorMenu');
   if (menu) {
     menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    if (menu.style.display === 'block') {
+      // Keep the menu above the dock; it scrolls inside itself.
+      const dock = document.getElementById('desktopDock');
+      const bottomLimit = dock ? dock.getBoundingClientRect().top : window.innerHeight;
+      menu.style.maxHeight = Math.max(120, bottomLimit - menu.getBoundingClientRect().top - 12) + 'px';
+      menu.scrollTop = 0;
+    }
   }
 }
 
