@@ -15,7 +15,8 @@ _CS_NAME = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{2,99}$')
 def _codespace_fields(data, server=None):
     """Validate the Codespace part of an add/edit request. Returns (name, token, error)."""
     name = (data.get('codespace_name') or (server.codespace_name if server else '') or '').strip()
-    token = (data.get('gh_token') or '').strip()
+    from routes.codespace import resolve_token
+    token = resolve_token(data.get('gh_token'))
     if not _CS_NAME.match(name):
         return None, None, 'Enter the Codespace name (for example "fluffy-space-garbanzo-abc123").'
     if not token and not (server and server.gh_token_enc):

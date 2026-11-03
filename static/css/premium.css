@@ -2199,3 +2199,23 @@ input[type="file"]::file-selector-button:hover { background: var(--sm-hover); }
 .desktop-server-dropdown { padding-top: 0; padding-bottom: 0; }   /* no gap above/below the sticky parts, so scrolled rows never peek out */
 .desktop-server-dropdown .server-dropdown-header { position: sticky; top: 0; z-index: 1; background: var(--sm-surface); padding-top: .75rem; }
 .desktop-server-dropdown .server-dropdown-foot { position: sticky; bottom: 0; z-index: 1; background: var(--sm-surface); padding: 2px 0 .5rem; margin-top: 4px; }
+
+/* Dropdown list shared by every <select> (same look as the repository picker) */
+.sm-sel-list {
+  position: fixed; z-index: 100000; overflow-y: auto; scrollbar-width: none; padding: 4px;
+  background: var(--sm-surface); border: 1px solid var(--sm-line-strong); border-radius: var(--sm-r-sm);
+  box-shadow: var(--sm-shadow-pop); animation: smSelIn .12s ease-out;
+}
+.sm-sel-list::-webkit-scrollbar { display: none; }
+@keyframes smSelIn { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.sm-sel-item { gap: .6rem; }
+.sm-sel-item:disabled { opacity: .4; cursor: not-allowed; }
+.sm-sel-item.selected { color: var(--sm-accent); font-weight: 600; }
+.sm-sel-tick { width: 12px; height: 12px; flex: 0 0 auto; }
+.sm-sel-item.selected .sm-sel-tick {
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.sm-sel-group { padding: .4rem .55rem .15rem; font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: var(--sm-text-3, var(--text-muted)); }
+select.sm-sel-open { border-color: var(--sm-accent-line, var(--sm-accent)); }

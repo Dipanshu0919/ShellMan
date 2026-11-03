@@ -42,6 +42,7 @@ from models.domain import CloudflareSetting, Domain
 from models.audit import AuditLog
 from models.alert import AlertRule, AlertEvent, AlertChannel
 from models.timelimit import TimeLimit, ServerUsage
+from models.github_token import GithubToken
 from models.metric_sample import MetricSample, AppSetting
 
 # Initialize Flask-Sock

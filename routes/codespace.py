@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify, request
 from models import db
 from models.server import Server
 from models.timelimit import TimeLimit, ServerUsage
+from models.github_token import GithubToken
 from routes.auth_helpers import login_required
 from services import codespace as cs
 from services import quota
@@ -11,6 +12,18 @@ from services.audit import audit
 from services.ssh_manager import ssh_manager
 
 codespace_bp = Blueprint('codespace', __name__)
+
+
+def resolve_token(raw):
+    """A token typed by the user, or "saved:<id>" meaning one stored under a name. Returns the plain token or ''."""
+    raw = (raw or '').strip()
+    if raw.startswith('saved:'):
+        try:
+            row = GithubToken.query.get(int(raw[6:]))
+        except ValueError:
+            row = None
+        return row.token if row else ''
+    return raw
 
 
 def _server(server_id):
@@ -37,7 +50,7 @@ def _overview(server):
 @login_required
 def discover():
     """List the Codespaces of a GitHub token so the user can pick one instead of typing its name."""
-    token = ((request.get_json(silent=True) or {}).get('gh_token') or '').strip()
+    token = resolve_token((request.get_json(silent=True) or {}).get('gh_token'))
     if len(token) < 20 or any(c.isspace() for c in token):
         return jsonify({'success': False, 'error': 'Paste a GitHub token first.'}), 400
     try:
@@ -47,10 +60,52 @@ def discover():
 
 
 def _token_arg(data):
-    token = (data.get('gh_token') or '').strip()
+    token = resolve_token(data.get('gh_token'))
     if len(token) < 20 or any(c.isspace() for c in token):
         return None
     return token
+
+
+@codespace_bp.route('/api/github-tokens', methods=['GET'])
+@login_required
+def tokens_list():
+    rows = GithubToken.query.order_by(GithubToken.label).all()
+    return jsonify({'success': True, 'tokens': [r.to_dict() for r in rows]})
+
+
+@codespace_bp.route('/api/github-tokens', methods=['POST'])
+@login_required
+def tokens_add():
+    """Save a token under a name. It is checked with GitHub first, which also tells us the account it belongs to."""
+    data = request.get_json(silent=True) or {}
+    token = (data.get('gh_token') or '').strip()
+    label = (data.get('label') or '').strip()[:80]
+    if len(token) < 20 or any(c.isspace() for c in token):
+        return jsonify({'success': False, 'error': 'That does not look like a GitHub token.'}), 400
+    try:
+        login = (cs._request(token, 'GET', '/user') or {}).get('login') or ''
+    except cs.CodespaceError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    label = label or login or 'GitHub token'
+    if GithubToken.query.filter_by(label=label).first():
+        return jsonify({'success': False, 'error': f'A saved token is already named "{label}". Pick another name.'}), 400
+    row = GithubToken(label=label, login=login)
+    row.token = token
+    db.session.add(row)
+    db.session.commit()
+    audit('github_token.save', target=label, detail=f'account={login}')
+    return jsonify({'success': True, 'token': row.to_dict()})
+
+
+@codespace_bp.route('/api/github-tokens/<int:token_id>', methods=['DELETE'])
+@login_required
+def tokens_delete(token_id):
+    row = GithubToken.query.get_or_404(token_id)
+    label = row.label
+    db.session.delete(row)
+    db.session.commit()
+    audit('github_token.delete', target=label)
+    return jsonify({'success': True})
 
 
 @codespace_bp.route('/api/codespaces/repos', methods=['POST'])

@@ -176,6 +176,14 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               
               <button class="btn btn-ghost btn-sm" id="hiddenBtn_${fileWinId}" title="Toggle Hidden Files (.*)">.*</button>
               
+              <!-- Sort order (also set by clicking the Name / Size / Modified column headers) -->
+              <select id="sortSel_${fileWinId}" class="form-control" title="Sort files" style="width:auto; height:28px; padding:0 .4rem; font-size:.72rem; cursor:pointer;">
+                <option value="name:asc">Name A→Z</option><option value="name:desc">Name Z→A</option>
+                <option value="size:asc">Size, smallest</option><option value="size:desc">Size, largest</option>
+                <option value="mtime:desc">Newest first</option><option value="mtime:asc">Oldest first</option>
+                <option value="type:asc">Type A→Z</option><option value="type:desc">Type Z→A</option>
+              </select>
+
               <!-- View Mode Toggle: List vs Grid -->
               <div style="display:inline-flex; border:1px solid var(--border-subtle); border-radius:var(--radius-xs); overflow:hidden;">
                 <button class="btn btn-ghost btn-xs active" id="viewListBtn_${fileWinId}" title="List View" style="padding:4px 6px; border-radius:0;"><svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></button>
@@ -244,9 +252,9 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   <thead style="position:sticky; top:0; background:var(--bg-surface); z-index:10; border-bottom:1px solid var(--border-subtle);">
                     <tr>
                       <th style="width:36px; text-align:center;"><input type="checkbox" id="selectAll_${fileWinId}"></th>
-                      <th>Name</th>
-                      <th style="width:120px;">Size</th>
-                      <th style="width:170px;">Modified</th>
+                      <th data-sort="name" style="cursor:pointer; user-select:none;">Name<span class="sort-arrow"></span></th>
+                      <th data-sort="size" style="width:120px; cursor:pointer; user-select:none;">Size<span class="sort-arrow"></span></th>
+                      <th data-sort="mtime" style="width:170px; cursor:pointer; user-select:none;">Modified<span class="sort-arrow"></span></th>
                     </tr>
                   </thead>
                   <tbody id="tb_${fileWinId}">
@@ -336,6 +344,27 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         let items = [];
         let showHidden = false;
         let viewMode = 'list'; // 'list' or 'grid'
+        // Sort order, remembered across windows and sessions. Folders always stay on top.
+        let sortKey = 'name', sortDir = 'asc';
+        try {
+          const sv = JSON.parse(localStorage.getItem('shellman_fm_sort') || 'null');
+          if (sv && ['name', 'size', 'mtime', 'type'].includes(sv.key)) { sortKey = sv.key; sortDir = sv.dir === 'desc' ? 'desc' : 'asc'; }
+        } catch (_) {}
+        const extOf = (n) => { const i = n.lastIndexOf('.'); return i > 0 ? n.slice(i + 1).toLowerCase() : ''; };
+        const sortItems = (arr) => {
+          const dir = sortDir === 'desc' ? -1 : 1;
+          const cmpName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+          return arr.slice().sort((a, b) => {
+            if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;           // folders first, in either direction
+            let c = 0;
+            if (sortKey === 'size') c = (a.size || 0) - (b.size || 0);
+            else if (sortKey === 'mtime') c = String(a.mtime || '').localeCompare(String(b.mtime || ''));
+            else if (sortKey === 'type') c = extOf(a.name).localeCompare(extOf(b.name));
+            else c = cmpName(a, b);
+            if (c === 0) return cmpName(a, b);                              // stable tie-break, always A→Z
+            return c * dir;
+          });
+        };
         let selectedPaths = new Set();
         let historyBack = [];
         let historyFwd = [];
@@ -1852,6 +1881,8 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
           const q = (bodyEl.querySelector(`#search_${fileWinId}`).value || '').toLowerCase().trim();
           let filtered = showHidden ? items : items.filter(i => !i.name.startsWith('.'));
           if (q) filtered = filtered.filter(i => i.name.toLowerCase().includes(q));
+          filtered = sortItems(filtered);
+          syncSortUi();
 
           stCount.textContent = `${filtered.length} items`;
 
@@ -2185,6 +2216,31 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
         bodyEl.querySelector(`#search_${fileWinId}`).oninput = () => {
           renderViews();
         };
+
+        // Sort controls: dropdown + clickable column headers
+        const sortSel = bodyEl.querySelector(`#sortSel_${fileWinId}`);
+        function syncSortUi() {
+          if (sortSel) sortSel.value = `${sortKey}:${sortDir}`;
+          bodyEl.querySelectorAll('th[data-sort]').forEach(th => {
+            const on = th.dataset.sort === sortKey;
+            const ar = th.querySelector('.sort-arrow');
+            if (ar) ar.textContent = on ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+            th.style.color = on ? 'var(--text-primary)' : '';
+          });
+        }
+        const setSort = (key, dir) => {
+          sortKey = key; sortDir = dir;
+          try { localStorage.setItem('shellman_fm_sort', JSON.stringify({ key, dir })); } catch (_) {}
+          renderViews();
+        };
+        if (sortSel) sortSel.onchange = () => { const [k, d] = sortSel.value.split(':'); setSort(k, d); };
+        bodyEl.querySelectorAll('th[data-sort]').forEach(th => {
+          th.onclick = () => {
+            const k = th.dataset.sort;
+            // same column flips direction; a new column starts sensibly (size/date: biggest/newest first)
+            setSort(k, k === sortKey ? (sortDir === 'asc' ? 'desc' : 'asc') : (k === 'name' ? 'asc' : 'desc'));
+          };
+        });
 
         // View Mode Toggle (List vs Grid)
         const vListBtn = bodyEl.querySelector(`#viewListBtn_${fileWinId}`);

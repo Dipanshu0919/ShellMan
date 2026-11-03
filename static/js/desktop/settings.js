@@ -332,9 +332,20 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
                 </div>
 
                 <div id="mCsBox_${setWinId}" style="display:${(isEdit && serverToEdit.kind === 'codespace') ? 'block' : 'none'};">
-                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">GitHub token ${isEdit ? '(leave blank to keep current)' : '*'}</label>
-                  <input type="password" class="form-control" id="mCsToken_${setWinId}" placeholder="ghp_… or github_pat_… (needs Codespaces access)" autocomplete="off" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
-                  <div style="font-size:0.7rem; color:var(--text-muted); margin:0.3rem 0 0.6rem;">Classic token: scope <b>codespace</b>. Fine-grained token: <b>Codespaces</b> read and write. It is stored encrypted and only used to start, stop and connect.</div>
+                  <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">GitHub token *</label>
+                  <div style="display:flex; gap:0.4rem;">
+                    <select class="form-control" id="mCsSaved_${setWinId}" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;"></select>
+                    <button type="button" class="btn btn-ghost btn-xs" id="mCsTokDel_${setWinId}" style="display:none; color:var(--c-bad);" title="Forget this saved token">Remove</button>
+                  </div>
+                  <div id="mCsNewTok_${setWinId}" style="display:none; margin-top:0.4rem;">
+                    <input type="password" class="form-control" id="mCsToken_${setWinId}" placeholder="ghp_… or github_pat_… (needs Codespaces access)" autocomplete="off" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                    <div style="display:flex; gap:0.4rem; margin-top:0.4rem; align-items:center;">
+                      <input type="text" class="form-control" id="mCsTokLabel_${setWinId}" maxlength="80" list="mCsTokNames_${setWinId}" placeholder="Name it, e.g. personal account (blank = GitHub username)" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;">
+                      <label style="display:flex; align-items:center; gap:0.3rem; font-size:0.74rem; white-space:nowrap; cursor:pointer;"><input type="checkbox" id="mCsTokSave_${setWinId}" checked> Save for next time</label>
+                    </div>
+                    <datalist id="mCsTokNames_${setWinId}"></datalist>
+                  </div>
+                  <div style="font-size:0.7rem; color:var(--text-muted); margin:0.3rem 0 0.6rem;">Classic token: scope <b>codespace</b>. Fine-grained token: <b>Codespaces</b> read and write. Saved tokens are stored encrypted and only used to start, stop and connect.</div>
                   <label style="display:block; font-weight:600; margin-bottom:0.25rem; color:var(--text-secondary);">Codespace *</label>
                   <div style="display:flex; gap:0.4rem;">
                     <input type="text" class="form-control" id="mCsName_${setWinId}" value="${(isEdit && serverToEdit.codespace_name) ? escapeHtml(serverToEdit.codespace_name) : ''}" placeholder="e.g. fluffy-space-garbanzo-abc123" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem;">
@@ -447,11 +458,43 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               if (!nm.value.trim()) nm.value = d.name;
             });
           };
+          // Saved GitHub tokens: pick one by name, or type a new token and name it
+          const tokSel = modalBackdrop.querySelector(`#mCsSaved_${setWinId}`);
+          const tokNew = modalBackdrop.querySelector(`#mCsNewTok_${setWinId}`);
+          const tokDel = modalBackdrop.querySelector(`#mCsTokDel_${setWinId}`);
+          let savedToks = [];
+          const paintToks = (selectId) => {
+            const opts = [];
+            if (isEdit) opts.push('<option value="keep">Keep the current token</option>');
+            savedToks.forEach(t => opts.push(`<option value="${t.id}">${escapeHtml(t.label)}${t.login && t.login !== t.label ? ' · @' + escapeHtml(t.login) : ''} (${escapeHtml(t.hint)})</option>`));
+            opts.push('<option value="new">+ Use a new token…</option>');
+            tokSel.innerHTML = opts.join('');
+            tokSel.value = selectId != null ? String(selectId) : (isEdit ? 'keep' : (savedToks.length ? String(savedToks[0].id) : 'new'));
+            modalBackdrop.querySelector(`#mCsTokNames_${setWinId}`).innerHTML = savedToks.map(t => `<option value="${escapeHtml(t.label)}">`).join('');
+            applyTok();
+          };
+          const applyTok = () => {
+            tokNew.style.display = tokSel.value === 'new' ? 'block' : 'none';
+            tokDel.style.display = /^\d+$/.test(tokSel.value) ? '' : 'none';
+          };
+          tokSel.onchange = applyTok;
+          // what to send as "gh_token": a typed token, "saved:<id>", or '' (keep the current one when editing)
+          const csTok = () => tokSel.value === 'new' ? modalBackdrop.querySelector(`#mCsToken_${setWinId}`).value.trim()
+            : /^\d+$/.test(tokSel.value) ? 'saved:' + tokSel.value : '';
+          tokDel.onclick = async () => {
+            const t = savedToks.find(x => String(x.id) === tokSel.value);
+            if (!t || !confirm(`Forget the saved token "${t.label}"? Servers already created with it keep working.`)) return;
+            await fetch('/api/github-tokens/' + t.id, { method: 'DELETE' });
+            savedToks = savedToks.filter(x => x.id !== t.id);
+            paintToks();
+          };
+          paintToks();
+          fetch('/api/github-tokens').then(r => r.json()).then(j => { if (j.success) { savedToks = j.tokens; paintToks(tokSel.value && tokSel.value !== 'new' && tokSel.value !== 'keep' ? undefined : (isEdit ? 'keep' : undefined)); } }).catch(() => {});
           const csFind = modalBackdrop.querySelector(`#mCsFind_${setWinId}`);
           if (csFind) csFind.onclick = async () => {
             const list = modalBackdrop.querySelector(`#mCsList_${setWinId}`);
             list.innerHTML = '<span style="color:var(--text-muted);font-size:0.74rem;">Asking GitHub…</span>';
-            const tokenVal = modalBackdrop.querySelector(`#mCsToken_${setWinId}`).value.trim();
+            const tokenVal = csTok();
             const res = await (window.ShellmanCodespace ? window.ShellmanCodespace.discover(tokenVal) : { success: false, error: 'Codespace UI not loaded' });
             if (!res.success) { list.innerHTML = `<span style="color:var(--c-bad);font-size:0.74rem;">${escapeHtml(res.error || 'Failed')}</span>`; return; }
             if (!res.codespaces.length) { list.innerHTML = '<span style="color:var(--text-muted);font-size:0.74rem;">No Codespaces found for this token.</span>'; return; }
@@ -468,7 +511,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
           if (csNewToggle) {
             const q = id => modalBackdrop.querySelector(`#${id}_${setWinId}`);
             const say = (text, color) => { const m = q('mCsNewMsg'); m.textContent = text; m.style.color = color || 'var(--sm-accent)'; };
-            const token = () => q('mCsToken').value.trim();
+            const token = () => csTok();
             csNewToggle.onclick = () => { const box = q('mCsNew'); box.style.display = box.style.display === 'none' ? 'block' : 'none'; };
             // Repo picker: our own dropdown, filtered as you type
             let repoItems = [], activeIdx = -1;
@@ -617,13 +660,23 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
             saveBtn.disabled = true;
             saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span> Saving...`;
 
+            let csTokToSend = isCs ? csTok() : '';
             try {
+              // a new token the user wants to keep: save it under its name first
+              if (isCs && tokSel.value === 'new' && csTokToSend && modalBackdrop.querySelector(`#mCsTokSave_${setWinId}`).checked) {
+                const tr = await (await fetch('/api/github-tokens', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ gh_token: csTokToSend, label: modalBackdrop.querySelector(`#mCsTokLabel_${setWinId}`).value.trim() })
+                })).json();
+                if (!tr.success) throw new Error(tr.error || 'Could not save the token.');
+                csTokToSend = 'saved:' + tr.token.id;
+              }
               const endpoint = isEdit ? `/api/servers/${serverToEdit.id}/edit` : '/api/servers/add';
               const resp = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(isCs
-                  ? { name, kind: 'codespace', codespace_name: modalBackdrop.querySelector(`#mCsName_${setWinId}`).value.trim(), gh_token: modalBackdrop.querySelector(`#mCsToken_${setWinId}`).value.trim() }
+                  ? { name, kind: 'codespace', codespace_name: modalBackdrop.querySelector(`#mCsName_${setWinId}`).value.trim(), gh_token: csTokToSend }
                   : { name, host, port, username, auth_type, password, private_key, passphrase, kind })
               });
               const res = await resp.json();
@@ -643,7 +696,7 @@ DesktopAppsController.prototype.launchSettings = function (params = {}) {
               statusBox.style.display = 'block';
               statusBox.style.background = 'rgba(239,68,68,0.12)';
               statusBox.style.color = 'var(--c-bad)';
-              statusBox.textContent = 'Save error: ' + e;
+              statusBox.textContent = 'Save error: ' + (e && e.message ? e.message : e);
               saveBtn.disabled = false;
               saveBtn.textContent = isEdit ? 'Save Changes' : 'Create Server';
             }
