@@ -716,7 +716,7 @@ class SFTPService:
                 "                    if fnmatch.fnmatchcase('/'.join(parts[i:j]), ex): return True\n"
                 "    return False\n"
                 "out = sys.argv[1]\n"
-                "with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as z:\n"
+                "with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=1, allowZip64=True) as z:\n"
                 "    for src in sys.argv[2:]:\n"
                 "        if skip(src): continue\n"
                 "        if os.path.isdir(src) and not os.path.islink(src):\n"
@@ -735,7 +735,7 @@ class SFTPService:
             )
             cmd = (
                 f"cd {shlex.quote(base_dir)} && rm -f {qa} && "
-                f"if command -v zip >/dev/null 2>&1; then zip -qr {qa} {sources} {zip_excl}; "
+                f"if command -v zip >/dev/null 2>&1; then zip -1qr {qa} {sources} {zip_excl}; "
                 f"elif command -v python3 >/dev/null 2>&1; then python3 -c {shlex.quote(py_zip)} {qa} {sources}; "
                 f"else echo 'Cannot create .zip: install zip (sudo apt install zip) or python3, or choose .tar.gz' >&2; exit 127; fi"
             )
@@ -743,7 +743,7 @@ class SFTPService:
             if not archive_name.endswith('.tar.gz') and not archive_name.endswith('.tgz') and not archive_name.endswith('.tar'):
                 archive_name += '.tar.gz'
                 archive_path += '.tar.gz'
-            cmd = f"cd {shlex.quote(base_dir)} && tar {'-cf' if archive_name.endswith('.tar') else '-czf'} {shlex.quote(archive_path)} {tar_excl} {sources}"
+            cmd = f"cd {shlex.quote(base_dir)} && GZIP=-1 tar {'-cf' if archive_name.endswith('.tar') else '-czf'} {shlex.quote(archive_path)} {tar_excl} {sources}"
 
         # tar/zip report no progress; watch the output folder and report the size of the
         # archive being written (real bytes, total unknown). zip writes to a temp file

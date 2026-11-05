@@ -133,6 +133,22 @@ function smFileIcon(name, isDir, size) {
  */
 
 DesktopAppsController.prototype.launchCode = function (params = {}) {
+    // Folder that holds a file, and the deepest folder shared by several files: the workspace opens there
+    const dirOf = (p) => { const i = p.lastIndexOf('/'); return i > 0 ? p.slice(0, i) : (p.startsWith('/') ? '/' : '~'); };
+    const commonDir = (list) => {
+      const parts = list.map(f => dirOf(f).split('/'));
+      let out = parts[0];
+      for (const q of parts.slice(1)) {
+        let n = 0;
+        while (n < out.length && n < q.length && out[n] === q[n]) n++;
+        out = out.slice(0, n);
+      }
+      return out.join('/') || (list[0].startsWith('/') ? '/' : '~');
+    };
+    const filesOf = (pr) => (pr.paths && Array.isArray(pr.paths) && pr.paths.length) ? pr.paths
+      : (pr.path && !pr.isDir ? [pr.path] : []);
+    const explicitRoot = (pr) => pr.root || ((pr.isDir && pr.path) ? pr.path : '');
+
     const existing = WindowManager.getWindowByAppId('code');
     if (existing) {
       if (existing.isMinimized) WindowManager.restoreWindow(existing.id);
@@ -142,6 +158,13 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
       }
       if (params.isDir && params.path && existing._setRoot) {
         existing._setRoot(params.path);
+      }
+      // Opening files without a folder: if they are outside the current workspace folder, move the workspace to them
+      const fl = filesOf(params);
+      if (!explicitRoot(params) && fl.length && existing._setRoot && existing._getRoot) {
+        const cur = (existing._getRoot() || '').replace(/\/+$/, '');
+        const inside = cur && cur !== '~' && fl.every(f => f.startsWith(cur + '/'));
+        if (!inside) existing._setRoot(commonDir(fl));
       }
       if (params.paths && Array.isArray(params.paths) && existing._openFile) {
         params.paths.forEach(p => existing._openFile(p));
@@ -158,7 +181,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
     } else if (params.path && !params.isDir) {
       initialFiles = [params.path];
     }
-    const initialRoot = params.root || (params.isDir && params.path ? params.path : '~');
+    const initialRoot = explicitRoot(params) || (initialFiles.length ? commonDir(initialFiles) : '~');
 
     const fetch = RequestScope.next(); // requests of this window are cancelled when it closes
     return WindowManager.createWindow({
@@ -299,7 +322,7 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
         </div>
       `,
       onInit: (bodyEl, winObj) => {
-        let currentWorkspaceRoot = '~';
+        let currentWorkspaceRoot = initialRoot || '~';   // known from the start, so the terminal opens in it even before the tree has loaded
         let editor = null;
         let isUsingFallback = false;
         let openTabs = new Map(); // path -> { model, dirty, lang, content }
@@ -1694,7 +1717,8 @@ DesktopAppsController.prototype.launchCode = function (params = {}) {
 
         // Initialize IDE
         winObj._openFile = openFile;
-        winObj._setRoot = (root) => { loadTree(root); };
+        winObj._setRoot = (root) => { currentWorkspaceRoot = root; loadTree(root); };
+        winObj._getRoot = () => currentWorkspaceRoot;
         loadTree(initialRoot);
         initEditor();
 

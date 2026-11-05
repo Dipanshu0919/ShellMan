@@ -3,6 +3,7 @@ from models.server import Server
 from routes.auth_helpers import login_required
 from services.audit import audit
 from services.sftp import SFTPService
+from services import fastdl
 from services.progress_tracker import ProgressTracker
 import time
 import json
@@ -395,13 +396,25 @@ def download_file(server_id):
         start, end = rng if rng else (0, max(file_size - 1, 0))
         length = (end - start + 1) if file_size else 0
 
-        def generate():
+        # Big downloads: several SSH connections at once (like aria2c). Previews / media seeking keep one connection.
+        use_fast = (not is_view) and length >= fastdl.MIN_FAST and fastdl.max_connections(server) > 1
+        if use_fast:
             try:
-                if start:
-                    remote_file.seek(start)
+                remote_file.close()
+            except Exception:
+                pass
+
+        def generate():
+            if use_fast:
+                yield from fastdl.stream(server, SFTPService._normalize_path(path, server), start, length)
+                return
+            try:
+                remote_file.seek(start)
+                # read ahead: many requests in flight instead of one round trip per 32 KB (capped so memory stays small)
+                remote_file.prefetch(min(start + length, start + 32 * 1024 * 1024))
                 left = length
                 while left > 0:
-                    chunk = remote_file.read(min(65536, left))
+                    chunk = remote_file.read(min(1048576, left))
                     if not chunk:
                         break
                     left -= len(chunk)

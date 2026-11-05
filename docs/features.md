@@ -81,6 +81,7 @@ Every ShellMan feature in detail. The short version is in the [README](../README
 <a id="file-manager"></a>
 
 ## 3. SFTP File Manager with Recursive Folder Drag-and-Drop & Custom Actions
+- **Fast downloads, no speed limit**: ShellMan sets no rate limit. A download of 8 MB or more opens several SSH connections at once (16 by default, like `aria2c -x 16`), reads each part with pipelined SFTP requests and streams the parts to the browser in order. Set `SHELLMAN_DL_CONNECTIONS` (1 to 16) to change it. Previews and video seeking keep one connection. Zip and tar.gz archives are made with the fastest compression level. The ceiling is the link and the CPU of the ShellMan host (SSH encryption in Python), roughly 60 to 80 MB/s per ShellMan process.
 - **Sorting**: choose an order from the Sort menu in the toolbar (name, size, newest/oldest, type, either direction) or click the Name, Size or Modified column header (click again to reverse). Folders always stay on top, names sort naturally (`file2` before `file10`), and the choice is remembered.
 - **Custom Actions Automation Engine**: Turn recurring shell commands into reusable remote buttons directly embedded in the file manager.
   - **Safe POSIX Parameter Substitution**: Variables are safely quoted and escaped to prevent command injection: `{{selected_path}}`, `{{selected_name}}`, `{{current_dir}}`, `{{selected_paths}}`, and `{{server_name}}`.
@@ -99,6 +100,7 @@ Every ShellMan feature in detail. The short version is in the [README](../README
 <a id="code-workspace"></a>
 
 ## 4. Monaco Code Workspace (VS Code Engine)
+- **Opens in the right folder**: opening a file from the File Manager sets the workspace folder to that file's folder (several files: their shared folder), not home. The integrated terminal starts in the workspace folder too. If you open a file outside the current workspace folder, the workspace moves to it.
 - **Full-Fledged Editor**: Powered by Microsoft Monaco with syntax highlighting, bracket matching, line numbers, and multi-cursor support.
 - **Local File Drag & Drop Integration**: Drag any file directly from your local desktop onto the editor viewport to immediately open it in an editable tab. Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save and upload it directly to the remote server workspace. Dragging files onto the left explorer tree immediately saves them to the active folder and refreshes the directory hierarchy.
 - **Desktop-Grade Right-Click Context Menus**: Full context menu suite on explorer files and folders (New File, New Folder, Rename, Duplicate/Copy, Move with Remote Directory Picker, Open in Terminal, Download, Copy Absolute/Relative Path, Delete) and editor tabs (Close, Close Others, Close All, Save, Copy Path).

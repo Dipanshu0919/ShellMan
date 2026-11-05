@@ -128,8 +128,9 @@ class SSHConnectionManager:
                 paramiko.RSAKey,
                 paramiko.Ed25519Key,
                 paramiko.ECDSAKey,
-                paramiko.DSSKey
             ]
+            if hasattr(paramiko, 'DSSKey'):          # removed in paramiko 4
+                key_classes.append(paramiko.DSSKey)
             last_err = None
             for key_cls in key_classes:
                 key_file.seek(0)
