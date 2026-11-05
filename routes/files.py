@@ -284,6 +284,28 @@ def stream_task_progress(task_id):
 
     return Response(event_generator(), mimetype='text/event-stream')
 
+@files_bp.route('/api/servers/<int:server_id>/files/transfer', methods=['POST'])
+@login_required
+def transfer_to_server(server_id):
+    """Copy files/folders from this server straight to another server (relayed, multi-connection). Returns at once;
+    progress is on /api/tasks/<task_id>/progress."""
+    from services import s2s
+    src = Server.query.get_or_404(server_id)
+    data = request.get_json(silent=True) or {}
+    dst_id = data.get('dest_server_id')
+    paths = [p for p in (data.get('paths') or []) if isinstance(p, str) and p.strip()]
+    dest_dir = (data.get('dest_dir') or '~').strip() or '~'
+    overwrite = bool(data.get('overwrite', True))
+    if not dst_id or not paths:
+        return jsonify({'success': False, 'error': 'Destination server and at least one path required'}), 400
+    dst = Server.query.get(int(dst_id))
+    if not dst:
+        return jsonify({'success': False, 'error': 'Destination server not found'}), 404
+    task_id = data.get('task_id') or ProgressTracker.generate_id()
+    s2s.start(src, dst, paths, dest_dir, task_id, overwrite)
+    audit('file.transfer', f'{src.name} -> {dst.name}:{dest_dir}', f'{len(paths)} item(s): ' + ', '.join(paths[:5]))
+    return jsonify({'success': True, 'task_id': task_id})
+
 @files_bp.route('/api/servers/<int:server_id>/files/upload', methods=['POST'])
 @login_required
 def upload_file(server_id):

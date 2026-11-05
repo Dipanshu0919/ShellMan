@@ -192,6 +192,12 @@ DesktopAppsController.prototype.launchApache = function (params = {}) {
           <div style="display:flex;gap:.4rem;"><button class="btn btn-primary btn-sm" id="apGo_${id}">Create</button><button class="btn btn-ghost btn-sm" id="apNo_${id}">Cancel</button></div></div>`;
         const t = f.querySelector(`#apT_${id}`), v = f.querySelector(`#apV_${id}`), l = f.querySelector(`#apLbl_${id}`);
         t.onchange = () => { l.firstChild.textContent = t.value === 'proxy' ? 'Proxy target' : 'Web root'; v.placeholder = t.value === 'proxy' ? 'http://127.0.0.1:3000' : '/var/www/example.com'; };
+        const br = document.createElement('button');
+        br.type = 'button'; br.className = 'btn btn-secondary btn-xs'; br.textContent = 'Browse...'; br.style.marginTop = '.3rem';
+        br.onclick = () => this.showDirectoryPicker({ serverId: sid, initialPath: v.value.trim() || '/var/www', title: 'Select Web Root Folder', onSelect: (p) => { v.value = p; } });
+        l.appendChild(br);
+        const syncBr = () => { br.style.display = t.value === 'proxy' ? 'none' : ''; };
+        t.addEventListener('change', syncBr); syncBr();
         f.querySelector(`#apNo_${id}`).onclick = () => { f.innerHTML = ''; };
         f.querySelector(`#apGo_${id}`).onclick = async (e) => {
           e.target.disabled = true;

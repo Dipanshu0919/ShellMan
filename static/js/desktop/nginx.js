@@ -889,7 +889,10 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
                 <!-- Static Directory Input -->
                 <div id="mStaticBox_${ngxWinId}" style="display:none;">
                   <label style="display:block; font-weight:600; font-size:0.78rem; margin-bottom:0.3rem; color:var(--text-secondary);">Web Root Path *</label>
-                  <input type="text" class="form-control" id="mStaticRoot_${ngxWinId}" placeholder="/var/www/my-domain" style="width:100%; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box; font-family:var(--font-mono);">
+                  <div style="display:flex; gap:0.4rem;">
+                    <input type="text" class="form-control" id="mStaticRoot_${ngxWinId}" placeholder="/var/www/my-domain" style="flex:1; font-size:0.8rem; padding:0.4rem 0.6rem; box-sizing:border-box; font-family:var(--font-mono);">
+                    <button type="button" class="btn btn-secondary btn-xs" id="mStaticBrowse_${ngxWinId}" style="padding:0 0.65rem;" title="Browse server folders">Browse...</button>
+                  </div>
                 </div>
 
                 <!-- Let's Encrypt Checkbox -->
@@ -936,6 +939,19 @@ DesktopAppsController.prototype.launchNginx = function (params = {}) {
               staticBox.style.display = (r.value === 'static') ? 'block' : 'none';
             };
           });
+
+          const staticBrowse = modalBackdrop.querySelector(`#mStaticBrowse_${ngxWinId}`);
+          if (staticBrowse) {
+            staticBrowse.onclick = () => {
+              const inp = modalBackdrop.querySelector(`#mStaticRoot_${ngxWinId}`);
+              this.showDirectoryPicker({
+                serverId: this.serverId,
+                initialPath: inp.value.trim() || '/var/www',
+                title: 'Select Web Root Folder',
+                onSelect: (p) => { inp.value = p; }
+              });
+            };
+          }
 
           // SSL checkbox toggle
           const enableSslCb = modalBackdrop.querySelector(`#mEnableSsl_${ngxWinId}`);

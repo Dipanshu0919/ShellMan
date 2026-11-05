@@ -213,6 +213,10 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                 <svg style="width:12px;height:12px;margin-right:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
                 Move
               </button>
+              <button class="btn btn-secondary btn-sm" id="sendBtn_${fileWinId}" title="Send selected items to another server">
+                <svg style="width:12px;height:12px;margin-right:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="8" height="6" rx="1"></rect><rect x="14" y="15" width="8" height="6" rx="1"></rect><path d="M6 9v3a2 2 0 0 0 2 2h8"></path><polyline points="13 11 16 14 13 17"></polyline></svg>
+                Send
+              </button>
               <button class="btn btn-secondary btn-sm active" id="togglePropsBtn_${fileWinId}" title="Toggle Properties Panel" style="display:inline-flex; align-items:center; gap:0.35rem;">
                 <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                 <span>Properties</span>
@@ -2460,6 +2464,10 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
                   <span>Move Folder...</span>
                 </div>
+                <div class="file-context-item" id="ctx_send_folder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="8" height="6" rx="1"></rect><rect x="14" y="15" width="8" height="6" rx="1"></rect><path d="M6 9v3a2 2 0 0 0 2 2h8"></path><polyline points="13 11 16 14 13 17"></polyline></svg>
+                  <span>Send to Server...</span>
+                </div>
                 <div class="file-context-separator"></div>
                 <div class="file-context-item" id="ctx_upload">
                   <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -2498,6 +2506,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               activeCtxMenu.querySelector('#ctx_term').onclick = () => { hideContextMenu(); DesktopApps.launch('terminal', { path: item.path, newWindow: true }); };
               activeCtxMenu.querySelector('#ctx_copy_folder').onclick = () => { hideContextMenu(); showCopyMoveModal([item.path], 'copy'); };
               activeCtxMenu.querySelector('#ctx_move_folder').onclick = () => { hideContextMenu(); showCopyMoveModal([item.path], 'move'); };
+              activeCtxMenu.querySelector('#ctx_send_folder').onclick = () => { hideContextMenu(); showSendModal(selectedPaths.has(item.path) && selectedPaths.size > 1 ? Array.from(selectedPaths) : [item.path]); };
               activeCtxMenu.querySelector('#ctx_upload').onclick = () => { hideContextMenu(); fileInput.click(); };
               activeCtxMenu.querySelector('#ctx_download_archive').onclick = () => { hideContextMenu(); downloadItemsAsArchive([item.path], item.name + '.tar.gz'); };
               activeCtxMenu.querySelector('#ctx_rename').onclick = () => { hideContextMenu(); showRenameModal(item); };
@@ -2553,6 +2562,10 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
                   <span>Move File...</span>
                 </div>
+                <div class="file-context-item" id="ctx_send_file">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="8" height="6" rx="1"></rect><rect x="14" y="15" width="8" height="6" rx="1"></rect><path d="M6 9v3a2 2 0 0 0 2 2h8"></path><polyline points="13 11 16 14 13 17"></polyline></svg>
+                  <span>Send to Server...</span>
+                </div>
                 ${archive ? `
                   <div class="file-context-item" id="ctx_extract_here">
                     <svg viewBox="0 0 24 24" fill="none"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline></svg>
@@ -2603,6 +2616,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               };
               activeCtxMenu.querySelector('#ctx_copy_file').onclick = () => { hideContextMenu(); showCopyMoveModal([item.path], 'copy'); };
               activeCtxMenu.querySelector('#ctx_move_file').onclick = () => { hideContextMenu(); showCopyMoveModal([item.path], 'move'); };
+              activeCtxMenu.querySelector('#ctx_send_file').onclick = () => { hideContextMenu(); showSendModal(selectedPaths.has(item.path) && selectedPaths.size > 1 ? Array.from(selectedPaths) : [item.path]); };
               if (archive) {
                 activeCtxMenu.querySelector('#ctx_extract_here').onclick = () => { hideContextMenu(); extractArchive(item.path, currentPath); };
                 activeCtxMenu.querySelector('#ctx_extract_folder').onclick = () => {
@@ -2913,6 +2927,110 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             const inp = backdrop.querySelector(`#destDirInp_${fileWinId}`);
             if (inp) { inp.focus(); inp.select(); }
           }, 60);
+        };
+
+        // Send to another server (relayed, many connections, runs in the background)
+        const showSendModal = async (paths) => {
+          if (!paths || paths.length === 0) {
+            if (window.showToast) window.showToast('Please select one or more files or folders first', 'warning');
+            return;
+          }
+          let list = [];
+          try {
+            const r = await fetch('/api/servers/list');
+            const j = await r.json();
+            list = (j.servers || []).filter(sv => sv.id !== this.serverId);
+          } catch (_) {}
+          if (!list.length) {
+            if (window.showToast) window.showToast('Add another server first - nothing to send to', 'warning');
+            return;
+          }
+          const count = paths.length;
+          const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+          const { backdrop } = showModal(
+            `Send ${count} Item${count > 1 ? 's' : ''} to Another Server`,
+            `
+              <div>
+                <label style="display:block; margin-bottom:0.3rem; color:var(--text-secondary); font-size:0.75rem;">Destination server</label>
+                <select id="sendSrv_${fileWinId}" class="form-control" style="width:100%; font-size:0.8rem; margin-bottom:0.6rem;">
+                  ${list.map(sv => `<option value="${sv.id}">${esc(sv.name)}${sv.host ? ' (' + esc(sv.host) + ')' : ''}</option>`).join('')}
+                </select>
+                <label style="display:block; margin-bottom:0.3rem; color:var(--text-secondary); font-size:0.75rem;">Destination folder on that server</label>
+                <div style="display:flex; gap:0.4rem; margin-bottom:0.4rem;">
+                  <input type="text" id="sendDir_${fileWinId}" class="form-control" value="~" style="flex:1; font-size:0.8rem; padding:0.35rem 0.6rem;" placeholder="/remote/destination/path">
+                  <button type="button" class="btn btn-secondary btn-sm" id="sendBrowse_${fileWinId}">Browse...</button>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:0.3rem; margin-bottom:0.6rem;">
+                  <button type="button" class="btn btn-ghost btn-xs send-chip" data-dir="~" style="font-size:0.7rem; border:1px solid rgba(var(--wash),0.1);">Home (~)</button>
+                  <button type="button" class="btn btn-ghost btn-xs send-chip" data-dir="/tmp" style="font-size:0.7rem; border:1px solid rgba(var(--wash),0.1);">/tmp</button>
+                  <button type="button" class="btn btn-ghost btn-xs send-chip" data-dir="/var/www" style="font-size:0.7rem; border:1px solid rgba(var(--wash),0.1);">/var/www</button>
+                </div>
+                <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.6rem;">
+                  <input type="checkbox" id="sendOw_${fileWinId}" checked> Overwrite files that already exist
+                </label>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-bottom:0.3rem;">Items (copied, source is kept):</div>
+                <div style="max-height:110px; overflow-y:auto; background:rgba(var(--shade),0.3); border:1px solid var(--border-subtle); border-radius:var(--radius-xs); padding:0.4rem 0.6rem; font-family:var(--font-mono); font-size:0.72rem; color:var(--text-secondary); display:flex; flex-direction:column; gap:0.2rem;">
+                  ${paths.map(p => `<div>&bull; ${esc(p.split('/').pop())}</div>`).join('')}
+                </div>
+                <div id="sendErr_${fileWinId}" style="display:none; color:var(--accent-rose); font-size:0.72rem; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(244,63,94,0.1); border-radius:4px;"></div>
+              </div>
+            `,
+            async (modalEl, modalSignal) => {
+              const errEl = modalEl.querySelector(`#sendErr_${fileWinId}`);
+              const destId = parseInt(modalEl.querySelector(`#sendSrv_${fileWinId}`).value, 10);
+              const destDir = modalEl.querySelector(`#sendDir_${fileWinId}`).value.trim();
+              const overwrite = modalEl.querySelector(`#sendOw_${fileWinId}`).checked;
+              if (!destDir) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Destination folder is required';
+                return false;
+              }
+              const dest = list.find(sv => sv.id === destId);
+              const taskId = 'xfer_' + Date.now();
+              try {
+                const resp = await fetch(`/api/servers/${this.serverId}/files/transfer`, {
+                  signal: modalSignal,
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ paths, dest_server_id: destId, dest_dir: destDir, overwrite, task_id: taskId })
+                });
+                const res = await resp.json();
+                if (!res.success) {
+                  errEl.style.display = 'block';
+                  errEl.textContent = res.error || 'Transfer failed to start';
+                  return false;
+                }
+              } catch (e) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Network error: ' + e;
+                return false;
+              }
+              startProgressToast(
+                taskId,
+                `Sending ${count} item(s) to ${dest ? dest.name : 'server'}`,
+                'Transfer complete!',
+                () => { clearSelection(); }
+              );
+              return true;
+            },
+            'Send'
+          );
+          backdrop.querySelectorAll('.send-chip').forEach(chip => {
+            chip.onclick = () => { backdrop.querySelector(`#sendDir_${fileWinId}`).value = chip.dataset.dir; };
+          });
+          // same folder picker the Sync, Git and Code apps use, pointed at the destination server
+          const q = (id) => backdrop.querySelector(`#${id}_${fileWinId}`);
+          q('sendBrowse').onclick = () => {
+            const sid = parseInt(q('sendSrv').value, 10);
+            const sv = list.find(x => x.id === sid);
+            DesktopApps.showDirectoryPicker({
+              serverId: sid,
+              initialPath: q('sendDir').value.trim() || '/',
+              title: `Select Destination Folder on ${sv ? sv.name : 'Server'}`,
+              onSelect: (p) => { q('sendDir').value = p; }
+            });
+          };
+          q('sendSrv').addEventListener('change', () => { q('sendDir').value = '~'; });
         };
 
         // Rename Modal Dialog (Section 6)
@@ -3578,6 +3696,11 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
             const paths = selectedPaths.size > 0 ? Array.from(selectedPaths) : [];
             showCopyMoveModal(paths, 'copy');
           };
+        }
+
+        const sendBtn = bodyEl.querySelector(`#sendBtn_${fileWinId}`);
+        if (sendBtn) {
+          sendBtn.onclick = () => showSendModal(selectedPaths.size > 0 ? Array.from(selectedPaths) : []);
         }
 
         const moveBtn = bodyEl.querySelector(`#moveBtn_${fileWinId}`);
