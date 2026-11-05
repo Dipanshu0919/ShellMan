@@ -236,7 +236,7 @@ class SSHConnectionManager:
 
     # A command can print gigabytes (cat of a big log, rsync -v of a huge tree). Keep the first part and drop the
     # rest so one command cannot exhaust the memory of the whole ShellMan process.
-    MAX_OUTPUT_BYTES = int(os.environ.get('SHELLMAN_MAX_OUTPUT_MB', '16')) * 1024 * 1024
+    MAX_OUTPUT_BYTES = int(os.environ.get('SHELLMAN_MAX_OUTPUT_MB', '256')) * 1024 * 1024
     _TRUNC_NOTE = b"\n[... output truncated by ShellMan to protect server memory ...]\n"
 
     @classmethod
@@ -269,7 +269,7 @@ class SSHConnectionManager:
                 # release the per-server lock instead of blocking every other request.
                 chan = stdout.channel
                 out_buf, err_buf = bytearray(), bytearray()
-                deadline = time.time() + max(timeout, 3600)
+                deadline = time.time() + max(timeout, 6 * 3600)
                 while not chan.exit_status_ready():
                     if chan.recv_ready():
                         self._append_capped(out_buf, chan.recv(65536))

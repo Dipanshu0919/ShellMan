@@ -306,6 +306,57 @@ def transfer_to_server(server_id):
     audit('file.transfer', f'{src.name} -> {dst.name}:{dest_dir}', f'{len(paths)} item(s): ' + ', '.join(paths[:5]))
     return jsonify({'success': True, 'task_id': task_id})
 
+@files_bp.route('/api/servers/<int:server_id>/files/upload/init', methods=['POST'])
+@login_required
+def upload_init(server_id):
+    """Start a parallel chunked upload of one big file (see services/chunk_upload.py)."""
+    from services import chunk_upload
+    server = Server.query.get_or_404(server_id)
+    d = request.get_json(silent=True) or {}
+    try:
+        uid, count = chunk_upload.init(server, d.get('dest_dir') or '~', d.get('path') or '', d.get('size', 0),
+                                       d.get('chunk_size', 8 * 1024 * 1024), bool(d.get('overwrite', True)))
+    except chunk_upload.UploadError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Cannot start upload: {e}'}), 500
+    return jsonify({'success': True, 'upload_id': uid, 'chunks': count})
+
+@files_bp.route('/api/servers/<int:server_id>/files/upload/chunk', methods=['POST'])
+@login_required
+def upload_chunk(server_id):
+    from services import chunk_upload
+    try:
+        chunk_upload.write_chunk(request.args.get('upload_id', ''), request.args.get('index', -1, type=int), request.get_data())
+    except chunk_upload.UploadError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Chunk failed: {e}'}), 500
+    return jsonify({'success': True})
+
+@files_bp.route('/api/servers/<int:server_id>/files/upload/finish', methods=['POST'])
+@login_required
+def upload_finish(server_id):
+    from services import chunk_upload
+    server = Server.query.get_or_404(server_id)
+    d = request.get_json(silent=True) or {}
+    try:
+        path, size = chunk_upload.finish(d.get('upload_id', ''))
+    except chunk_upload.UploadError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Finish failed: {e}'}), 500
+    audit('file.upload', f'{server.name}:{path}', f'{size} bytes (parallel)')
+    return jsonify({'success': True, 'path': path, 'size': size})
+
+@files_bp.route('/api/servers/<int:server_id>/files/upload/abort', methods=['POST'])
+@login_required
+def upload_abort(server_id):
+    from services import chunk_upload
+    d = request.get_json(silent=True) or {}
+    chunk_upload.abort(d.get('upload_id', ''))
+    return jsonify({'success': True})
+
 @files_bp.route('/api/servers/<int:server_id>/files/upload', methods=['POST'])
 @login_required
 def upload_file(server_id):

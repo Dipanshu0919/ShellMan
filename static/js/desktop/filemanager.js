@@ -4014,6 +4014,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
 
           let isCancelled = false;
           let activeFetchAbort = null;
+          const chunkAborts = new Set();   // in-flight part uploads of big files
 
           // Mode-specific batch configuration:
           // Eco Mode: max 100 files or 50MB per chunk
@@ -4061,6 +4062,7 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               if (activeFetchAbort) {
                 try { activeFetchAbort.abort(); } catch (_) {}
               }
+              chunkAborts.forEach(c => { try { c.abort(); } catch (_) {} });
               stopBtn.disabled = true;
               stopBtn.textContent = 'Stopping...';
               if (statEl) {
@@ -4084,7 +4086,14 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
           let currentBatch = [];
           let currentBatchSize = 0;
 
-          for (const item of uploadItems) {
+          // Big files go in parts over several connections at once; everything else is batched as before.
+          const BIG_FILE = 16 * 1024 * 1024;
+          const PART = 8 * 1024 * 1024;
+          const PARALLEL = 6;
+          const bigItems = uploadItems.filter(it => (it.file.size || 0) >= BIG_FILE);
+          const smallItems = uploadItems.filter(it => (it.file.size || 0) < BIG_FILE);
+
+          for (const item of smallItems) {
             const sz = item.file.size || 0;
             if (currentBatch.length > 0 && (currentBatch.length >= BATCH_FILE_LIMIT || (currentBatchSize + sz > BATCH_SIZE_LIMIT))) {
               batches.push(currentBatch);
@@ -4157,6 +4166,70 @@ DesktopAppsController.prototype.launchFiles = function (params = {}) {
               } catch (batchErr) {
                 if (isCancelled || batchErr.name === 'AbortError') break;
                 errors.push(`Batch ${bIndex + 1}/${batches.length}: ${batchErr.message || batchErr}`);
+              }
+            }
+
+
+            // ---- big files: parts in parallel (browser -> ShellMan), each part on its own SSH connection ----
+            const base = `/api/servers/${this.serverId}/files/upload`;
+            const postJson = async (url, body, signal) => {
+              const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal });
+              return r.json();
+            };
+            for (const it of bigItems) {
+              if (isCancelled) break;
+              const file = it.file;
+              const rel = it.relativePath || file.name;
+              const ctl = new AbortController();
+              chunkAborts.add(ctl);
+              let uid = null;
+              try {
+                const init = await postJson(`${base}/init`, { dest_dir: destDir, path: rel, size: file.size, chunk_size: PART, overwrite }, ctl.signal);
+                if (!init.success) throw new Error(init.error || 'Could not start upload');
+                uid = init.upload_id;
+                const total = init.chunks;
+                let next = 0;
+                let failure = null;
+                const worker = async () => {
+                  while (!failure && !isCancelled) {
+                    const i = next++;
+                    if (i >= total) return;
+                    // copy the part into memory first so a file changing on disk cannot break the request
+                    const buf = await file.slice(i * PART, Math.min(file.size, (i + 1) * PART)).arrayBuffer();
+                    let ok = false;
+                    let lastErr = '';
+                    for (let attempt = 0; attempt < 3 && !ok && !isCancelled; attempt++) {
+                      try {
+                        const r = await fetch(`${base}/chunk?upload_id=${uid}&index=${i}`, {
+                          method: 'POST', body: buf, headers: { 'Content-Type': 'application/octet-stream' }, signal: ctl.signal
+                        });
+                        const j = await r.json();
+                        if (j.success) ok = true; else lastErr = j.error || `HTTP ${r.status}`;
+                      } catch (e) {
+                        if (e.name === 'AbortError') return;
+                        lastErr = String(e);
+                      }
+                    }
+                    if (!ok) { if (!isCancelled) failure = lastErr || 'Part failed'; return; }
+                    uploadedBytes += buf.byteLength;
+                    updateProgress(uploadedCount, uploadedBytes);
+                  }
+                };
+                await Promise.all(Array.from({ length: Math.min(PARALLEL, total) }, worker));
+                if (isCancelled) throw Object.assign(new Error('cancelled'), { name: 'AbortError' });
+                if (failure) throw new Error(failure);
+                const fin = await postJson(`${base}/finish`, { upload_id: uid }, ctl.signal);
+                if (!fin.success) throw new Error(fin.error || 'Could not finish upload');
+                uid = null;
+                uploadedCount++;
+                updateProgress(uploadedCount, uploadedBytes);
+                if (window.ShellmanFX) window.ShellmanFX.files.pulse(fileWinId, 'up');
+              } catch (e) {
+                if (uid) { try { await fetch(`${base}/abort`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ upload_id: uid }) }); } catch (_) {} }
+                if (isCancelled || e.name === 'AbortError') break;
+                errors.push(`${rel}: ${e.message || e}`);
+              } finally {
+                chunkAborts.delete(ctl);
               }
             }
 

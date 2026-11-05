@@ -413,6 +413,23 @@ class DesktopAppsController {
           `).join('')}
         </div>
 
+        <!-- Search and sort -->
+        <div style="padding: 0.4rem 0.85rem; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 0.5rem; align-items: center;">
+          <div style="flex: 1; display: flex; align-items: center; background: var(--bg-canvas, var(--sm-inset)); border: 1px solid var(--border-color, var(--sm-line-strong)); border-radius: 6px; padding: 0.15rem 0.5rem;">
+            <svg style="width: 13px; height: 13px; color: var(--text-muted); margin-right: 0.4rem; flex-shrink: 0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="dpSearchInput" placeholder="${selectFiles ? 'Search files and folders in this folder...' : 'Search folders in this folder...'}" autocomplete="off" spellcheck="false" style="width: 100%; background: transparent; border: none; outline: none; box-shadow: none; font-size: 0.78rem; color: var(--text-primary);">
+            <button type="button" id="dpSearchClear" title="Clear" style="display:none; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.9rem; line-height:1; padding:0 0.1rem;">&times;</button>
+          </div>
+          <select id="dpSortSel" class="form-control" title="Sort" style="width: 150px; font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+            <option value="name:asc">Name A-Z</option>
+            <option value="name:desc">Name Z-A</option>
+            <option value="mtime:desc">Newest first</option>
+            <option value="mtime:asc">Oldest first</option>
+            <option value="size:desc">Largest first</option>
+            <option value="size:asc">Smallest first</option>
+          </select>
+        </div>
+
         <!-- Directory List View -->
         <div id="dpItemsList" style="flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 2px;">
           <div style="text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.8rem;">
@@ -445,6 +462,11 @@ class DesktopAppsController {
     const upBtn = overlay.querySelector('#dpUpBtn');
     const goBtn = overlay.querySelector('#dpGoBtn');
     const newFolderBtn = overlay.querySelector('#dpNewFolderBtn');
+    const searchInp = overlay.querySelector('#dpSearchInput');
+    const searchClear = overlay.querySelector('#dpSearchClear');
+    const sortSel = overlay.querySelector('#dpSortSel');
+    let rawItems = [];
+    try { const sv = localStorage.getItem('sm_picker_sort'); if (sv && [...sortSel.options].some(o => o.value === sv)) sortSel.value = sv; } catch (_) {}
 
     const closePicker = () => {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -466,60 +488,33 @@ class DesktopAppsController {
       closePicker();
     };
 
-    const loadDirectory = async (dirPath) => {
-      dirPath = (dirPath || (isLocal ? '~/' : '/')).trim();
-      if (!dirPath) dirPath = isLocal ? '~/' : '/';
-      currentPath = dirPath;
-      if (!selectFiles) {
-        selectedPath = dirPath;
-        selText.textContent = selectedPath;
-      }
-      pathInp.value = currentPath;
-
-      listEl.innerHTML = `
-        <div style="text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.8rem;">
-          <span class="spinner-border spinner-border-sm" style="width: 12px; height: 12px; margin-right: 6px;"></span>
-          Listing files and folders in <code style="color: var(--sm-accent);">${currentPath}</code>...
-        </div>
-      `;
-
-      try {
-        const fetchUrl = isLocal
-          ? `/api/sync/local-dirs?path=${encodeURIComponent(currentPath)}`
-          : `/api/servers/${sId}/files/list?path=${encodeURIComponent(currentPath)}`;
-        const resp = await fetch(fetchUrl);
-        const res = await resp.json();
-        if (!res.success) {
-          listEl.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: var(--c-bad); font-size: 0.8rem;">
-              Failed to load directory: ${res.error || 'Access denied'}
-            </div>
-          `;
-          return;
-        }
-
-        currentPath = res.data.current_path || dirPath;
-        parentPath = res.data.parent_path;
-        if (!selectFiles) {
-          selectedPath = currentPath;
-          selText.textContent = selectedPath;
-        }
-        pathInp.value = currentPath;
-
-        const allItems = res.data.items || [];
-        const dirItems = allItems.filter(item => item.is_dir && item.name !== '.' && item.name !== '..');
+    const renderList = () => {
+        const allItems = rawItems;
+        const needle = searchInp.value.trim().toLowerCase();
+        const [sKey, sDir] = sortSel.value.split(':');
+        const dirSign = sDir === 'asc' ? 1 : -1;
+        const cmpName = (x, y) => x.name.localeCompare(y.name, undefined, { numeric: true, sensitivity: 'base' });
+        const cmp = (x, y) => {
+          let r = 0;
+          if (sKey === 'size') r = (Number(x.size) || 0) - (Number(y.size) || 0);
+          else if (sKey === 'mtime') r = String(x.mtime || '').localeCompare(String(y.mtime || ''));
+          else r = cmpName(x, y);
+          return r === 0 ? cmpName(x, y) : r * dirSign;
+        };
+        const dirItems = allItems.filter(item => item.is_dir && item.name !== '.' && item.name !== '..' && (!needle || item.name.toLowerCase().includes(needle))).sort(cmp);
         const fileItems = selectFiles ? allItems.filter(item => {
           if (item.is_dir) return false;
+          if (needle && !item.name.toLowerCase().includes(needle)) return false;
           if (!fileExtensions || !fileExtensions.length) return true;
           const lower = item.name.toLowerCase();
           return fileExtensions.some(ext => lower.endsWith(ext.toLowerCase()));
-        }) : [];
+        }).sort(cmp) : [];
 
         if (dirItems.length === 0 && fileItems.length === 0) {
           listEl.innerHTML = `
             <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 0.78rem;">
               <svg style="width: 28px; height: 28px; color: #475569; margin: 0 auto 0.5rem; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-              No matching files or subdirectories inside this folder.<br>
+              ${needle ? `Nothing matches <strong>${needle.replace(/</g, '&lt;')}</strong> here.` : 'No matching files or subdirectories inside this folder.'}<br>
               ${!selectFiles ? `Click <strong>"Choose Directory"</strong> below to select <code style="color: var(--sm-accent);">${currentPath}</code>.` : ''}
             </div>
           `;
@@ -597,10 +592,62 @@ class DesktopAppsController {
           };
         });
 
+    };
+
+    const loadDirectory = async (dirPath) => {
+      dirPath = (dirPath || (isLocal ? '~/' : '/')).trim();
+      if (!dirPath) dirPath = isLocal ? '~/' : '/';
+      currentPath = dirPath;
+      if (!selectFiles) {
+        selectedPath = dirPath;
+        selText.textContent = selectedPath;
+      }
+      pathInp.value = currentPath;
+
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 3rem; color: var(--text-muted); font-size: 0.8rem;">
+          <span class="spinner-border spinner-border-sm" style="width: 12px; height: 12px; margin-right: 6px;"></span>
+          Listing files and folders in <code style="color: var(--sm-accent);">${currentPath}</code>...
+        </div>
+      `;
+
+      try {
+        const fetchUrl = isLocal
+          ? `/api/sync/local-dirs?path=${encodeURIComponent(currentPath)}`
+          : `/api/servers/${sId}/files/list?path=${encodeURIComponent(currentPath)}`;
+        const resp = await fetch(fetchUrl);
+        const res = await resp.json();
+        if (!res.success) {
+          listEl.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--c-bad); font-size: 0.8rem;">
+              Failed to load directory: ${res.error || 'Access denied'}
+            </div>
+          `;
+          return;
+        }
+
+        currentPath = res.data.current_path || dirPath;
+        parentPath = res.data.parent_path;
+        if (!selectFiles) {
+          selectedPath = currentPath;
+          selText.textContent = selectedPath;
+        }
+        pathInp.value = currentPath;
+
+        rawItems = res.data.items || [];
+        searchInp.value = '';
+        searchClear.style.display = 'none';
+        renderList();
+
       } catch (err) {
         listEl.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--c-bad); font-size: 0.8rem;">Network error: ${err}</div>`;
       }
     };
+
+    searchInp.oninput = () => { searchClear.style.display = searchInp.value ? '' : 'none'; renderList(); };
+    searchInp.onkeydown = (e) => { if (e.key === 'Escape' && searchInp.value) { e.stopPropagation(); searchInp.value = ''; searchInp.oninput(); } };
+    searchClear.onclick = () => { searchInp.value = ''; searchInp.oninput(); searchInp.focus(); };
+    sortSel.onchange = () => { try { localStorage.setItem('sm_picker_sort', sortSel.value); } catch (_) {} renderList(); };
 
     upBtn.onclick = () => {
       if (parentPath && parentPath !== currentPath) {

@@ -257,7 +257,7 @@ class SFTPService:
             return False, f"Cannot stat {path}: {str(e)}"
 
     @classmethod
-    def read_file(cls, server, file_path: str, max_bytes: int = 5 * 1024 * 1024) -> Tuple[bool, Any]:
+    def read_file(cls, server, file_path: str, max_bytes: int = 64 * 1024 * 1024) -> Tuple[bool, Any]:
         file_path = cls._normalize_path(file_path, server)
         try:
             with ssh_manager.sftp_context(server) as sftp:
@@ -265,9 +265,11 @@ class SFTPService:
                 if stat.S_ISDIR(attr.st_mode):
                     return False, "Target is a directory, not a file"
                 if attr.st_size > max_bytes:
-                    return False, f"File size ({format_bytes(attr.st_size)}) exceeds editable limit (5MB)"
+                    return False, f"File size ({format_bytes(attr.st_size)}) exceeds editable limit ({format_bytes(max_bytes)})"
 
                 with sftp.open(file_path, 'rb') as f:
+                    if attr.st_size > 1024 * 1024:
+                        f.prefetch(attr.st_size)
                     content_bytes = f.read()
 
                 try:
@@ -392,7 +394,7 @@ class SFTPService:
         quoted_sources = " ".join(shlex.quote(p) for p in clean_paths)
 
         cmd = f"mv -t {quoted_dest} -- {quoted_sources} 2>&1"
-        code, out, err = cls._run_task_cmd(server, cmd, 600, task_id)
+        code, out, err = cls._run_task_cmd(server, cmd, 6 * 3600, task_id)
         if code == -2 and task_id:
             ProgressTracker.cancel_done(task_id)
             return False, "Cancelled"
@@ -427,7 +429,7 @@ class SFTPService:
             f"rsync -a --info=progress2 -- {quoted_sources} {quoted_dest} 2>&1; "
             f"else cp -r --target-directory={quoted_dest} -- {quoted_sources} 2>&1; fi"
         )
-        code, out, err = cls._run_task_cmd(server, cmd, 1800, task_id)
+        code, out, err = cls._run_task_cmd(server, cmd, 6 * 3600, task_id)
         if code == -2 and task_id:
             ProgressTracker.cancel_done(task_id)
             return False, "Cancelled"
@@ -778,7 +780,7 @@ class SFTPService:
 
         try:
             code, out, err = ssh_manager.execute(
-                server, cmd, timeout=1800,
+                server, cmd, timeout=6 * 3600,
                 cancel_check=(lambda: ProgressTracker.is_cancelled(task_id)) if task_id else None,
                 on_cancel=_kill_remote)
         finally:

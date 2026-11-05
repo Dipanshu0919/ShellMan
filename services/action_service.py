@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from services.ssh_manager import ssh_manager
 
-# Max execution output size: 512 KB
-MAX_OUTPUT_BYTES = 512 * 1024
+# Max execution output size: 16 MB
+MAX_OUTPUT_BYTES = 16 * 1024 * 1024
 
 class ActionExecutionService:
     """
@@ -124,9 +124,9 @@ class ActionExecutionService:
 
         # Truncate output buffer if larger than MAX_OUTPUT_BYTES
         if len(stdout) > MAX_OUTPUT_BYTES:
-            stdout = stdout[:MAX_OUTPUT_BYTES] + "\n... [Output truncated by ShellMan at 512 KB] ..."
+            stdout = stdout[:MAX_OUTPUT_BYTES] + "\n... [Output truncated by ShellMan at 16 MB] ..."
         if len(stderr) > MAX_OUTPUT_BYTES:
-            stderr = stderr[:MAX_OUTPUT_BYTES] + "\n... [Stderr truncated by ShellMan at 512 KB] ..."
+            stderr = stderr[:MAX_OUTPUT_BYTES] + "\n... [Stderr truncated by ShellMan at 16 MB] ..."
 
         return {
             'success': (code == 0),
